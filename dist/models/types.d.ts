@@ -16,7 +16,6 @@ export interface JSONLEntry {
         content?: any[];
     };
     requestId?: string;
-    parentUuid?: string | null;
     uuid?: string;
     timestamp?: string;
     cwd?: string;
