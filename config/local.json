@@ -6,7 +6,7 @@
   "claudeCode": {
     "rawDataPath": "/Users/baotrungtn/.claude",
 
-    "pricingDataPath": "../pricing-data.json",
+    "pricingDataPath": "./pricing-data.json",
 
     "cacheDurationDefault": 5
   },

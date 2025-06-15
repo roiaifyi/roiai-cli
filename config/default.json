@@ -6,8 +6,8 @@
     "infoPath": "~/.claude/user_info.json"
   },
   "claudeCode": {
-    "rawDataPath": "../claude_raw_data",
-    "pricingDataPath": "../pricing-data.json",
+    "rawDataPath": "./claude_raw_data",
+    "pricingDataPath": "./pricing-data.json",
     "cacheDurationDefault": 5,
     "batchSize": 1000
   },
