@@ -16,7 +16,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "cli",
@@ -28,10 +30,14 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@jest/globals": "^30.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/config": "^3.3.5",
+    "@types/jest": "^29.5.14",
     "@types/node": "^24.0.1",
+    "jest": "^30.0.0",
     "nodemon": "^3.1.10",
+    "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   },

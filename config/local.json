@@ -4,7 +4,7 @@
   },
 
   "claudeCode": {
-    "rawDataPath": "/Users/baotrungtn/.claude",
+    "rawDataPath": "./claude_raw_data",
 
     "pricingDataPath": "./pricing-data.json",
 

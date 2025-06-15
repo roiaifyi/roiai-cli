@@ -1,12 +1,13 @@
-import { prisma } from '../database';
+import { PrismaClient } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 export class AggregationService {
+  constructor(private prisma: PrismaClient) {}
   async recalculateAllAggregates(): Promise<void> {
     console.log('🔄 Recalculating all aggregates...');
     
     // Start a transaction to ensure consistency
-    await prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       // 1. Recalculate Session aggregates
       await this.recalculateSessionAggregates(tx);
       
@@ -153,7 +154,7 @@ export class AggregationService {
     console.log('🔍 Verifying aggregates...');
     
     // Query the verification view created in the migration
-    const result = await prisma.$queryRaw`
+    const result = await this.prisma.$queryRaw`
       SELECT 
         u.user_id,
         u.total_messages as stored_messages,
@@ -176,5 +177,142 @@ export class AggregationService {
     `;
     
     return result;
+  }
+
+  async getUsageByProject() {
+    return await this.prisma.project.findMany({
+      select: {
+        name: true,
+        totalMessages: true,
+        totalCost: true,
+        totalInputTokens: true,
+        totalOutputTokens: true,
+        totalCacheCreationTokens: true,
+        totalCacheReadTokens: true
+      },
+      orderBy: { totalCost: 'desc' }
+    }).then(projects => projects.map(p => ({
+      projectName: p.name,
+      messageCount: p.totalMessages,
+      totalCost: p.totalCost.toNumber(),
+      inputTokens: p.totalInputTokens,
+      outputTokens: p.totalOutputTokens,
+      cacheCreationInputTokens: p.totalCacheCreationTokens,
+      cacheReadInputTokens: p.totalCacheReadTokens
+    })));
+  }
+
+  async getUsageByUser() {
+    return await this.prisma.user.findMany({
+      select: {
+        name: true,
+        totalMessages: true,
+        totalCost: true,
+        totalInputTokens: true,
+        totalOutputTokens: true,
+        totalCacheCreationTokens: true,
+        totalCacheReadTokens: true
+      },
+      orderBy: { totalCost: 'desc' }
+    }).then(users => users.map(u => ({
+      userName: u.name,
+      messageCount: u.totalMessages,
+      totalCost: u.totalCost.toNumber(),
+      inputTokens: u.totalInputTokens,
+      outputTokens: u.totalOutputTokens,
+      cacheCreationInputTokens: u.totalCacheCreationTokens,
+      cacheReadInputTokens: u.totalCacheReadTokens
+    })));
+  }
+
+  async getDailyUsage(startDate: Date, endDate: Date) {
+    const messages = await this.prisma.message.groupBy({
+      by: ['timestamp'],
+      where: {
+        timestamp: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      _sum: {
+        inputTokens: true,
+        outputTokens: true,
+        cacheCreationTokens: true,
+        cacheReadTokens: true,
+        messageCost: true
+      },
+      _count: {
+        uuid: true
+      }
+    });
+
+    return messages.map(day => ({
+      date: day.timestamp.toISOString().split('T')[0],
+      messageCount: day._count.uuid,
+      inputTokens: day._sum.inputTokens || 0,
+      outputTokens: day._sum.outputTokens || 0,
+      cacheCreationInputTokens: day._sum.cacheCreationTokens || 0,
+      cacheReadInputTokens: day._sum.cacheReadTokens || 0,
+      totalCost: day._sum.messageCost?.toNumber() || 0
+    }));
+  }
+
+  async getUsageByModel() {
+    const models = await this.prisma.message.groupBy({
+      by: ['model'],
+      _sum: {
+        inputTokens: true,
+        outputTokens: true,
+        cacheCreationTokens: true,
+        cacheReadTokens: true,
+        messageCost: true
+      },
+      _count: {
+        uuid: true
+      }
+    });
+
+    return models.map(m => ({
+      model: m.model,
+      messageCount: m._count.uuid,
+      inputTokens: m._sum.inputTokens || 0,
+      outputTokens: m._sum.outputTokens || 0,
+      cacheCreationInputTokens: m._sum.cacheCreationTokens || 0,
+      cacheReadInputTokens: m._sum.cacheReadTokens || 0,
+      totalCost: m._sum.messageCost?.toNumber() || 0
+    }));
+  }
+
+  async getTotalUsage() {
+    const totals = await this.prisma.message.aggregate({
+      _sum: {
+        inputTokens: true,
+        outputTokens: true,
+        cacheCreationTokens: true,
+        cacheReadTokens: true,
+        messageCost: true
+      },
+      _count: {
+        uuid: true
+      }
+    });
+
+    const uniqueCounts = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.project.count(),
+      this.prisma.session.count()
+    ]);
+
+    return {
+      totalMessages: totals._count?.uuid || 0,
+      totalInputTokens: totals._sum?.inputTokens || 0,
+      totalOutputTokens: totals._sum?.outputTokens || 0,
+      totalCacheCreationTokens: totals._sum?.cacheCreationTokens || 0,
+      totalCacheReadTokens: totals._sum?.cacheReadTokens || 0,
+      totalCost: totals._sum?.messageCost?.toNumber() || 0,
+      uniqueUsers: uniqueCounts[0],
+      uniqueProjects: uniqueCounts[1],
+      uniqueSessions: uniqueCounts[2]
+    };
   }
 }

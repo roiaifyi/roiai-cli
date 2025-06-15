@@ -1,2 +1,9 @@
 dist
 node_modules
+claude_raw_data/
+pricing-data.json
+*.db
+*.db-journal
+coverage/
+.DS_Store
+*.log
