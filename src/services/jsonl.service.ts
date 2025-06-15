@@ -409,16 +409,6 @@ export class JSONLService {
 
         processing.add(entry.uuid);
 
-        // Process parent first if it exists
-        if (entry.parentUuid) {
-          const parent = messagesToProcess.find(
-            (m) => m.uuid === entry.parentUuid
-          );
-          if (parent && parent.uuid && !processed.has(parent.uuid)) {
-            await processInOrder(parent);
-          }
-        }
-
         // Process this message
         await this.processMessage(entry, projectId);
         processed.add(entry.uuid);
@@ -560,18 +550,6 @@ export class JSONLService {
       }
     }
 
-    // Check if parent exists when parentUuid is provided
-    if (entry.parentUuid) {
-      const parentExists = await prisma.message.findUnique({
-        where: { uuid: entry.parentUuid },
-      });
-
-      if (!parentExists) {
-        // Log warning but don't fail - set parentUuid to null
-        // console.warn(`Parent message ${entry.parentUuid} not found for message ${entry.uuid}. Setting parentUuid to null.`);
-        entry.parentUuid = null;
-      }
-    }
 
     // Create message
     const inputTokens = entry.message.usage?.input_tokens || 0;
@@ -588,7 +566,6 @@ export class JSONLService {
         sessionId: entry.sessionId,
         projectId,
         userId,
-        parentUuid: entry.parentUuid || null,
         timestamp: entry.timestamp ? new Date(entry.timestamp) : null,
         role: entry.message.role || entry.type || "unknown",
         model: entry.message.model || null,

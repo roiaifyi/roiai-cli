@@ -84,7 +84,6 @@ export class DatabaseService {
     timestamp?: Date;
     messageCost: Prisma.Decimal;
     requestId?: string;
-    parentUuid?: string;
     type?: string;
   }) {
     return await this.prisma.message.create({
@@ -103,8 +102,7 @@ export class DatabaseService {
         cacheReadTokens: messageData.cacheReadTokens,
         timestamp: messageData.timestamp,
         messageCost: messageData.messageCost,
-        requestId: messageData.requestId,
-        parentUuid: messageData.parentUuid
+        requestId: messageData.requestId
       }
     });
   }

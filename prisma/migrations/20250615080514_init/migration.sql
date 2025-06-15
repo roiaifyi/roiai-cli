@@ -28,7 +28,6 @@ CREATE TABLE "machines" (
 -- CreateTable
 CREATE TABLE "projects" (
     "project_id" TEXT NOT NULL PRIMARY KEY,
-    "project_path" TEXT NOT NULL,
     "project_name" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "client_machine_id" TEXT NOT NULL,
@@ -72,7 +71,6 @@ CREATE TABLE "messages" (
     "session_id" TEXT NOT NULL,
     "project_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
-    "parent_uuid" TEXT,
     "timestamp" DATETIME,
     "role" TEXT NOT NULL,
     "model" TEXT,
@@ -89,8 +87,7 @@ CREATE TABLE "messages" (
     "message_cost" DECIMAL NOT NULL DEFAULT 0,
     CONSTRAINT "messages_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "sessions" ("session_id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "messages_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects" ("project_id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "messages_parent_uuid_fkey" FOREIGN KEY ("parent_uuid") REFERENCES "messages" ("uuid") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -123,7 +120,7 @@ CREATE TABLE "sync_status" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "projects_project_path_client_machine_id_key" ON "projects"("project_path", "client_machine_id");
+CREATE UNIQUE INDEX "projects_project_name_client_machine_id_key" ON "projects"("project_name", "client_machine_id");
 
 -- CreateIndex
 CREATE INDEX "messages_session_id_idx" ON "messages"("session_id");
@@ -139,9 +136,6 @@ CREATE INDEX "messages_timestamp_idx" ON "messages"("timestamp");
 
 -- CreateIndex
 CREATE INDEX "messages_request_id_idx" ON "messages"("request_id");
-
--- CreateIndex
-CREATE INDEX "messages_parent_uuid_idx" ON "messages"("parent_uuid");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "messages_session_id_message_id_uuid_key" ON "messages"("session_id", "message_id", "uuid");
