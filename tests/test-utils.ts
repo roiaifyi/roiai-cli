@@ -86,12 +86,22 @@ export function createTestJsonlFile(filename: string, entries: any[] = [], proje
 // Create test pricing data
 export function createTestPricingData() {
   const pricingData = {
-    "claude-3-5-sonnet-20241022": {
-      input: 0.000003,
-      output: 0.000015,
-      cacheWrite: 0.00000375,
-      cacheRead: 0.0000003
-    }
+    models: [
+      {
+        id: "claude-3-5-sonnet-20241022",
+        name: "Claude 3.5 Sonnet",
+        input: 0.000003,
+        output: 0.000015,
+        cache: {
+          "5m": { write: 0.00000375, read: 0.0000003 },
+          "1h": { write: 0.00000375, read: 0.0000003 }
+        },
+        originalRates: {
+          inputPerMillion: 3,
+          outputPerMillion: 15
+        }
+      }
+    ]
   };
   
   const pricingPath = path.join(TEST_DATA_DIR, 'pricing-data.json');

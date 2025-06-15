@@ -52,12 +52,14 @@ describe('Sync Command BDD Tests', () => {
     describe('When I run the sync command for the first time', () => {
       it('Then it should process all JSONL files and store data in the database', async () => {
         // Arrange
+        // Try with unique IDs for each test run to avoid deduplication issues
+        const testId = Date.now();
         const jsonlEntries = [
           {
             type: "message",
-            uuid: "uuid_001",
+            uuid: `uuid_001_${testId}`,
             message: {
-              id: "msg_001",
+              id: `msg_001_${testId}`,
               role: "assistant",
               model: "claude-3-5-sonnet-20241022",
               usage: { 
@@ -71,9 +73,9 @@ describe('Sync Command BDD Tests', () => {
           },
           {
             type: "message",
-            uuid: "uuid_002",
+            uuid: `uuid_002_${testId}`,
             message: {
-              id: "msg_002",
+              id: `msg_002_${testId}`,
               role: "assistant",
               model: "claude-3-5-sonnet-20241022",
               usage: { 
