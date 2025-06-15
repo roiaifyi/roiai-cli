@@ -108,7 +108,7 @@ export const syncCommand = new Command('sync')
           
           if (changes.newMessages > 0) {
             console.log(`   ${chalk.green('+')} New messages: ${chalk.cyan(changes.newMessages)}`);
-            console.log(`   ${chalk.green('+')} Cost added: ${chalk.cyan('$' + changes.totalCostAdded.toFixed(4))}`);
+            console.log(`   ${chalk.green('+')} Cost added: ${chalk.bold.green('$' + changes.totalCostAdded.toFixed(4))}`);
           }
         } else {
           console.log(chalk.gray('  No new data found'));

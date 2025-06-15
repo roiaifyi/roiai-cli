@@ -96,7 +96,7 @@ exports.syncCommand = new commander_1.Command('sync')
                 }
                 if (changes.newMessages > 0) {
                     console.log(`   ${chalk_1.default.green('+')} New messages: ${chalk_1.default.cyan(changes.newMessages)}`);
-                    console.log(`   ${chalk_1.default.green('+')} Cost added: ${chalk_1.default.cyan('$' + changes.totalCostAdded.toFixed(4))}`);
+                    console.log(`   ${chalk_1.default.green('+')} Cost added: ${chalk_1.default.bold.green('$' + changes.totalCostAdded.toFixed(4))}`);
                 }
             }
             else {
