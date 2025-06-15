@@ -57,7 +57,7 @@ exports.syncCommand = new commander_1.Command('sync')
         if (needsFullRecalc) {
             // Full recalculation needed for initial sync or force flag
             spinner.start('Recalculating aggregates...');
-            const aggregationService = new aggregation_service_1.AggregationService();
+            const aggregationService = new aggregation_service_1.AggregationService(database_1.prisma);
             await aggregationService.recalculateAllAggregates();
             spinner.succeed('Aggregates recalculated');
         }

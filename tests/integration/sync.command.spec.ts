@@ -12,6 +12,26 @@ import {
 } from '../test-utils';
 
 describe('Sync Command BDD Tests', () => {
+  // Helper to run CLI and capture output
+  const runSync = (testConfig: any) => {
+    const cliPath = path.join(process.cwd(), 'dist', 'index.js');
+    try {
+      const output = execSync(`node ${cliPath} cc sync`, {
+        env: {
+          ...process.env,
+          NODE_CONFIG: JSON.stringify(testConfig)
+        },
+        encoding: 'utf8'
+      });
+      return output;
+    } catch (error: any) {
+      console.error('CLI Error:', error.message);
+      console.error('CLI Output:', error.stdout?.toString());
+      console.error('CLI Stderr:', error.stderr?.toString());
+      throw error;
+    }
+  };
+  
   beforeEach(async () => {
     await resetTestDatabase();
     createTestConfig();
@@ -34,28 +54,40 @@ describe('Sync Command BDD Tests', () => {
         // Arrange
         const jsonlEntries = [
           {
-            id: "msg_001",
-            role: "assistant" as const,
-            usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: null, cache_read_input_tokens: null },
-            updated_at: "2024-12-01T10:00:00Z",
-            project: "project-1",
-            user: "user-1",
-            machine: "machine-1",
-            session: "session-1"
+            type: "message",
+            uuid: "uuid_001",
+            message: {
+              id: "msg_001",
+              role: "assistant",
+              model: "claude-3-5-sonnet-20241022",
+              usage: { 
+                input_tokens: 100, 
+                output_tokens: 50, 
+                cache_creation_input_tokens: null, 
+                cache_read_input_tokens: null 
+              }
+            },
+            timestamp: "2024-12-01T10:00:00Z"
           },
           {
-            id: "msg_002",
-            role: "user" as const,
-            usage: { input_tokens: 200, output_tokens: null, cache_creation_input_tokens: 50, cache_read_input_tokens: null },
-            updated_at: "2024-12-01T11:00:00Z",
-            project: "project-1",
-            user: "user-1",
-            machine: "machine-1",
-            session: "session-1"
+            type: "message",
+            uuid: "uuid_002",
+            message: {
+              id: "msg_002",
+              role: "assistant",
+              model: "claude-3-5-sonnet-20241022",
+              usage: { 
+                input_tokens: 200, 
+                output_tokens: 100, 
+                cache_creation_input_tokens: 50, 
+                cache_read_input_tokens: null 
+              }
+            },
+            timestamp: "2024-12-01T11:00:00Z"
           }
         ];
         
-        createTestJsonlFile('claude_usage_2024-12-01.jsonl', jsonlEntries);
+        createTestJsonlFile('claude_usage_2024-12-01.jsonl', jsonlEntries, 'project-1');
         
         // Update config to point to test data directory
         const testConfig = createTestConfig({
@@ -68,14 +100,7 @@ describe('Sync Command BDD Tests', () => {
         });
         
         // Act
-        const cliPath = path.join(process.cwd(), 'dist', 'index.js');
-        execSync(`node ${cliPath} cc sync`, {
-          env: {
-            ...process.env,
-            NODE_CONFIG: JSON.stringify(testConfig)
-          },
-          stdio: 'pipe'
-        });
+        runSync(testConfig);
         
         // Assert
         const counts = await countDatabaseRecords();
@@ -103,23 +128,33 @@ describe('Sync Command BDD Tests', () => {
         // Arrange
         const file1Entries = [
           {
-            id: "msg_001",
-            role: "assistant" as const,
-            usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: null, cache_read_input_tokens: null },
-            updated_at: "2024-12-01T10:00:00Z"
+            type: "message",
+            uuid: "uuid_001",
+            message: {
+              id: "msg_001",
+              role: "assistant",
+              model: "claude-3-5-sonnet-20241022",
+              usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: null, cache_read_input_tokens: null }
+            },
+            timestamp: "2024-12-01T10:00:00Z"
           }
         ];
         
         const file2Entries = [
           {
-            id: "msg_002",
-            role: "assistant" as const,
-            usage: { input_tokens: 200, output_tokens: 100, cache_creation_input_tokens: null, cache_read_input_tokens: null },
-            updated_at: "2024-12-02T10:00:00Z"
+            type: "message",
+            uuid: "uuid_002",
+            message: {
+              id: "msg_002",
+              role: "assistant",
+              model: "claude-3-5-sonnet-20241022",
+              usage: { input_tokens: 200, output_tokens: 100, cache_creation_input_tokens: null, cache_read_input_tokens: null }
+            },
+            timestamp: "2024-12-02T10:00:00Z"
           }
         ];
         
-        createTestJsonlFile('claude_usage_2024-12-01.jsonl', file1Entries);
+        createTestJsonlFile('claude_usage_2024-12-01.jsonl', file1Entries, 'test-project');
         
         const testConfig = createTestConfig({
           claudeCode: {
@@ -130,28 +165,14 @@ describe('Sync Command BDD Tests', () => {
           }
         });
         
-        const cliPath = path.join(process.cwd(), 'dist', 'index.js');
-        
         // Act - First sync
-        execSync(`node ${cliPath} cc sync`, {
-          env: {
-            ...process.env,
-            NODE_CONFIG: JSON.stringify(testConfig)
-          },
-          stdio: 'pipe'
-        });
+        runSync(testConfig);
         
         // Add second file
-        createTestJsonlFile('claude_usage_2024-12-02.jsonl', file2Entries);
+        createTestJsonlFile('claude_usage_2024-12-02.jsonl', file2Entries, 'test-project');
         
         // Act - Second sync
-        execSync(`node ${cliPath} cc sync`, {
-          env: {
-            ...process.env,
-            NODE_CONFIG: JSON.stringify(testConfig)
-          },
-          stdio: 'pipe'
-        });
+        runSync(testConfig);
         
         // Assert
         const counts = await countDatabaseRecords();
@@ -170,25 +191,27 @@ describe('Sync Command BDD Tests', () => {
     describe('When I have invalid JSONL data', () => {
       it('Then it should skip invalid entries and process valid ones', async () => {
         // Arrange
-        const jsonlPath = path.join(TEST_DATA_DIR, 'claude_usage_invalid.jsonl');
+        const projectPath = path.join(TEST_DATA_DIR, 'projects', 'project-1');
         const fs = require('fs');
+        
+        // Ensure directory exists
+        fs.mkdirSync(projectPath, { recursive: true });
+        
+        const jsonlPath = path.join(projectPath, 'claude_usage_invalid.jsonl');
         
         // Mix of valid and invalid entries
         const content = [
           '{"invalid": "entry"}', // Missing required fields
           JSON.stringify({
-            id: "msg_valid",
-            model: "claude-3-5-sonnet-20241022",
-            role: "assistant",
-            stop_reason: "end_turn",
-            stop_sequence: null,
-            tool_use: [],
-            usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: null, cache_read_input_tokens: null },
-            updated_at: "2024-12-01T10:00:00Z",
-            project: "project-1",
-            user: "user-1",
-            machine: "machine-1",
-            session: "session-1"
+            type: "message",
+            uuid: "uuid_valid",
+            message: {
+              id: "msg_valid",
+              model: "claude-3-5-sonnet-20241022",
+              role: "assistant",
+              usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: null, cache_read_input_tokens: null }
+            },
+            timestamp: "2024-12-01T10:00:00Z"
           }),
           'not even json', // Invalid JSON
           '' // Empty line
@@ -206,14 +229,7 @@ describe('Sync Command BDD Tests', () => {
         });
         
         // Act
-        const cliPath = path.join(process.cwd(), 'dist', 'index.js');
-        execSync(`node ${cliPath} cc sync`, {
-          env: {
-            ...process.env,
-            NODE_CONFIG: JSON.stringify(testConfig)
-          },
-          stdio: 'pipe'
-        });
+        runSync(testConfig);
         
         // Assert
         const counts = await countDatabaseRecords();
@@ -226,46 +242,40 @@ describe('Sync Command BDD Tests', () => {
         // Arrange
         const entries = [
           {
-            id: "msg_cache_1",
-            model: "claude-3-5-sonnet-20241022",
-            role: "assistant" as const,
-            stop_reason: "end_turn",
-            stop_sequence: null,
-            tool_use: [],
-            usage: { 
-              input_tokens: 1000, 
-              output_tokens: 500, 
-              cache_creation_input_tokens: 2000, 
-              cache_read_input_tokens: null 
+            type: "message",
+            uuid: "uuid_cache_1",
+            message: {
+              id: "msg_cache_1",
+              model: "claude-3-5-sonnet-20241022",
+              role: "assistant",
+              usage: { 
+                input_tokens: 1000, 
+                output_tokens: 500, 
+                cache_creation_input_tokens: 2000, 
+                cache_read_input_tokens: null 
+              }
             },
-            updated_at: "2024-12-01T10:00:00Z",
-            project: "cache-project",
-            user: "cache-user",
-            machine: "cache-machine",
-            session: "cache-session"
+            timestamp: "2024-12-01T10:00:00Z"
           },
           {
-            id: "msg_cache_2",
-            model: "claude-3-5-sonnet-20241022",
-            role: "assistant" as const,
-            stop_reason: "end_turn",
-            stop_sequence: null,
-            tool_use: [],
-            usage: { 
-              input_tokens: 500, 
-              output_tokens: 200, 
-              cache_creation_input_tokens: null, 
-              cache_read_input_tokens: 1500 
+            type: "message",
+            uuid: "uuid_cache_2",
+            message: {
+              id: "msg_cache_2",
+              model: "claude-3-5-sonnet-20241022",
+              role: "assistant",
+              usage: { 
+                input_tokens: 500, 
+                output_tokens: 200, 
+                cache_creation_input_tokens: null, 
+                cache_read_input_tokens: 1500 
+              }
             },
-            updated_at: "2024-12-01T11:00:00Z",
-            project: "cache-project",
-            user: "cache-user",
-            machine: "cache-machine",
-            session: "cache-session"
+            timestamp: "2024-12-01T11:00:00Z"
           }
         ];
         
-        createTestJsonlFile('claude_usage_cache.jsonl', entries);
+        createTestJsonlFile('claude_usage_cache.jsonl', entries, 'cache-project');
         
         const testConfig = createTestConfig({
           claudeCode: {
@@ -277,14 +287,7 @@ describe('Sync Command BDD Tests', () => {
         });
         
         // Act
-        const cliPath = path.join(process.cwd(), 'dist', 'index.js');
-        execSync(`node ${cliPath} cc sync`, {
-          env: {
-            ...process.env,
-            NODE_CONFIG: JSON.stringify(testConfig)
-          },
-          stdio: 'pipe'
-        });
+        runSync(testConfig);
         
         // Assert
         const prisma = createTestPrismaClient();

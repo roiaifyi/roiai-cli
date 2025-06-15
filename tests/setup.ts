@@ -60,6 +60,7 @@ export async function resetTestDatabase() {
   
   try {
     // Delete all data in reverse order of dependencies
+    await prisma.syncStatus.deleteMany();
     await prisma.message.deleteMany();
     await prisma.session.deleteMany();
     await prisma.project.deleteMany();
@@ -69,4 +70,10 @@ export async function resetTestDatabase() {
   } finally {
     await prisma.$disconnect();
   }
+  
+  // Also clean up test data directory
+  if (fs.existsSync(TEST_DATA_DIR)) {
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  }
+  fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }

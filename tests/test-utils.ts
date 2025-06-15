@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { TEST_DATA_DIR, TEST_CONFIG_PATH, createTestPrismaClient } from './setup';
-import { ClaudeCodeUsageData } from '../src/models/claude-code.model';
+import { TEST_DATA_DIR, TEST_CONFIG_PATH, TEST_DB_PATH, createTestPrismaClient } from './setup';
 
 export { createTestPrismaClient };
 
@@ -18,7 +17,7 @@ export function createTestConfig(overrides: any = {}) {
       batchSize: 100
     },
     database: {
-      dbPath: path.join(TEST_DATA_DIR, 'test.db')
+      path: TEST_DB_PATH
     },
     ...overrides
   };
@@ -45,29 +44,37 @@ export function createTestUserInfo(overrides: any = {}) {
 }
 
 // Create test JSONL file
-export function createTestJsonlFile(filename: string, entries: Partial<ClaudeCodeUsageData>[] = []) {
-  const filePath = path.join(TEST_DATA_DIR, filename);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+export function createTestJsonlFile(filename: string, entries: any[] = [], projectName: string = 'test-project') {
+  // Create the expected directory structure: projects/[project-name]/
+  const projectPath = path.join(TEST_DATA_DIR, 'projects', projectName);
+  
+  // Ensure directories exist
+  fs.mkdirSync(projectPath, { recursive: true });
+  
+  const filePath = path.join(projectPath, filename);
   
   const content = entries.map(entry => {
-    const fullEntry: ClaudeCodeUsageData = {
-      id: entry.id || `msg_${Math.random().toString(36).substr(2, 9)}`,
-      model: entry.model || "claude-3-5-sonnet-20241022",
-      role: entry.role || "assistant",
-      stop_reason: entry.stop_reason || "end_turn",
-      stop_sequence: entry.stop_sequence || null,
-      tool_use: entry.tool_use || [],
-      usage: entry.usage || {
-        cache_creation_input_tokens: null,
-        cache_read_input_tokens: null,
-        input_tokens: 100,
-        output_tokens: 50
+    // If entry is already in JSONL format, use it directly
+    if (entry.type || entry.message) {
+      return JSON.stringify(entry);
+    }
+    
+    // Otherwise, convert old format to JSONL format
+    const fullEntry = {
+      type: "message",
+      uuid: entry.uuid || `uuid_${Math.random().toString(36).substr(2, 9)}`,
+      message: {
+        id: entry.id || `msg_${Math.random().toString(36).substr(2, 9)}`,
+        model: entry.model || "claude-3-5-sonnet-20241022",
+        role: entry.role || "assistant",
+        usage: entry.usage || {
+          cache_creation_input_tokens: null,
+          cache_read_input_tokens: null,
+          input_tokens: 100,
+          output_tokens: 50
+        }
       },
-      updated_at: entry.updated_at || new Date().toISOString(),
-      project: entry.project || "test-project",
-      user: entry.user || "test-user",
-      machine: entry.machine || "test-machine",
-      session: entry.session || "test-session"
+      timestamp: entry.updated_at || entry.timestamp || new Date().toISOString()
     };
     return JSON.stringify(fullEntry);
   }).join('\n');
