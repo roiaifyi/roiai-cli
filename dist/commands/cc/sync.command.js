@@ -146,7 +146,8 @@ exports.syncCommand = new commander_1.Command('sync')
         console.log(`   Total projects: ${chalk_1.default.cyan(stats.projects)}`);
         console.log(`   Total sessions: ${chalk_1.default.cyan(stats.sessions)}`);
         console.log(`   Total messages: ${chalk_1.default.cyan(stats.messages)}`);
-        console.log(`   Total cost: ${chalk_1.default.cyan('$' + stats.totalCost.toFixed(4))}`);
+        console.log(chalk_1.default.gray('   ' + '─'.repeat(30)));
+        console.log(`   ${chalk_1.default.bold('Total cost:')} ${chalk_1.default.bold.green('$' + stats.totalCost.toFixed(4))}`);
         // Show aggregated user stats
         const userStats = await getUserAggregatedStats();
         if (userStats) {
@@ -154,11 +155,12 @@ exports.syncCommand = new commander_1.Command('sync')
             console.log(`   Projects: ${chalk_1.default.cyan(userStats.totalProjects)}`);
             console.log(`   Sessions: ${chalk_1.default.cyan(userStats.totalSessions)}`);
             console.log(`   Messages: ${chalk_1.default.cyan(userStats.totalMessages)}`);
-            console.log(`   Total cost: ${chalk_1.default.cyan('$' + Number(userStats.totalCost).toFixed(4))}`);
             console.log(`   Input tokens: ${chalk_1.default.cyan(userStats.totalInputTokens.toLocaleString())}`);
             console.log(`   Output tokens: ${chalk_1.default.cyan(userStats.totalOutputTokens.toLocaleString())}`);
             console.log(`   Cache creation tokens: ${chalk_1.default.cyan(userStats.totalCacheCreationTokens.toLocaleString())}`);
             console.log(`   Cache read tokens: ${chalk_1.default.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
+            console.log(chalk_1.default.gray('   ' + '─'.repeat(30)));
+            console.log(`   ${chalk_1.default.bold('Total cost:')} ${chalk_1.default.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
         }
         // Check for pending sync items
         const pendingSync = await database_1.prisma.syncStatus.count({

@@ -166,7 +166,8 @@ export const syncCommand = new Command('sync')
       console.log(`   Total projects: ${chalk.cyan(stats.projects)}`);
       console.log(`   Total sessions: ${chalk.cyan(stats.sessions)}`);
       console.log(`   Total messages: ${chalk.cyan(stats.messages)}`);
-      console.log(`   Total cost: ${chalk.cyan('$' + stats.totalCost.toFixed(4))}`);
+      console.log(chalk.gray('   ' + '─'.repeat(30)));
+      console.log(`   ${chalk.bold('Total cost:')} ${chalk.bold.green('$' + stats.totalCost.toFixed(4))}`);
 
       // Show aggregated user stats
       const userStats = await getUserAggregatedStats();
@@ -175,11 +176,12 @@ export const syncCommand = new Command('sync')
         console.log(`   Projects: ${chalk.cyan(userStats.totalProjects)}`);
         console.log(`   Sessions: ${chalk.cyan(userStats.totalSessions)}`);
         console.log(`   Messages: ${chalk.cyan(userStats.totalMessages)}`);
-        console.log(`   Total cost: ${chalk.cyan('$' + Number(userStats.totalCost).toFixed(4))}`);
         console.log(`   Input tokens: ${chalk.cyan(userStats.totalInputTokens.toLocaleString())}`);
         console.log(`   Output tokens: ${chalk.cyan(userStats.totalOutputTokens.toLocaleString())}`);
         console.log(`   Cache creation tokens: ${chalk.cyan(userStats.totalCacheCreationTokens.toLocaleString())}`);
         console.log(`   Cache read tokens: ${chalk.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
+        console.log(chalk.gray('   ' + '─'.repeat(30)));
+        console.log(`   ${chalk.bold('Total cost:')} ${chalk.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
       }
 
       // Check for pending sync items
