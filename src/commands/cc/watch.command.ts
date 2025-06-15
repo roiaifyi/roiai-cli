@@ -33,11 +33,13 @@ export const watchCommand = new Command('watch')
       const watchPath = options.path || configManager.getClaudeCodeConfig().rawDataPath;
       const watchConfig = configManager.getWatchConfig();
       
+      const watchPattern = path.join(watchPath, 'projects', '**/*.jsonl');
       logger.info(`Watching directory: ${chalk.cyan(watchPath)}`);
+      logger.info(`Watch pattern: ${chalk.cyan(watchPattern)}`);
       logger.info('Press Ctrl+C to stop watching\n');
 
       // Set up file watcher - watch for JSONL files in projects subdirectory
-      const watcher = chokidar.watch(path.join(watchPath, 'projects', '**/*.jsonl'), {
+      const watcher = chokidar.watch(watchPattern, {
         ignored: watchConfig.ignored,
         persistent: true,
         usePolling: true,
@@ -45,7 +47,8 @@ export const watchCommand = new Command('watch')
         awaitWriteFinish: {
           stabilityThreshold: 2000,
           pollInterval: 100
-        }
+        },
+        ignoreInitial: true  // Don't fire 'add' events for existing files
       });
 
       // Track processing to avoid duplicates
@@ -88,11 +91,11 @@ export const watchCommand = new Command('watch')
       // Watch events
       watcher
         .on('add', async (filePath) => {
-          logger.debug(`File added: ${filePath}`);
+          logger.info(`File detected (add): ${chalk.yellow(filePath)}`);
           await processFile(filePath);
         })
         .on('change', async (filePath) => {
-          logger.debug(`File changed: ${filePath}`);
+          logger.info(`File detected (change): ${chalk.yellow(filePath)}`);
           await processFile(filePath);
         })
         .on('error', (error) => {
@@ -100,6 +103,8 @@ export const watchCommand = new Command('watch')
         })
         .on('ready', () => {
           logger.success('Initial scan complete. Watching for changes...');
+          const watched = watcher.getWatched();
+          logger.debug(`Watching ${Object.keys(watched).length} directories`);
         });
 
       // Handle graceful shutdown

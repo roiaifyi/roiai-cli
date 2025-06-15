@@ -34,10 +34,12 @@ exports.watchCommand = new commander_1.Command('watch')
         // Get watch path
         const watchPath = options.path || config_1.configManager.getClaudeCodeConfig().rawDataPath;
         const watchConfig = config_1.configManager.getWatchConfig();
+        const watchPattern = path_1.default.join(watchPath, 'projects', '**/*.jsonl');
         logger_1.logger.info(`Watching directory: ${chalk_1.default.cyan(watchPath)}`);
+        logger_1.logger.info(`Watch pattern: ${chalk_1.default.cyan(watchPattern)}`);
         logger_1.logger.info('Press Ctrl+C to stop watching\n');
         // Set up file watcher - watch for JSONL files in projects subdirectory
-        const watcher = chokidar_1.default.watch(path_1.default.join(watchPath, 'projects', '**/*.jsonl'), {
+        const watcher = chokidar_1.default.watch(watchPattern, {
             ignored: watchConfig.ignored,
             persistent: true,
             usePolling: true,
@@ -45,7 +47,8 @@ exports.watchCommand = new commander_1.Command('watch')
             awaitWriteFinish: {
                 stabilityThreshold: 2000,
                 pollInterval: 100
-            }
+            },
+            ignoreInitial: true // Don't fire 'add' events for existing files
         });
         // Track processing to avoid duplicates
         const processingQueue = new Set();
@@ -79,11 +82,11 @@ exports.watchCommand = new commander_1.Command('watch')
         // Watch events
         watcher
             .on('add', async (filePath) => {
-            logger_1.logger.debug(`File added: ${filePath}`);
+            logger_1.logger.info(`File detected (add): ${chalk_1.default.yellow(filePath)}`);
             await processFile(filePath);
         })
             .on('change', async (filePath) => {
-            logger_1.logger.debug(`File changed: ${filePath}`);
+            logger_1.logger.info(`File detected (change): ${chalk_1.default.yellow(filePath)}`);
             await processFile(filePath);
         })
             .on('error', (error) => {
@@ -91,6 +94,8 @@ exports.watchCommand = new commander_1.Command('watch')
         })
             .on('ready', () => {
             logger_1.logger.success('Initial scan complete. Watching for changes...');
+            const watched = watcher.getWatched();
+            logger_1.logger.debug(`Watching ${Object.keys(watched).length} directories`);
         });
         // Handle graceful shutdown
         process.on('SIGINT', async () => {
