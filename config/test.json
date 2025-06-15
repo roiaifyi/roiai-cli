@@ -7,7 +7,8 @@
   },
   "claudeCode": {
     "rawDataPath": "./test_claude_raw_data",
-    "pricingDataPath": "./test_pricing-data.json",
+    "pricingUrl": "https://raw.githubusercontent.com/alansparrow/ai-models-pricing/main/claude/pricing-data.json",
+    "pricingCacheTimeout": 0,
     "cacheDurationDefault": 5,
     "batchSize": 100
   },

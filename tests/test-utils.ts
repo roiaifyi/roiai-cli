@@ -12,7 +12,8 @@ export function createTestConfig(overrides: any = {}) {
     },
     claudeCode: {
       rawDataPath: TEST_DATA_DIR,
-      pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+      pricingUrl: 'https://example.com/test-pricing.json',
+      pricingCacheTimeout: 0, // No cache for tests
       cacheDurationDefault: 5,
       batchSize: 100
     },
@@ -83,12 +84,25 @@ export function createTestJsonlFile(filename: string, entries: any[] = [], proje
   return filePath;
 }
 
-// Create test pricing data
+// Create test pricing data (for mocking fetch responses)
 export function createTestPricingData() {
   const pricingData = {
+    metadata: {
+      id: "test-pricing",
+      provider: "Anthropic",
+      providerUrl: "https://www.anthropic.com",
+      apiEndpoint: "https://api.anthropic.com",
+      source: "test",
+      lastUpdated: new Date().toISOString(),
+      version: "1.0.0",
+      description: "Test pricing data",
+      currency: "USD",
+      unit: "per token",
+      notes: "Test data"
+    },
     models: [
       {
-        id: "claude-3-5-sonnet-20241022",
+        modelId: "claude-3-5-sonnet-20241022",
         name: "Claude 3.5 Sonnet",
         input: 0.000003,
         output: 0.000015,
@@ -97,15 +111,12 @@ export function createTestPricingData() {
           "1h": { write: 0.00000375, read: 0.0000003 }
         },
         originalRates: {
-          inputPerMillion: 3,
-          outputPerMillion: 15
+          input: "$3/MTok",
+          output: "$15/MTok"
         }
       }
     ]
   };
-  
-  const pricingPath = path.join(TEST_DATA_DIR, 'pricing-data.json');
-  fs.writeFileSync(pricingPath, JSON.stringify(pricingData, null, 2));
   
   return pricingData;
 }

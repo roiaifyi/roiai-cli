@@ -14,8 +14,11 @@
     "// rawDataPath_example3": "C:\\Users\\YourName\\AppData\\Local\\Claude\\claude_raw_data",
     "rawDataPath": "../claude_raw_data",
     
-    "// pricingDataPath": "Path to the pricing data JSON file",
-    "pricingDataPath": "../pricing-data.json",
+    "// pricingUrl": "URL to fetch pricing data from",
+    "pricingUrl": "https://raw.githubusercontent.com/alansparrow/ai-models-pricing/main/claude/pricing-data.json",
+    
+    "// pricingCacheTimeout": "How long to cache pricing data in milliseconds (3600000 = 1 hour, 0 = no cache)",
+    "pricingCacheTimeout": 3600000,
     
     "// cacheDurationDefault": "Cache duration in minutes (5 or 60)",
     "cacheDurationDefault": 5

@@ -47,7 +47,8 @@ The main configuration file controls all aspects of the CLI. Create this file by
   },
   "claudeCode": {
     "rawDataPath": "../claude_raw_data",     // Path to Claude raw data
-    "pricingDataPath": "../pricing-data.json", // Path to pricing data
+    "pricingUrl": "https://raw.githubusercontent.com/alansparrow/ai-models-pricing/main/claude/pricing-data.json",
+    "pricingCacheTimeout": 3600000,          // Cache duration in ms (1 hour, 0 = no cache)
     "cacheDurationDefault": 5,               // Cache duration (5 or 60 minutes)
     "batchSize": 1000                        // Processing batch size
   },
@@ -79,6 +80,25 @@ The user info file identifies you and your machine. Create it at the path specif
 ```
 
 If this file doesn't exist, the CLI will generate default values based on your system.
+
+### 3. Pricing Data Configuration
+
+The CLI fetches pricing data from a remote repository to ensure you always have up-to-date pricing:
+
+```json
+{
+  "claudeCode": {
+    "pricingUrl": "https://raw.githubusercontent.com/alansparrow/ai-models-pricing/main/claude/pricing-data.json",
+    "pricingCacheTimeout": 3600000  // 1 hour in milliseconds
+  }
+}
+```
+
+- **pricingUrl**: URL to fetch the latest pricing data
+- **pricingCacheTimeout**: How long to cache the data (milliseconds)
+  - `3600000` = 1 hour (default)
+  - `0` = No cache, fetch every time
+  - `86400000` = 24 hours
 
 ## Common Path Configurations
 

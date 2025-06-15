@@ -27,22 +27,36 @@ export interface JSONLEntry {
 }
 
 export interface PricingData {
-  models: Array<{
+  metadata?: {
     id: string;
+    provider: string;
+    providerUrl: string;
+    apiEndpoint: string;
+    source: string;
+    lastUpdated: string;
+    version: string;
+    description: string;
+    currency: string;
+    unit: string;
+    notes: string;
+  };
+  models: Array<{
+    modelId: string;
     name: string;
     input: number;
     output: number;
-    originalRates: {
-      inputPerMillion: number;
-      outputPerMillion: number;
+    cache?: {
+      '5m': { write: number; read: number };
+      '1h': { write: number; read: number };
+    };
+    originalRates?: {
+      input: string;
+      output: string;
+      cache5mWrite?: string;
+      cache1hWrite?: string;
+      cacheRead?: string;
     };
   }>;
-  cache: {
-    durations: {
-      '5min': { write: number; read: number };
-      '1hour': { write: number; read: number };
-    };
-  };
 }
 
 export interface TokenUsage {

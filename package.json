@@ -57,6 +57,7 @@
     "@types/config": "^3.3.5",
     "@types/jest": "^29.5.14",
     "@types/node": "^24.0.1",
+    "@types/node-fetch": "^2.6.12",
     "jest": "^30.0.0",
     "nodemon": "^3.1.10",
     "ts-jest": "^29.4.0",
@@ -70,6 +71,7 @@
     "chokidar": "^4.0.3",
     "commander": "^14.0.0",
     "config": "^4.0.0",
+    "node-fetch": "^2.7.0",
     "ora": "^5.4.1",
     "prisma": "^6.9.0"
   }

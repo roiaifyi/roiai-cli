@@ -5,9 +5,8 @@
 
   "claudeCode": {
     "rawDataPath": "/Users/baotrungtn/.claude",
-
-    "pricingDataPath": "./pricing-data.json",
-
+    "pricingUrl": "https://raw.githubusercontent.com/alansparrow/ai-models-pricing/main/claude/pricing-data.json",
+    "pricingCacheTimeout": 3600000,
     "cacheDurationDefault": 5
   },
 

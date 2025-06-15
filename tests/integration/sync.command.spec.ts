@@ -6,7 +6,6 @@ import {
   createTestConfig, 
   createTestJsonlFile, 
   createTestUserInfo,
-  createTestPricingData,
   countDatabaseRecords,
   createTestPrismaClient
 } from '../test-utils';
@@ -36,7 +35,6 @@ describe('Sync Command BDD Tests', () => {
     await resetTestDatabase();
     createTestConfig();
     createTestUserInfo();
-    createTestPricingData();
     
     // Set up environment
     process.env.NODE_ENV = 'test';
@@ -95,7 +93,8 @@ describe('Sync Command BDD Tests', () => {
         const testConfig = createTestConfig({
           claudeCode: {
             rawDataPath: TEST_DATA_DIR,
-            pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+            pricingUrl: 'https://example.com/test-pricing.json',
+            pricingCacheTimeout: 0,
             cacheDurationDefault: 5,
             batchSize: 100
           }
@@ -161,7 +160,8 @@ describe('Sync Command BDD Tests', () => {
         const testConfig = createTestConfig({
           claudeCode: {
             rawDataPath: TEST_DATA_DIR,
-            pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+            pricingUrl: 'https://example.com/test-pricing.json',
+            pricingCacheTimeout: 0,
             cacheDurationDefault: 5,
             batchSize: 100
           }
@@ -224,7 +224,8 @@ describe('Sync Command BDD Tests', () => {
         const testConfig = createTestConfig({
           claudeCode: {
             rawDataPath: TEST_DATA_DIR,
-            pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+            pricingUrl: 'https://example.com/test-pricing.json',
+            pricingCacheTimeout: 0,
             cacheDurationDefault: 5,
             batchSize: 100
           }
@@ -282,7 +283,8 @@ describe('Sync Command BDD Tests', () => {
         const testConfig = createTestConfig({
           claudeCode: {
             rawDataPath: TEST_DATA_DIR,
-            pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+            pricingUrl: 'https://example.com/test-pricing.json',
+            pricingCacheTimeout: 0,
             cacheDurationDefault: 5,
             batchSize: 100
           }

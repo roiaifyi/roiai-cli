@@ -1,9 +1,18 @@
+import { PricingData } from "../models/types";
+export interface PricingCache {
+    data: PricingData | null;
+    lastFetchTime: number;
+}
 export declare class PricingService {
-    private pricingData;
+    private cache;
     private modelMapping;
+    private fetchPromise;
     constructor();
     private initializeModelMapping;
     loadPricingData(): Promise<void>;
+    private isCacheValid;
+    private fetchFromUrl;
+    private normalizePricingData;
     private getDefaultPricing;
     getModelPricing(modelId: string): any;
     private formatPricingResponse;
@@ -24,5 +33,8 @@ export declare class PricingService {
         };
     };
     isSyntheticModel(modelId: string): boolean;
+    getPricingMetadata(): any;
+    clearCache(): void;
+    getCache(): PricingCache;
 }
 //# sourceMappingURL=pricing.service.d.ts.map

@@ -18,16 +18,17 @@ class ConfigManager {
         if (!path_1.default.isAbsolute(this.config.claudeCode.rawDataPath)) {
             this.config.claudeCode.rawDataPath = path_1.default.resolve(process.cwd(), this.config.claudeCode.rawDataPath);
         }
-        if (!path_1.default.isAbsolute(this.config.claudeCode.pricingDataPath)) {
-            this.config.claudeCode.pricingDataPath = path_1.default.resolve(process.cwd(), this.config.claudeCode.pricingDataPath);
-        }
         // Check if Claude raw data path exists
         if (!fs_1.default.existsSync(this.config.claudeCode.rawDataPath)) {
             throw new Error(`Claude raw data path does not exist: ${this.config.claudeCode.rawDataPath}`);
         }
-        // Check if pricing data exists
-        if (!fs_1.default.existsSync(this.config.claudeCode.pricingDataPath)) {
-            console.warn(`Pricing data file not found: ${this.config.claudeCode.pricingDataPath}`);
+        // Validate pricing URL
+        if (!this.config.claudeCode.pricingUrl) {
+            throw new Error('Pricing URL is required in configuration');
+        }
+        // Validate cache timeout
+        if (this.config.claudeCode.pricingCacheTimeout < 0) {
+            throw new Error('Pricing cache timeout must be >= 0');
         }
     }
     get() {

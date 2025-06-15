@@ -7,7 +7,8 @@ export interface Config {
     };
     claudeCode: {
         rawDataPath: string;
-        pricingDataPath: string;
+        pricingUrl: string;
+        pricingCacheTimeout: number;
         cacheDurationDefault: number;
         batchSize: number;
     };
@@ -32,7 +33,8 @@ declare class ConfigManager {
     get(): Config;
     getClaudeCodeConfig(): {
         rawDataPath: string;
-        pricingDataPath: string;
+        pricingUrl: string;
+        pricingCacheTimeout: number;
         cacheDurationDefault: number;
         batchSize: number;
     };
