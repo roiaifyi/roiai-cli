@@ -137,6 +137,28 @@ export const syncCommand = new Command('sync')
         }
       }
 
+      // Show token usage by model for processed messages
+      if (result.tokenUsageByModel.size > 0) {
+        console.log('\n' + chalk.bold('🤖 Token Usage by Model (Processed Messages):'));
+        
+        // Convert Map to array and sort by model name
+        const sortedUsage = Array.from(result.tokenUsageByModel.values()).sort((a, b) => 
+          a.model.localeCompare(b.model)
+        );
+        
+        for (const usage of sortedUsage) {
+          console.log(`\n   ${chalk.cyan(usage.model)}:`);
+          console.log(`     Input tokens: ${chalk.green(usage.inputTokens.toLocaleString())}`);
+          console.log(`     Output tokens: ${chalk.green(usage.outputTokens.toLocaleString())}`);
+          console.log(`     Cache creation tokens: ${chalk.green(usage.cacheCreationTokens.toLocaleString())}`);
+          console.log(`     Cache read tokens: ${chalk.green(usage.cacheReadTokens.toLocaleString())}`);
+          
+          const totalTokens = usage.inputTokens + usage.outputTokens + 
+                            usage.cacheCreationTokens + usage.cacheReadTokens;
+          console.log(`     Total tokens: ${chalk.yellow(totalTokens.toLocaleString())}`);
+        }
+      }
+
       // Show database stats
       const stats = await getDatabaseStats();
       console.log('\n' + chalk.bold('💾 Database Stats:'));

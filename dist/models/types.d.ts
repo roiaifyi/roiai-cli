@@ -56,11 +56,19 @@ export interface TokenUsage {
     cacheReadTokens: number;
     totalCost: number;
 }
+export interface TokenUsageByModel {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+}
 export interface ProcessingResult {
     projectsProcessed: number;
     sessionsProcessed: number;
     messagesProcessed: number;
     errors: string[];
+    tokenUsageByModel: Map<string, TokenUsageByModel>;
 }
 export interface ProcessingProgress {
     totalProjects: number;

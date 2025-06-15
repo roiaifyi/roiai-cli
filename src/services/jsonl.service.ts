@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import readline from "readline";
 import crypto from "crypto";
-import { JSONLEntry, ProcessingResult, ProcessingProgress } from "../models/types";
+import { JSONLEntry, ProcessingResult, ProcessingProgress, TokenUsageByModel } from "../models/types";
 import { prisma } from "../database";
 import { PricingService } from "./pricing.service";
 import { UserService } from "./user.service";
@@ -46,6 +46,7 @@ export class JSONLService {
       sessionsProcessed: 0,
       messagesProcessed: 0,
       errors: [],
+      tokenUsageByModel: new Map(),
     };
 
     // Reset incremental changes tracking
@@ -122,6 +123,9 @@ export class JSONLService {
             result.projectsProcessed++;
           }
           
+          // Merge token usage by model
+          this.mergeTokenUsage(result.tokenUsageByModel, projectResult.tokenUsageByModel);
+          
           // Update processed files count
           const files = await fs.promises.readdir(projectPath);
           processedFiles += files.filter(f => f.endsWith(".jsonl")).length;
@@ -178,6 +182,7 @@ export class JSONLService {
       sessionsProcessed: 0,
       messagesProcessed: 0,
       errors: [],
+      tokenUsageByModel: new Map(),
     };
 
     // Extract project name from path
@@ -213,6 +218,9 @@ export class JSONLService {
       result.sessionsProcessed += fileResult.sessionsProcessed;
       result.messagesProcessed += fileResult.messagesProcessed;
       result.errors.push(...fileResult.errors);
+      
+      // Merge token usage by model
+      this.mergeTokenUsage(result.tokenUsageByModel, fileResult.tokenUsageByModel);
       
       fileIndex++;
     }
@@ -283,6 +291,7 @@ export class JSONLService {
       sessionsProcessed: 0,
       messagesProcessed: 0,
       errors: [],
+      tokenUsageByModel: new Map(),
     };
 
     // Extract session ID from filename
@@ -411,7 +420,7 @@ export class JSONLService {
         processing.add(entry.uuid);
 
         // Process this message
-        await this.processMessage(entry, projectId);
+        await this.processMessage(entry, projectId, result.tokenUsageByModel);
         processed.add(entry.uuid);
         processing.delete(entry.uuid);
         result.messagesProcessed++;
@@ -494,7 +503,7 @@ export class JSONLService {
   //   return lineCount;
   // }
 
-  private async processMessage(entry: JSONLEntry, projectId: string) {
+  private async processMessage(entry: JSONLEntry, projectId: string, tokenUsageByModel: Map<string, TokenUsageByModel>) {
     if (!entry.message || !entry.sessionId || !entry.uuid) return;
 
     const userId = this.userService.getUserId();
@@ -584,6 +593,26 @@ export class JSONLService {
       },
     });
 
+    // Track token usage for this sync
+    if (entry.message.model) {
+      const model = entry.message.model;
+      const existing = tokenUsageByModel.get(model);
+      if (existing) {
+        existing.inputTokens += inputTokens;
+        existing.outputTokens += outputTokens;
+        existing.cacheCreationTokens += cacheCreationTokens;
+        existing.cacheReadTokens += cacheReadTokens;
+      } else {
+        tokenUsageByModel.set(model, {
+          model,
+          inputTokens,
+          outputTokens,
+          cacheCreationTokens,
+          cacheReadTokens,
+        });
+      }
+    }
+
     // Update aggregates incrementally (only if using incremental aggregation)
     if (this.useIncrementalAggregation) {
       await this.incrementalAggregation.onMessageCreated({
@@ -614,6 +643,29 @@ export class JSONLService {
         operation: "INSERT",
       },
       update: {},
+    });
+  }
+
+  private mergeTokenUsage(
+    target: Map<string, TokenUsageByModel>,
+    source: Map<string, TokenUsageByModel>
+  ): void {
+    source.forEach((usage, model) => {
+      const existing = target.get(model);
+      if (existing) {
+        existing.inputTokens += usage.inputTokens;
+        existing.outputTokens += usage.outputTokens;
+        existing.cacheCreationTokens += usage.cacheCreationTokens;
+        existing.cacheReadTokens += usage.cacheReadTokens;
+      } else {
+        target.set(model, {
+          model,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          cacheCreationTokens: usage.cacheCreationTokens,
+          cacheReadTokens: usage.cacheReadTokens,
+        });
+      }
     });
   }
 }

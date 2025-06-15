@@ -39,6 +39,7 @@ class JSONLService {
             sessionsProcessed: 0,
             messagesProcessed: 0,
             errors: [],
+            tokenUsageByModel: new Map(),
         };
         // Reset incremental changes tracking
         this.incrementalChanges = {
@@ -96,6 +97,8 @@ class JSONLService {
                     if (projectResult.messagesProcessed > 0 || projectResult.sessionsProcessed > 0) {
                         result.projectsProcessed++;
                     }
+                    // Merge token usage by model
+                    this.mergeTokenUsage(result.tokenUsageByModel, projectResult.tokenUsageByModel);
                     // Update processed files count
                     const files = await fs_1.default.promises.readdir(projectPath);
                     processedFiles += files.filter(f => f.endsWith(".jsonl")).length;
@@ -142,6 +145,7 @@ class JSONLService {
             sessionsProcessed: 0,
             messagesProcessed: 0,
             errors: [],
+            tokenUsageByModel: new Map(),
         };
         // Extract project name from path
         const projectName = path_1.default
@@ -171,6 +175,8 @@ class JSONLService {
             result.sessionsProcessed += fileResult.sessionsProcessed;
             result.messagesProcessed += fileResult.messagesProcessed;
             result.errors.push(...fileResult.errors);
+            // Merge token usage by model
+            this.mergeTokenUsage(result.tokenUsageByModel, fileResult.tokenUsageByModel);
             fileIndex++;
         }
         return result;
@@ -230,6 +236,7 @@ class JSONLService {
             sessionsProcessed: 0,
             messagesProcessed: 0,
             errors: [],
+            tokenUsageByModel: new Map(),
         };
         // Extract session ID from filename
         const sessionId = path_1.default.basename(filePath, ".jsonl");
@@ -340,7 +347,7 @@ class JSONLService {
                 }
                 processing.add(entry.uuid);
                 // Process this message
-                await this.processMessage(entry, projectId);
+                await this.processMessage(entry, projectId, result.tokenUsageByModel);
                 processed.add(entry.uuid);
                 processing.delete(entry.uuid);
                 result.messagesProcessed++;
@@ -413,7 +420,7 @@ class JSONLService {
     //   }
     //   return lineCount;
     // }
-    async processMessage(entry, projectId) {
+    async processMessage(entry, projectId, tokenUsageByModel) {
         if (!entry.message || !entry.sessionId || !entry.uuid)
             return;
         const userId = this.userService.getUserId();
@@ -484,6 +491,26 @@ class JSONLService {
                 messageCost,
             },
         });
+        // Track token usage for this sync
+        if (entry.message.model) {
+            const model = entry.message.model;
+            const existing = tokenUsageByModel.get(model);
+            if (existing) {
+                existing.inputTokens += inputTokens;
+                existing.outputTokens += outputTokens;
+                existing.cacheCreationTokens += cacheCreationTokens;
+                existing.cacheReadTokens += cacheReadTokens;
+            }
+            else {
+                tokenUsageByModel.set(model, {
+                    model,
+                    inputTokens,
+                    outputTokens,
+                    cacheCreationTokens,
+                    cacheReadTokens,
+                });
+            }
+        }
         // Update aggregates incrementally (only if using incremental aggregation)
         if (this.useIncrementalAggregation) {
             await this.incrementalAggregation.onMessageCreated({
@@ -513,6 +540,26 @@ class JSONLService {
                 operation: "INSERT",
             },
             update: {},
+        });
+    }
+    mergeTokenUsage(target, source) {
+        source.forEach((usage, model) => {
+            const existing = target.get(model);
+            if (existing) {
+                existing.inputTokens += usage.inputTokens;
+                existing.outputTokens += usage.outputTokens;
+                existing.cacheCreationTokens += usage.cacheCreationTokens;
+                existing.cacheReadTokens += usage.cacheReadTokens;
+            }
+            else {
+                target.set(model, {
+                    model,
+                    inputTokens: usage.inputTokens,
+                    outputTokens: usage.outputTokens,
+                    cacheCreationTokens: usage.cacheCreationTokens,
+                    cacheReadTokens: usage.cacheReadTokens,
+                });
+            }
         });
     }
 }

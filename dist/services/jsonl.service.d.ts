@@ -26,5 +26,6 @@ export declare class JSONLService {
     private checkFileStatus;
     private calculateFileChecksum;
     private processMessage;
+    private mergeTokenUsage;
 }
 //# sourceMappingURL=jsonl.service.d.ts.map

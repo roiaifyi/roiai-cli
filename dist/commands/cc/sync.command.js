@@ -123,6 +123,22 @@ exports.syncCommand = new commander_1.Command('sync')
                 result.errors.slice(0, 10).forEach(err => console.log(chalk_1.default.red(`     - ${err}`)));
             }
         }
+        // Show token usage by model for processed messages
+        if (result.tokenUsageByModel.size > 0) {
+            console.log('\n' + chalk_1.default.bold('🤖 Token Usage by Model (Processed Messages):'));
+            // Convert Map to array and sort by model name
+            const sortedUsage = Array.from(result.tokenUsageByModel.values()).sort((a, b) => a.model.localeCompare(b.model));
+            for (const usage of sortedUsage) {
+                console.log(`\n   ${chalk_1.default.cyan(usage.model)}:`);
+                console.log(`     Input tokens: ${chalk_1.default.green(usage.inputTokens.toLocaleString())}`);
+                console.log(`     Output tokens: ${chalk_1.default.green(usage.outputTokens.toLocaleString())}`);
+                console.log(`     Cache creation tokens: ${chalk_1.default.green(usage.cacheCreationTokens.toLocaleString())}`);
+                console.log(`     Cache read tokens: ${chalk_1.default.green(usage.cacheReadTokens.toLocaleString())}`);
+                const totalTokens = usage.inputTokens + usage.outputTokens +
+                    usage.cacheCreationTokens + usage.cacheReadTokens;
+                console.log(`     Total tokens: ${chalk_1.default.yellow(totalTokens.toLocaleString())}`);
+            }
+        }
         // Show database stats
         const stats = await getDatabaseStats();
         console.log('\n' + chalk_1.default.bold('💾 Database Stats:'));
