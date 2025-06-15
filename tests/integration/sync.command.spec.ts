@@ -12,17 +12,15 @@ import {
 } from '../test-utils';
 
 describe('Sync Command BDD Tests', () => {
-  let testConfig: any;
-  
   beforeEach(async () => {
     await resetTestDatabase();
-    testConfig = createTestConfig();
+    createTestConfig();
     createTestUserInfo();
     createTestPricingData();
     
     // Set up environment
-    process.env.NODE_CONFIG_DIR = path.dirname(TEST_DATA_DIR);
-    process.env.NODE_CONFIG = JSON.stringify(testConfig);
+    process.env.NODE_ENV = 'test';
+    process.env.NODE_CONFIG_DIR = path.join(process.cwd(), 'config');
     process.env.DATABASE_URL = `file:${TEST_DB_PATH}`;
   });
   
@@ -59,10 +57,23 @@ describe('Sync Command BDD Tests', () => {
         
         createTestJsonlFile('claude_usage_2024-12-01.jsonl', jsonlEntries);
         
+        // Update config to point to test data directory
+        const testConfig = createTestConfig({
+          claudeCode: {
+            rawDataPath: TEST_DATA_DIR,
+            pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+            cacheDurationDefault: 5,
+            batchSize: 100
+          }
+        });
+        
         // Act
         const cliPath = path.join(process.cwd(), 'dist', 'index.js');
         execSync(`node ${cliPath} cc sync`, {
-          env: process.env,
+          env: {
+            ...process.env,
+            NODE_CONFIG: JSON.stringify(testConfig)
+          },
           stdio: 'pipe'
         });
         
@@ -110,11 +121,23 @@ describe('Sync Command BDD Tests', () => {
         
         createTestJsonlFile('claude_usage_2024-12-01.jsonl', file1Entries);
         
+        const testConfig = createTestConfig({
+          claudeCode: {
+            rawDataPath: TEST_DATA_DIR,
+            pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+            cacheDurationDefault: 5,
+            batchSize: 100
+          }
+        });
+        
         const cliPath = path.join(process.cwd(), 'dist', 'index.js');
         
         // Act - First sync
         execSync(`node ${cliPath} cc sync`, {
-          env: process.env,
+          env: {
+            ...process.env,
+            NODE_CONFIG: JSON.stringify(testConfig)
+          },
           stdio: 'pipe'
         });
         
@@ -123,7 +146,10 @@ describe('Sync Command BDD Tests', () => {
         
         // Act - Second sync
         execSync(`node ${cliPath} cc sync`, {
-          env: process.env,
+          env: {
+            ...process.env,
+            NODE_CONFIG: JSON.stringify(testConfig)
+          },
           stdio: 'pipe'
         });
         
@@ -170,10 +196,22 @@ describe('Sync Command BDD Tests', () => {
         
         fs.writeFileSync(jsonlPath, content);
         
+        const testConfig = createTestConfig({
+          claudeCode: {
+            rawDataPath: TEST_DATA_DIR,
+            pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+            cacheDurationDefault: 5,
+            batchSize: 100
+          }
+        });
+        
         // Act
         const cliPath = path.join(process.cwd(), 'dist', 'index.js');
         execSync(`node ${cliPath} cc sync`, {
-          env: process.env,
+          env: {
+            ...process.env,
+            NODE_CONFIG: JSON.stringify(testConfig)
+          },
           stdio: 'pipe'
         });
         
@@ -189,34 +227,62 @@ describe('Sync Command BDD Tests', () => {
         const entries = [
           {
             id: "msg_cache_1",
+            model: "claude-3-5-sonnet-20241022",
             role: "assistant" as const,
+            stop_reason: "end_turn",
+            stop_sequence: null,
+            tool_use: [],
             usage: { 
               input_tokens: 1000, 
               output_tokens: 500, 
               cache_creation_input_tokens: 2000, 
               cache_read_input_tokens: null 
             },
-            updated_at: "2024-12-01T10:00:00Z"
+            updated_at: "2024-12-01T10:00:00Z",
+            project: "cache-project",
+            user: "cache-user",
+            machine: "cache-machine",
+            session: "cache-session"
           },
           {
             id: "msg_cache_2",
+            model: "claude-3-5-sonnet-20241022",
             role: "assistant" as const,
+            stop_reason: "end_turn",
+            stop_sequence: null,
+            tool_use: [],
             usage: { 
               input_tokens: 500, 
               output_tokens: 200, 
               cache_creation_input_tokens: null, 
               cache_read_input_tokens: 1500 
             },
-            updated_at: "2024-12-01T11:00:00Z"
+            updated_at: "2024-12-01T11:00:00Z",
+            project: "cache-project",
+            user: "cache-user",
+            machine: "cache-machine",
+            session: "cache-session"
           }
         ];
         
         createTestJsonlFile('claude_usage_cache.jsonl', entries);
         
+        const testConfig = createTestConfig({
+          claudeCode: {
+            rawDataPath: TEST_DATA_DIR,
+            pricingDataPath: path.join(TEST_DATA_DIR, 'pricing-data.json'),
+            cacheDurationDefault: 5,
+            batchSize: 100
+          }
+        });
+        
         // Act
         const cliPath = path.join(process.cwd(), 'dist', 'index.js');
         execSync(`node ${cliPath} cc sync`, {
-          env: process.env,
+          env: {
+            ...process.env,
+            NODE_CONFIG: JSON.stringify(testConfig)
+          },
           stdio: 'pipe'
         });
         
@@ -226,10 +292,10 @@ describe('Sync Command BDD Tests', () => {
           orderBy: { timestamp: 'asc' }
         });
         
-        expect(messages[0].cacheCreationInputTokens).toBe(2000);
-        expect(messages[0].cacheReadInputTokens).toBeNull();
-        expect(messages[1].cacheCreationInputTokens).toBeNull();
-        expect(messages[1].cacheReadInputTokens).toBe(1500);
+        expect(messages[0].cacheCreationTokens).toBe(2000);
+        expect(messages[0].cacheReadTokens).toBe(0);
+        expect(messages[1].cacheCreationTokens).toBe(0);
+        expect(messages[1].cacheReadTokens).toBe(1500);
         
         await prisma.$disconnect();
       });

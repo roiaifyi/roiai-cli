@@ -12,16 +12,16 @@ beforeAll(async () => {
   // Create test directories
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   
+  // Remove existing test database if it exists
+  if (fs.existsSync(TEST_DB_PATH)) {
+    fs.unlinkSync(TEST_DB_PATH);
+  }
+  
   // Set up test database
   process.env.DATABASE_URL = `file:${TEST_DB_PATH}`;
   
-  // Run migrations on test database
-  execSync('npx prisma migrate deploy', {
-    env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` }
-  });
-  
-  // Generate Prisma client for test database
-  execSync('npx prisma generate', {
+  // Create the database schema using push instead of migrate
+  execSync('npx prisma db push --force-reset --skip-generate', {
     env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` }
   });
 });

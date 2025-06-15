@@ -109,7 +109,7 @@ export class PricingService {
 
   getModelPricing(modelId: string): any {
     if (!this.pricingData) {
-      throw new Error("Pricing data not loaded");
+      this.pricingData = this.getDefaultPricing();
     }
 
     // Check if it's a mapped model

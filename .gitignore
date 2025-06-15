@@ -7,3 +7,5 @@ pricing-data.json
 coverage/
 .DS_Store
 *.log
+.env
+.env.local

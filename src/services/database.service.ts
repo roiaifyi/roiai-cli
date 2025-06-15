@@ -1,5 +1,4 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import * as crypto from 'crypto';
 
 export class DatabaseService {
   constructor(private prisma: PrismaClient) {}

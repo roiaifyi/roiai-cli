@@ -63,7 +63,7 @@ export const syncCommand = new Command('sync')
       if (needsFullRecalc) {
         // Full recalculation needed for initial sync or force flag
         spinner.start('Recalculating aggregates...');
-        const aggregationService = new AggregationService();
+        const aggregationService = new AggregationService(prisma);
         await aggregationService.recalculateAllAggregates();
         spinner.succeed('Aggregates recalculated');
       } else {

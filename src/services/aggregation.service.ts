@@ -182,7 +182,7 @@ export class AggregationService {
   async getUsageByProject() {
     return await this.prisma.project.findMany({
       select: {
-        name: true,
+        projectName: true,
         totalMessages: true,
         totalCost: true,
         totalInputTokens: true,
@@ -192,7 +192,7 @@ export class AggregationService {
       },
       orderBy: { totalCost: 'desc' }
     }).then(projects => projects.map(p => ({
-      projectName: p.name,
+      projectName: p.projectName,
       messageCount: p.totalMessages,
       totalCost: p.totalCost.toNumber(),
       inputTokens: p.totalInputTokens,
@@ -205,7 +205,7 @@ export class AggregationService {
   async getUsageByUser() {
     return await this.prisma.user.findMany({
       select: {
-        name: true,
+        email: true,
         totalMessages: true,
         totalCost: true,
         totalInputTokens: true,
@@ -215,7 +215,7 @@ export class AggregationService {
       },
       orderBy: { totalCost: 'desc' }
     }).then(users => users.map(u => ({
-      userName: u.name,
+      userName: u.email || 'Unknown',
       messageCount: u.totalMessages,
       totalCost: u.totalCost.toNumber(),
       inputTokens: u.totalInputTokens,
@@ -247,7 +247,7 @@ export class AggregationService {
     });
 
     return messages.map(day => ({
-      date: day.timestamp.toISOString().split('T')[0],
+      date: day.timestamp ? day.timestamp.toISOString().split('T')[0] : 'Unknown',
       messageCount: day._count.uuid,
       inputTokens: day._sum.inputTokens || 0,
       outputTokens: day._sum.outputTokens || 0,

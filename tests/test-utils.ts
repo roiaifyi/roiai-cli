@@ -30,6 +30,8 @@ export function createTestConfig(overrides: any = {}) {
 // Create test user info
 export function createTestUserInfo(overrides: any = {}) {
   const userInfo = {
+    userId: "test-user-123",
+    clientMachineId: "test-machine-123",
     email: "test@example.com",
     name: "Test User",
     ...overrides
