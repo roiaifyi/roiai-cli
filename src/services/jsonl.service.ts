@@ -42,9 +42,9 @@ export class JSONLService {
 
   async processDirectory(directoryPath: string): Promise<ProcessingResult> {
     const result: ProcessingResult = {
+      projectsProcessed: 0,
       sessionsProcessed: 0,
       messagesProcessed: 0,
-      duplicatesSkipped: 0,
       errors: [],
     };
 
@@ -117,8 +117,10 @@ export class JSONLService {
           
           result.sessionsProcessed += projectResult.sessionsProcessed;
           result.messagesProcessed += projectResult.messagesProcessed;
-          result.duplicatesSkipped += projectResult.duplicatesSkipped;
           result.errors.push(...projectResult.errors);
+          if (projectResult.messagesProcessed > 0 || projectResult.sessionsProcessed > 0) {
+            result.projectsProcessed++;
+          }
           
           // Update processed files count
           const files = await fs.promises.readdir(projectPath);
@@ -172,9 +174,9 @@ export class JSONLService {
     currentProjectIndex?: number
   ): Promise<ProcessingResult> {
     const result: ProcessingResult = {
+      projectsProcessed: 0,
       sessionsProcessed: 0,
       messagesProcessed: 0,
-      duplicatesSkipped: 0,
       errors: [],
     };
 
@@ -210,7 +212,6 @@ export class JSONLService {
       const fileResult = await this.processJSONLFile(filePath, project.id, projectName);
       result.sessionsProcessed += fileResult.sessionsProcessed;
       result.messagesProcessed += fileResult.messagesProcessed;
-      result.duplicatesSkipped += fileResult.duplicatesSkipped;
       result.errors.push(...fileResult.errors);
       
       fileIndex++;
@@ -278,9 +279,9 @@ export class JSONLService {
     _projectName?: string
   ): Promise<ProcessingResult> {
     const result: ProcessingResult = {
+      projectsProcessed: 0,
       sessionsProcessed: 0,
       messagesProcessed: 0,
-      duplicatesSkipped: 0,
       errors: [],
     };
 
@@ -382,7 +383,7 @@ export class JSONLService {
 
             // Check global deduplication
             if (messageId && this.globalMessageIds.has(messageId)) {
-              result.duplicatesSkipped++;
+              // Skip duplicate message
             } else if (messageId) {
               this.globalMessageIds.add(messageId);
               messagesToProcess.push(entry);

@@ -105,9 +105,9 @@ exports.syncCommand = new commander_1.Command('sync')
         }
         // Show results
         console.log('\n' + chalk_1.default.bold('📊 Sync Results:'));
+        console.log(`   Projects processed: ${chalk_1.default.green(result.projectsProcessed)}`);
         console.log(`   Sessions processed: ${chalk_1.default.green(result.sessionsProcessed)}`);
         console.log(`   Messages processed: ${chalk_1.default.green(result.messagesProcessed)}`);
-        console.log(`   Duplicates skipped: ${chalk_1.default.yellow(result.duplicatesSkipped)}`);
         // Show processing speed
         const messagesPerSecond = result.messagesProcessed > 0
             ? (result.messagesProcessed / parseFloat(duration)).toFixed(1)

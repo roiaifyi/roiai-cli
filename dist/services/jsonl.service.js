@@ -35,9 +35,9 @@ class JSONLService {
     }
     async processDirectory(directoryPath) {
         const result = {
+            projectsProcessed: 0,
             sessionsProcessed: 0,
             messagesProcessed: 0,
-            duplicatesSkipped: 0,
             errors: [],
         };
         // Reset incremental changes tracking
@@ -92,8 +92,10 @@ class JSONLService {
                     const projectResult = await this.processProjectDirectory(projectPath, totalFiles, processedFiles, validProjects.length, processedProjects);
                     result.sessionsProcessed += projectResult.sessionsProcessed;
                     result.messagesProcessed += projectResult.messagesProcessed;
-                    result.duplicatesSkipped += projectResult.duplicatesSkipped;
                     result.errors.push(...projectResult.errors);
+                    if (projectResult.messagesProcessed > 0 || projectResult.sessionsProcessed > 0) {
+                        result.projectsProcessed++;
+                    }
                     // Update processed files count
                     const files = await fs_1.default.promises.readdir(projectPath);
                     processedFiles += files.filter(f => f.endsWith(".jsonl")).length;
@@ -136,9 +138,9 @@ class JSONLService {
     }
     async processProjectDirectory(projectPath, totalFiles, currentFileOffset, totalProjects, currentProjectIndex) {
         const result = {
+            projectsProcessed: 0,
             sessionsProcessed: 0,
             messagesProcessed: 0,
-            duplicatesSkipped: 0,
             errors: [],
         };
         // Extract project name from path
@@ -168,7 +170,6 @@ class JSONLService {
             const fileResult = await this.processJSONLFile(filePath, project.id, projectName);
             result.sessionsProcessed += fileResult.sessionsProcessed;
             result.messagesProcessed += fileResult.messagesProcessed;
-            result.duplicatesSkipped += fileResult.duplicatesSkipped;
             result.errors.push(...fileResult.errors);
             fileIndex++;
         }
@@ -225,9 +226,9 @@ class JSONLService {
     }
     async processJSONLFile(filePath, projectId, _projectName) {
         const result = {
+            projectsProcessed: 0,
             sessionsProcessed: 0,
             messagesProcessed: 0,
-            duplicatesSkipped: 0,
             errors: [],
         };
         // Extract session ID from filename
@@ -313,7 +314,7 @@ class JSONLService {
                         const messageId = entry.message.id || entry.uuid; // Use uuid as fallback
                         // Check global deduplication
                         if (messageId && this.globalMessageIds.has(messageId)) {
-                            result.duplicatesSkipped++;
+                            // Skip duplicate message
                         }
                         else if (messageId) {
                             this.globalMessageIds.add(messageId);

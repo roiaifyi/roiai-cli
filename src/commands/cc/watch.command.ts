@@ -73,8 +73,7 @@ export const watchCommand = new Command('watch')
 
           if (result.messagesProcessed > 0) {
             logger.success(
-              `Processed ${chalk.green(result.messagesProcessed)} messages` +
-              (result.duplicatesSkipped > 0 ? ` (${chalk.yellow(result.duplicatesSkipped)} duplicates skipped)` : '')
+              `Processed ${chalk.green(result.messagesProcessed)} messages`
             );
           }
 

@@ -65,8 +65,7 @@ exports.watchCommand = new commander_1.Command('watch')
                 logger_1.logger.info(`Processing ${chalk_1.default.yellow(path_1.default.basename(filePath))}...`);
                 const result = await jsonlService.processJSONLFile(filePath, project.id);
                 if (result.messagesProcessed > 0) {
-                    logger_1.logger.success(`Processed ${chalk_1.default.green(result.messagesProcessed)} messages` +
-                        (result.duplicatesSkipped > 0 ? ` (${chalk_1.default.yellow(result.duplicatesSkipped)} duplicates skipped)` : ''));
+                    logger_1.logger.success(`Processed ${chalk_1.default.green(result.messagesProcessed)} messages`);
                 }
                 if (result.errors.length > 0) {
                     result.errors.forEach(err => logger_1.logger.error(err));

@@ -54,9 +54,9 @@ export interface TokenUsage {
 }
 
 export interface ProcessingResult {
+  projectsProcessed: number;
   sessionsProcessed: number;
   messagesProcessed: number;
-  duplicatesSkipped: number;
   errors: string[];
 }
 

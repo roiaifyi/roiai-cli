@@ -117,9 +117,9 @@ export const syncCommand = new Command('sync')
 
       // Show results
       console.log('\n' + chalk.bold('📊 Sync Results:'));
+      console.log(`   Projects processed: ${chalk.green(result.projectsProcessed)}`);
       console.log(`   Sessions processed: ${chalk.green(result.sessionsProcessed)}`);
       console.log(`   Messages processed: ${chalk.green(result.messagesProcessed)}`);
-      console.log(`   Duplicates skipped: ${chalk.yellow(result.duplicatesSkipped)}`);
       
       // Show processing speed
       const messagesPerSecond = result.messagesProcessed > 0 
