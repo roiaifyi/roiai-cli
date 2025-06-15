@@ -7,7 +7,9 @@ CLI tool for managing AI service usage data, starting with Claude Code tracking.
 ```bash
 npm install
 npm run build
-npm link  # Makes roiai-cli available globally
+npm run prisma:generate  # Generate Prisma client
+npx prisma db push       # Create database schema
+npm link                 # Makes roiai-cli available globally
 ```
 
 ## Configuration
@@ -86,6 +88,32 @@ The SQLite database is stored at `prisma/dev.db`. You can view it using:
 ```bash
 npm run prisma:studio
 ```
+
+### Troubleshooting Database Issues
+
+If you encounter errors like "The table `main.users` does not exist in the current database", this usually means the database file exists but the schema hasn't been applied. To fix this:
+
+1. **Remove the existing database file:**
+   ```bash
+   rm -f prisma/dev.db prisma/dev.db-journal
+   ```
+
+2. **Recreate the database with the schema:**
+   ```bash
+   npx prisma db push
+   ```
+
+3. **Verify the database was created:**
+   ```bash
+   ls -la prisma/dev.db
+   # Should show a file size > 0 bytes (typically ~100KB)
+   ```
+
+**Note:** If the database is created in the wrong location (e.g., `prisma/prisma/dev.db`), check your `.env` file. The `DATABASE_URL` should be:
+```
+DATABASE_URL="file:./dev.db"
+```
+This ensures the database is created at `prisma/dev.db` relative to the project root.
 
 ## Development
 
