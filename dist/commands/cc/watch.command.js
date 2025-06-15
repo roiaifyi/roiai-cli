@@ -36,8 +36,8 @@ exports.watchCommand = new commander_1.Command('watch')
         const watchConfig = config_1.configManager.getWatchConfig();
         logger_1.logger.info(`Watching directory: ${chalk_1.default.cyan(watchPath)}`);
         logger_1.logger.info('Press Ctrl+C to stop watching\n');
-        // Set up file watcher
-        const watcher = chokidar_1.default.watch(path_1.default.join(watchPath, '**/*.jsonl'), {
+        // Set up file watcher - watch for JSONL files in projects subdirectory
+        const watcher = chokidar_1.default.watch(path_1.default.join(watchPath, 'projects', '**/*.jsonl'), {
             ignored: watchConfig.ignored,
             persistent: true,
             usePolling: true,
@@ -49,19 +49,17 @@ exports.watchCommand = new commander_1.Command('watch')
         });
         // Track processing to avoid duplicates
         const processingQueue = new Set();
-        let isProcessing = false;
         const processFile = async (filePath) => {
-            if (processingQueue.has(filePath) || isProcessing) {
+            if (processingQueue.has(filePath)) {
                 return;
             }
             processingQueue.add(filePath);
-            isProcessing = true;
             try {
                 // Extract project ID from file path
-                const relativePath = path_1.default.relative(watchPath, filePath);
+                const relativePath = path_1.default.relative(path_1.default.join(watchPath, 'projects'), filePath);
                 const projectDir = relativePath.split(path_1.default.sep)[0];
                 const projectName = projectDir.replace(/^-Users-[^-]+-/, '');
-                const project = await jsonlService['ensureProject'](projectName);
+                const project = await jsonlService.ensureProject(projectName);
                 logger_1.logger.info(`Processing ${chalk_1.default.yellow(path_1.default.basename(filePath))}...`);
                 const result = await jsonlService.processJSONLFile(filePath, project.id);
                 if (result.messagesProcessed > 0) {
@@ -76,7 +74,6 @@ exports.watchCommand = new commander_1.Command('watch')
             }
             finally {
                 processingQueue.delete(filePath);
-                isProcessing = false;
             }
         };
         // Watch events

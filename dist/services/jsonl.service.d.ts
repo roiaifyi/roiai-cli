@@ -1,6 +1,7 @@
 import { ProcessingResult, ProcessingProgress } from "../models/types";
 import { PricingService } from "./pricing.service";
 import { UserService } from "./user.service";
+import { Decimal } from "@prisma/client/runtime/library";
 export declare class JSONLService {
     private pricingService;
     private userService;
@@ -21,7 +22,21 @@ export declare class JSONLService {
     processDirectory(directoryPath: string): Promise<ProcessingResult>;
     private ensureUserAndMachine;
     private processProjectDirectory;
-    private ensureProject;
+    ensureProject(projectName: string): Promise<{
+        id: string;
+        lastSeen: Date;
+        totalSessions: number;
+        totalMessages: number;
+        totalCost: Decimal;
+        totalInputTokens: bigint;
+        totalOutputTokens: bigint;
+        totalCacheCreationTokens: bigint;
+        totalCacheReadTokens: bigint;
+        userId: string;
+        firstSeen: Date;
+        projectName: string;
+        clientMachineId: string;
+    }>;
     processJSONLFile(filePath: string, projectId: string, _projectName?: string): Promise<ProcessingResult>;
     private checkFileStatus;
     private calculateFileChecksum;

@@ -36,8 +36,8 @@ export const watchCommand = new Command('watch')
       logger.info(`Watching directory: ${chalk.cyan(watchPath)}`);
       logger.info('Press Ctrl+C to stop watching\n');
 
-      // Set up file watcher
-      const watcher = chokidar.watch(path.join(watchPath, '**/*.jsonl'), {
+      // Set up file watcher - watch for JSONL files in projects subdirectory
+      const watcher = chokidar.watch(path.join(watchPath, 'projects', '**/*.jsonl'), {
         ignored: watchConfig.ignored,
         persistent: true,
         usePolling: true,
@@ -50,23 +50,21 @@ export const watchCommand = new Command('watch')
 
       // Track processing to avoid duplicates
       const processingQueue = new Set<string>();
-      let isProcessing = false;
 
       const processFile = async (filePath: string) => {
-        if (processingQueue.has(filePath) || isProcessing) {
+        if (processingQueue.has(filePath)) {
           return;
         }
 
         processingQueue.add(filePath);
-        isProcessing = true;
 
         try {
           // Extract project ID from file path
-          const relativePath = path.relative(watchPath, filePath);
+          const relativePath = path.relative(path.join(watchPath, 'projects'), filePath);
           const projectDir = relativePath.split(path.sep)[0];
           
           const projectName = projectDir.replace(/^-Users-[^-]+-/, '');
-          const project = await jsonlService['ensureProject'](projectName);
+          const project = await jsonlService.ensureProject(projectName);
 
           logger.info(`Processing ${chalk.yellow(path.basename(filePath))}...`);
           const result = await jsonlService.processJSONLFile(filePath, project.id);
@@ -84,7 +82,6 @@ export const watchCommand = new Command('watch')
           logger.error(`Failed to process ${filePath}:`, error);
         } finally {
           processingQueue.delete(filePath);
-          isProcessing = false;
         }
       };
 

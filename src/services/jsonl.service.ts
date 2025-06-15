@@ -228,7 +228,7 @@ export class JSONLService {
     return result;
   }
 
-  private async ensureProject(projectName: string) {
+  async ensureProject(projectName: string) {
     const userId = this.userService.getUserId();
     const machineId = this.userService.getClientMachineId();
     const projectId = crypto
