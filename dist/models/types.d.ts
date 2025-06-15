@@ -63,6 +63,16 @@ export interface ProcessingResult {
     duplicatesSkipped: number;
     errors: string[];
 }
+export interface ProcessingProgress {
+    totalProjects: number;
+    processedProjects: number;
+    currentProject: string;
+    totalFiles: number;
+    processedFiles: number;
+    currentFile: string;
+    messagesInCurrentFile: number;
+    processedMessagesInCurrentFile: number;
+}
 export interface UserInfo {
     userId: string;
     clientMachineId: string;

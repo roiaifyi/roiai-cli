@@ -51,6 +51,24 @@ exports.syncCommand = new commander_1.Command('sync')
         // Start processing
         spinner.start('Processing Claude Code data...');
         const startTime = Date.now();
+        // Set up progress tracking
+        let lastProgressUpdate = Date.now();
+        jsonlService.setProgressCallback((progress) => {
+            const now = Date.now();
+            // Update every 100ms to avoid too frequent updates
+            if (now - lastProgressUpdate > 100) {
+                const projectProgress = progress.totalProjects > 0
+                    ? Math.round((progress.processedProjects / progress.totalProjects) * 100)
+                    : 0;
+                const fileProgress = progress.totalFiles > 0
+                    ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
+                    : 0;
+                const progressText = `Processing: Project ${progress.processedProjects + 1}/${progress.totalProjects} (${projectProgress}%) | ` +
+                    `File ${progress.processedFiles + 1}/${progress.totalFiles} (${fileProgress}%)`;
+                spinner.text = progressText;
+                lastProgressUpdate = now;
+            }
+        });
         const result = await jsonlService.processDirectory(dataPath);
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         spinner.succeed(`Sync completed in ${duration}s`);
@@ -90,6 +108,11 @@ exports.syncCommand = new commander_1.Command('sync')
         console.log(`   Sessions processed: ${chalk_1.default.green(result.sessionsProcessed)}`);
         console.log(`   Messages processed: ${chalk_1.default.green(result.messagesProcessed)}`);
         console.log(`   Duplicates skipped: ${chalk_1.default.yellow(result.duplicatesSkipped)}`);
+        // Show processing speed
+        const messagesPerSecond = result.messagesProcessed > 0
+            ? (result.messagesProcessed / parseFloat(duration)).toFixed(1)
+            : '0';
+        console.log(`   Processing speed: ${chalk_1.default.cyan(messagesPerSecond + ' messages/sec')}`);
         if (result.errors.length > 0) {
             console.log(`   Errors: ${chalk_1.default.red(result.errors.length)}`);
             if (result.errors.length <= 10) {

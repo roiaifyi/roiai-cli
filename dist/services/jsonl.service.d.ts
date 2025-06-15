@@ -1,4 +1,4 @@
-import { ProcessingResult } from "../models/types";
+import { ProcessingResult, ProcessingProgress } from "../models/types";
 import { PricingService } from "./pricing.service";
 import { UserService } from "./user.service";
 export declare class JSONLService {
@@ -8,6 +8,7 @@ export declare class JSONLService {
     private incrementalAggregation;
     private useIncrementalAggregation;
     private incrementalChanges;
+    private progressCallback?;
     constructor(pricingService: PricingService, userService: UserService);
     setUseIncrementalAggregation(value: boolean): void;
     getIncrementalChanges(): {
@@ -16,11 +17,12 @@ export declare class JSONLService {
         newMessages: number;
         totalCostAdded: number;
     };
+    setProgressCallback(callback: (progress: ProcessingProgress) => void): void;
     processDirectory(directoryPath: string): Promise<ProcessingResult>;
     private ensureUserAndMachine;
     private processProjectDirectory;
     private ensureProject;
-    processJSONLFile(filePath: string, projectId: string): Promise<ProcessingResult>;
+    processJSONLFile(filePath: string, projectId: string, _projectName?: string): Promise<ProcessingResult>;
     private checkFileStatus;
     private calculateFileChecksum;
     private processMessage;

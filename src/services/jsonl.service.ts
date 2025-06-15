@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import readline from "readline";
 import crypto from "crypto";
-import { JSONLEntry, ProcessingResult } from "../models/types";
+import { JSONLEntry, ProcessingResult, ProcessingProgress } from "../models/types";
 import { prisma } from "../database";
 import { PricingService } from "./pricing.service";
 import { UserService } from "./user.service";
@@ -19,6 +19,7 @@ export class JSONLService {
     newMessages: number;
     totalCostAdded: number;
   } = { newProjects: [], newSessions: [], newMessages: 0, totalCostAdded: 0 };
+  private progressCallback?: (progress: ProcessingProgress) => void;
 
   constructor(
     private pricingService: PricingService,
@@ -33,6 +34,10 @@ export class JSONLService {
 
   getIncrementalChanges() {
     return this.incrementalChanges;
+  }
+
+  setProgressCallback(callback: (progress: ProcessingProgress) => void) {
+    this.progressCallback = callback;
   }
 
   async processDirectory(directoryPath: string): Promise<ProcessingResult> {
@@ -68,19 +73,57 @@ export class JSONLService {
       }
 
       const projectDirs = await fs.promises.readdir(projectsPath);
+      const validProjects = projectDirs.filter(dir => !dir.startsWith("."));
+      
+      // Count total files first for progress tracking
+      let totalFiles = 0;
+      for (const projectDir of validProjects) {
+        const projectPath = path.join(projectsPath, projectDir);
+        const stats = await fs.promises.stat(projectPath);
+        if (stats.isDirectory()) {
+          const files = await fs.promises.readdir(projectPath);
+          totalFiles += files.filter(f => f.endsWith(".jsonl")).length;
+        }
+      }
 
-      for (const projectDir of projectDirs) {
-        if (projectDir.startsWith(".")) continue;
+      let processedProjects = 0;
+      let processedFiles = 0;
 
+      for (const projectDir of validProjects) {
         const projectPath = path.join(projectsPath, projectDir);
         const stats = await fs.promises.stat(projectPath);
 
         if (stats.isDirectory()) {
-          const projectResult = await this.processProjectDirectory(projectPath);
+          if (this.progressCallback) {
+            this.progressCallback({
+              totalProjects: validProjects.length,
+              processedProjects,
+              currentProject: projectDir,
+              totalFiles,
+              processedFiles,
+              currentFile: "",
+              messagesInCurrentFile: 0,
+              processedMessagesInCurrentFile: 0
+            });
+          }
+
+          const projectResult = await this.processProjectDirectory(
+            projectPath, 
+            totalFiles, 
+            processedFiles,
+            validProjects.length,
+            processedProjects
+          );
+          
           result.sessionsProcessed += projectResult.sessionsProcessed;
           result.messagesProcessed += projectResult.messagesProcessed;
           result.duplicatesSkipped += projectResult.duplicatesSkipped;
           result.errors.push(...projectResult.errors);
+          
+          // Update processed files count
+          const files = await fs.promises.readdir(projectPath);
+          processedFiles += files.filter(f => f.endsWith(".jsonl")).length;
+          processedProjects++;
         }
       }
     } catch (error) {
@@ -122,7 +165,11 @@ export class JSONLService {
   }
 
   private async processProjectDirectory(
-    projectPath: string
+    projectPath: string,
+    totalFiles?: number,
+    currentFileOffset?: number,
+    totalProjects?: number,
+    currentProjectIndex?: number
   ): Promise<ProcessingResult> {
     const result: ProcessingResult = {
       sessionsProcessed: 0,
@@ -143,13 +190,30 @@ export class JSONLService {
     const files = await fs.promises.readdir(projectPath);
     const jsonlFiles = files.filter((f) => f.endsWith(".jsonl"));
 
+    let fileIndex = 0;
     for (const file of jsonlFiles) {
       const filePath = path.join(projectPath, file);
-      const fileResult = await this.processJSONLFile(filePath, project.id);
+      
+      if (this.progressCallback && totalFiles !== undefined && currentFileOffset !== undefined) {
+        this.progressCallback({
+          totalProjects: totalProjects || 1,
+          processedProjects: currentProjectIndex || 0,
+          currentProject: projectName,
+          totalFiles: totalFiles,
+          processedFiles: currentFileOffset + fileIndex,
+          currentFile: file,
+          messagesInCurrentFile: 0,
+          processedMessagesInCurrentFile: 0
+        });
+      }
+      
+      const fileResult = await this.processJSONLFile(filePath, project.id, projectName);
       result.sessionsProcessed += fileResult.sessionsProcessed;
       result.messagesProcessed += fileResult.messagesProcessed;
       result.duplicatesSkipped += fileResult.duplicatesSkipped;
       result.errors.push(...fileResult.errors);
+      
+      fileIndex++;
     }
 
     return result;
@@ -210,7 +274,8 @@ export class JSONLService {
 
   async processJSONLFile(
     filePath: string,
-    projectId: string
+    projectId: string,
+    _projectName?: string
   ): Promise<ProcessingResult> {
     const result: ProcessingResult = {
       sessionsProcessed: 0,
@@ -275,6 +340,9 @@ export class JSONLService {
       });
     }
 
+    // Count total lines first for progress
+    // const totalLines = await this.countFileLines(filePath);
+    
     // Process file line by line
     const fileStream = fs.createReadStream(filePath);
     const rl = readline.createInterface({
@@ -419,6 +487,21 @@ export class JSONLService {
       stream.on("error", reject);
     });
   }
+
+  // TODO: Implement line counting for more detailed progress tracking
+  // private async countFileLines(filePath: string): Promise<number> {
+  //   const fileStream = fs.createReadStream(filePath);
+  //   const rl = readline.createInterface({
+  //     input: fileStream,
+  //     crlfDelay: Infinity,
+  //   });
+
+  //   let lineCount = 0;
+  //   for await (const _line of rl) {
+  //     lineCount++;
+  //   }
+  //   return lineCount;
+  // }
 
   private async processMessage(entry: JSONLEntry, projectId: string) {
     if (!entry.message || !entry.sessionId || !entry.uuid) return;

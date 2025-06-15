@@ -18,6 +18,7 @@ class JSONLService {
     incrementalAggregation;
     useIncrementalAggregation = true;
     incrementalChanges = { newProjects: [], newSessions: [], newMessages: 0, totalCostAdded: 0 };
+    progressCallback;
     constructor(pricingService, userService) {
         this.pricingService = pricingService;
         this.userService = userService;
@@ -28,6 +29,9 @@ class JSONLService {
     }
     getIncrementalChanges() {
         return this.incrementalChanges;
+    }
+    setProgressCallback(callback) {
+        this.progressCallback = callback;
     }
     async processDirectory(directoryPath) {
         const result = {
@@ -56,17 +60,44 @@ class JSONLService {
                 throw new Error(`Projects path is not a directory: ${projectsPath}`);
             }
             const projectDirs = await fs_1.default.promises.readdir(projectsPath);
-            for (const projectDir of projectDirs) {
-                if (projectDir.startsWith("."))
-                    continue;
+            const validProjects = projectDirs.filter(dir => !dir.startsWith("."));
+            // Count total files first for progress tracking
+            let totalFiles = 0;
+            for (const projectDir of validProjects) {
                 const projectPath = path_1.default.join(projectsPath, projectDir);
                 const stats = await fs_1.default.promises.stat(projectPath);
                 if (stats.isDirectory()) {
-                    const projectResult = await this.processProjectDirectory(projectPath);
+                    const files = await fs_1.default.promises.readdir(projectPath);
+                    totalFiles += files.filter(f => f.endsWith(".jsonl")).length;
+                }
+            }
+            let processedProjects = 0;
+            let processedFiles = 0;
+            for (const projectDir of validProjects) {
+                const projectPath = path_1.default.join(projectsPath, projectDir);
+                const stats = await fs_1.default.promises.stat(projectPath);
+                if (stats.isDirectory()) {
+                    if (this.progressCallback) {
+                        this.progressCallback({
+                            totalProjects: validProjects.length,
+                            processedProjects,
+                            currentProject: projectDir,
+                            totalFiles,
+                            processedFiles,
+                            currentFile: "",
+                            messagesInCurrentFile: 0,
+                            processedMessagesInCurrentFile: 0
+                        });
+                    }
+                    const projectResult = await this.processProjectDirectory(projectPath, totalFiles, processedFiles, validProjects.length, processedProjects);
                     result.sessionsProcessed += projectResult.sessionsProcessed;
                     result.messagesProcessed += projectResult.messagesProcessed;
                     result.duplicatesSkipped += projectResult.duplicatesSkipped;
                     result.errors.push(...projectResult.errors);
+                    // Update processed files count
+                    const files = await fs_1.default.promises.readdir(projectPath);
+                    processedFiles += files.filter(f => f.endsWith(".jsonl")).length;
+                    processedProjects++;
                 }
             }
         }
@@ -103,7 +134,7 @@ class JSONLService {
             },
         });
     }
-    async processProjectDirectory(projectPath) {
+    async processProjectDirectory(projectPath, totalFiles, currentFileOffset, totalProjects, currentProjectIndex) {
         const result = {
             sessionsProcessed: 0,
             messagesProcessed: 0,
@@ -119,13 +150,27 @@ class JSONLService {
         // Process all JSONL files in the project directory
         const files = await fs_1.default.promises.readdir(projectPath);
         const jsonlFiles = files.filter((f) => f.endsWith(".jsonl"));
+        let fileIndex = 0;
         for (const file of jsonlFiles) {
             const filePath = path_1.default.join(projectPath, file);
-            const fileResult = await this.processJSONLFile(filePath, project.id);
+            if (this.progressCallback && totalFiles !== undefined && currentFileOffset !== undefined) {
+                this.progressCallback({
+                    totalProjects: totalProjects || 1,
+                    processedProjects: currentProjectIndex || 0,
+                    currentProject: projectName,
+                    totalFiles: totalFiles,
+                    processedFiles: currentFileOffset + fileIndex,
+                    currentFile: file,
+                    messagesInCurrentFile: 0,
+                    processedMessagesInCurrentFile: 0
+                });
+            }
+            const fileResult = await this.processJSONLFile(filePath, project.id, projectName);
             result.sessionsProcessed += fileResult.sessionsProcessed;
             result.messagesProcessed += fileResult.messagesProcessed;
             result.duplicatesSkipped += fileResult.duplicatesSkipped;
             result.errors.push(...fileResult.errors);
+            fileIndex++;
         }
         return result;
     }
@@ -178,7 +223,7 @@ class JSONLService {
             });
         }
     }
-    async processJSONLFile(filePath, projectId) {
+    async processJSONLFile(filePath, projectId, _projectName) {
         const result = {
             sessionsProcessed: 0,
             messagesProcessed: 0,
@@ -233,6 +278,8 @@ class JSONLService {
                 },
             });
         }
+        // Count total lines first for progress
+        // const totalLines = await this.countFileLines(filePath);
         // Process file line by line
         const fileStream = fs_1.default.createReadStream(filePath);
         const rl = readline_1.default.createInterface({
@@ -359,6 +406,19 @@ class JSONLService {
             stream.on("error", reject);
         });
     }
+    // TODO: Implement line counting for more detailed progress tracking
+    // private async countFileLines(filePath: string): Promise<number> {
+    //   const fileStream = fs.createReadStream(filePath);
+    //   const rl = readline.createInterface({
+    //     input: fileStream,
+    //     crlfDelay: Infinity,
+    //   });
+    //   let lineCount = 0;
+    //   for await (const _line of rl) {
+    //     lineCount++;
+    //   }
+    //   return lineCount;
+    // }
     async processMessage(entry, projectId) {
         if (!entry.message || !entry.sessionId || !entry.uuid)
             return;
