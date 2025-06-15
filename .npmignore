@@ -1,0 +1,52 @@
+# Source files
+src/
+*.ts
+!dist/**/*.d.ts
+
+# Development files
+.git/
+.gitignore
+node_modules/
+*.log
+.env
+.env.*
+
+# Test files
+tests/
+coverage/
+jest.config.js
+*.test.ts
+*.spec.ts
+
+# Config files (except defaults)
+config/local.json
+config/*.local.json
+tsconfig.json
+nodemon.json
+
+# Database files
+prisma/dev.db
+prisma/dev.db-journal
+prisma/migrations/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation source
+docs/
+*.md
+!README.md
+
+# Build artifacts
+*.tsbuildinfo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/

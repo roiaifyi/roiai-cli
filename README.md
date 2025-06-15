@@ -4,12 +4,21 @@ CLI tool for managing AI service usage data, starting with Claude Code tracking.
 
 ## Installation
 
+### From npm (Recommended)
+
 ```bash
+npm install -g roiai-cli
+```
+
+### From Source
+
+```bash
+git clone https://github.com/yourusername/roiai-cli.git
+cd roiai-cli
 npm install
 npm run build
-npm run prisma:generate  # Generate Prisma client
-npx prisma db push       # Create database schema
-npm link                 # Makes roiai-cli available globally
+npm run prisma:generate
+npm link
 ```
 
 ## Configuration

@@ -18,7 +18,9 @@
     "prisma:studio": "prisma studio",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "prepublishOnly": "npm run build && npm run prisma:generate",
+    "postinstall": "prisma generate"
   },
   "keywords": [
     "cli",
@@ -27,8 +29,28 @@
     "usage",
     "tracking"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/roiai-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/roiai-cli/issues"
+  },
+  "homepage": "https://github.com/yourusername/roiai-cli#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "prisma/**/*",
+    "config/default.json",
+    "config/local.example.json",
+    "pricing-data.json",
+    "README.md",
+    "LICENSE"
+  ],
   "devDependencies": {
     "@jest/globals": "^30.0.0",
     "@types/better-sqlite3": "^7.6.13",
