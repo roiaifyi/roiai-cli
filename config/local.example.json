@@ -1,0 +1,41 @@
+{
+  "// NOTE": "Copy this file to 'local.json' and update with your actual values",
+  "// NOTE2": "The 'local.json' file is gitignored and won't be committed",
+  
+  "user": {
+    "// infoPath": "Path to your user info JSON file",
+    "infoPath": "~/.claude/user_info.json"
+  },
+  
+  "claudeCode": {
+    "// rawDataPath": "Path to your Claude Code raw data directory",
+    "// rawDataPath_example1": "/Users/yourusername/claude_raw_data",
+    "// rawDataPath_example2": "~/Library/Application Support/Claude/claude_raw_data",
+    "// rawDataPath_example3": "C:\\Users\\YourName\\AppData\\Local\\Claude\\claude_raw_data",
+    "rawDataPath": "../claude_raw_data",
+    
+    "// pricingDataPath": "Path to the pricing data JSON file",
+    "pricingDataPath": "../pricing-data.json",
+    
+    "// cacheDurationDefault": "Cache duration in minutes (5 or 60)",
+    "cacheDurationDefault": 5
+  },
+  
+  "sync": {
+    "// apiEndpoint": "Your remote server API endpoint for data upload",
+    "apiEndpoint": "https://your-api-server.com/claude-stats/upload",
+    
+    "// apiToken": "Your API authentication token (keep this secret!)",
+    "apiToken": "your-secret-api-token-here"
+  },
+  
+  "database": {
+    "// path": "Path to SQLite database file (relative to project root)",
+    "path": "./prisma/dev.db"
+  },
+  
+  "logging": {
+    "// level": "Logging level: 'debug', 'info', 'warn', or 'error'",
+    "level": "info"
+  }
+}

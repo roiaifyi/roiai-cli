@@ -1,0 +1,27 @@
+{
+  "database": {
+    "path": "./prisma/dev.db"
+  },
+  "user": {
+    "infoPath": "~/.claude/user_info.json"
+  },
+  "claudeCode": {
+    "rawDataPath": "../claude_raw_data",
+    "pricingDataPath": "../pricing-data.json",
+    "cacheDurationDefault": 5,
+    "batchSize": 1000
+  },
+  "sync": {
+    "apiEndpoint": "https://api.example.com/claude-stats/upload",
+    "apiToken": "",
+    "batchSize": 1000,
+    "maxRetries": 3
+  },
+  "watch": {
+    "pollInterval": 5000,
+    "ignored": ["**/node_modules/**", "**/.git/**"]
+  },
+  "logging": {
+    "level": "info"
+  }
+}

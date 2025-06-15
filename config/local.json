@@ -1,0 +1,26 @@
+{
+  "user": {
+    "infoPath": "/Users/baotrungtn/repos/claude-stat/roiai-cli/config/user_info.example.json"
+  },
+
+  "claudeCode": {
+    "rawDataPath": "/Users/baotrungtn/.claude",
+
+    "pricingDataPath": "../pricing-data.json",
+
+    "cacheDurationDefault": 5
+  },
+
+  "sync": {
+    "apiEndpoint": "https://your-api-server.com/claude-stats/upload",
+    "apiToken": "your-secret-api-token-here"
+  },
+
+  "database": {
+    "path": "./prisma/dev.db"
+  },
+
+  "logging": {
+    "level": "info"
+  }
+}

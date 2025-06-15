@@ -1,0 +1,170 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                      String    @id @map("user_id")
+  email                   String?
+  createdAt               DateTime  @default(now()) @map("created_at")
+  lastSeen                DateTime  @default(now()) @map("last_seen")
+  totalProjects           Int       @default(0) @map("total_projects")
+  totalSessions           Int       @default(0) @map("total_sessions")
+  totalMessages           Int       @default(0) @map("total_messages")
+  totalCost               Decimal   @default(0) @map("total_cost")
+  totalInputTokens        BigInt    @default(0) @map("total_input_tokens")
+  totalOutputTokens       BigInt    @default(0) @map("total_output_tokens")
+  totalCacheCreationTokens BigInt   @default(0) @map("total_cache_creation_tokens")
+  totalCacheReadTokens    BigInt    @default(0) @map("total_cache_read_tokens")
+  
+  machines                Machine[]
+  projects                Project[]
+  sessions                Session[]
+  messages                Message[]
+  fileStatus              FileStatus[]
+
+  @@map("users")
+}
+
+model Machine {
+  id                      String    @id @map("client_machine_id")
+  userId                  String    @map("user_id")
+  machineName             String?   @map("machine_name")
+  osInfo                  String?   @map("os_info")
+  firstSeen               DateTime  @default(now()) @map("first_seen")
+  lastSeen                DateTime  @default(now()) @map("last_seen")
+  
+  user                    User      @relation(fields: [userId], references: [id])
+  projects                Project[]
+  sessions                Session[]
+
+  @@map("machines")
+}
+
+model Project {
+  id                      String    @id @map("project_id")
+  projectName             String    @map("project_name")
+  userId                  String    @map("user_id")
+  clientMachineId         String    @map("client_machine_id")
+  firstSeen               DateTime  @default(now()) @map("first_seen")
+  lastSeen                DateTime  @default(now()) @map("last_seen")
+  totalSessions           Int       @default(0) @map("total_sessions")
+  totalMessages           Int       @default(0) @map("total_messages")
+  totalCost               Decimal   @default(0) @map("total_cost")
+  totalInputTokens        BigInt    @default(0) @map("total_input_tokens")
+  totalOutputTokens       BigInt    @default(0) @map("total_output_tokens")
+  totalCacheCreationTokens BigInt   @default(0) @map("total_cache_creation_tokens")
+  totalCacheReadTokens    BigInt    @default(0) @map("total_cache_read_tokens")
+  
+  user                    User      @relation(fields: [userId], references: [id])
+  machine                 Machine   @relation(fields: [clientMachineId], references: [id])
+  sessions                Session[]
+  messages                Message[]
+  fileStatus              FileStatus[]
+
+  @@unique([projectName, clientMachineId])
+  @@map("projects")
+}
+
+model Session {
+  id                      String    @id @map("session_id")
+  projectId               String    @map("project_id")
+  userId                  String    @map("user_id")
+  clientMachineId         String    @map("client_machine_id")
+  startTime               DateTime? @map("start_time")
+  endTime                 DateTime? @map("end_time")
+  totalMessages           Int       @default(0) @map("total_messages")
+  totalCost               Decimal   @default(0) @map("total_cost")
+  totalInputTokens        BigInt    @default(0) @map("total_input_tokens")
+  totalOutputTokens       BigInt    @default(0) @map("total_output_tokens")
+  totalCacheCreationTokens BigInt   @default(0) @map("total_cache_creation_tokens")
+  totalCacheReadTokens    BigInt    @default(0) @map("total_cache_read_tokens")
+  
+  project                 Project   @relation(fields: [projectId], references: [id])
+  user                    User      @relation(fields: [userId], references: [id])
+  machine                 Machine   @relation(fields: [clientMachineId], references: [id])
+  messages                Message[]
+  fileStatus              FileStatus[]
+
+  @@map("sessions")
+}
+
+model Message {
+  uuid                    String    @id
+  messageId               String    @map("message_id")
+  requestId               String?   @map("request_id")
+  sessionId               String    @map("session_id")
+  projectId               String    @map("project_id")
+  userId                  String    @map("user_id")
+  parentUuid              String?   @map("parent_uuid")
+  timestamp               DateTime?
+  role                    String
+  model                   String?
+  type                    String?
+  inputTokens             Int       @default(0) @map("input_tokens")
+  outputTokens            Int       @default(0) @map("output_tokens")
+  cacheCreationTokens     Int       @default(0) @map("cache_creation_tokens")
+  cacheReadTokens         Int       @default(0) @map("cache_read_tokens")
+  pricePerInputToken      Decimal?  @map("price_per_input_token")
+  pricePerOutputToken     Decimal?  @map("price_per_output_token")
+  pricePerCacheWriteToken Decimal?  @map("price_per_cache_write_token")
+  pricePerCacheReadToken  Decimal?  @map("price_per_cache_read_token")
+  cacheDurationMinutes    Int?      @map("cache_duration_minutes")
+  messageCost             Decimal   @default(0) @map("message_cost")
+  
+  session                 Session   @relation(fields: [sessionId], references: [id])
+  project                 Project   @relation(fields: [projectId], references: [id])
+  user                    User      @relation(fields: [userId], references: [id])
+  parent                  Message?  @relation("MessageToMessage", fields: [parentUuid], references: [uuid])
+  children                Message[] @relation("MessageToMessage")
+
+  @@index([sessionId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([requestId])
+  @@index([parentUuid])
+  @@unique([sessionId, messageId, uuid])
+  @@map("messages")
+}
+
+model FileStatus {
+  filePath                String    @id @map("file_path")
+  projectId               String?   @map("project_id")
+  sessionId               String?   @map("session_id")
+  userId                  String?   @map("user_id")
+  fileSize                Int?      @map("file_size")
+  lastModified            DateTime? @map("last_modified")
+  lastProcessedLine       Int       @default(0) @map("last_processed_line")
+  lastProcessedAt         DateTime? @map("last_processed_at")
+  checksum                String?
+  
+  project                 Project?  @relation(fields: [projectId], references: [id])
+  session                 Session?  @relation(fields: [sessionId], references: [id])
+  user                    User?     @relation(fields: [userId], references: [id])
+
+  @@map("file_status")
+}
+
+model SyncStatus {
+  id                      Int       @id @default(autoincrement())
+  tableName               String    @map("table_name")
+  recordId                String    @map("record_id")
+  operation               String
+  localTimestamp          DateTime  @default(now()) @map("local_timestamp")
+  syncedAt                DateTime? @map("synced_at")
+  syncBatchId             String?   @map("sync_batch_id")
+  syncResponse            String?   @map("sync_response")
+  retryCount              Int       @default(0) @map("retry_count")
+  
+  @@unique([tableName, recordId])
+  @@index([syncedAt])
+  @@map("sync_status")
+}
