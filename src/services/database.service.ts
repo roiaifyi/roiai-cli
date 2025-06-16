@@ -64,6 +64,7 @@ export class DatabaseService {
     sessionId: string;
     projectId: string;
     userId: string;
+    clientMachineId: string;
     role: string;
     model?: string;
     inputTokens: number;
@@ -82,6 +83,7 @@ export class DatabaseService {
         sessionId: messageData.sessionId,
         projectId: messageData.projectId,
         userId: messageData.userId,
+        clientMachineId: messageData.clientMachineId,
         role: messageData.role,
         model: messageData.model,
         type: messageData.type,
@@ -102,6 +104,7 @@ export class DatabaseService {
     sessionId: string;
     projectId: string;
     userId: string;
+    clientMachineId: string;
     role: string;
     model?: string;
     inputTokens: number;

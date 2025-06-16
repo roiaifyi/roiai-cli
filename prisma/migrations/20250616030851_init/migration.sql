@@ -80,6 +80,7 @@ CREATE TABLE "messages" (
     "session_id" TEXT NOT NULL,
     "project_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
+    "client_machine_id" TEXT NOT NULL,
     "timestamp" DATETIME,
     "role" TEXT NOT NULL,
     "model" TEXT,
@@ -96,7 +97,8 @@ CREATE TABLE "messages" (
     "message_cost" DECIMAL NOT NULL DEFAULT 0,
     CONSTRAINT "messages_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "sessions" ("session_id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "messages_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects" ("project_id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "messages_client_machine_id_fkey" FOREIGN KEY ("client_machine_id") REFERENCES "machines" ("client_machine_id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -139,6 +141,9 @@ CREATE INDEX "messages_project_id_idx" ON "messages"("project_id");
 
 -- CreateIndex
 CREATE INDEX "messages_user_id_idx" ON "messages"("user_id");
+
+-- CreateIndex
+CREATE INDEX "messages_client_machine_id_idx" ON "messages"("client_machine_id");
 
 -- CreateIndex
 CREATE INDEX "messages_timestamp_idx" ON "messages"("timestamp");

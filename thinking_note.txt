@@ -54,3 +54,12 @@ The user requested changing message-related fields to bigger data types (BigInt)
 - Discovered that SQLite doesn't support BIGINT with AUTOINCREMENT
 - Changed SyncStatus.id back to Int since it's just for tracking sync operations
 - This is sufficient as the sync status table won't have billions of rows
+
+## Added clientMachineId to Messages Table
+- Added clientMachineId as a direct foreign key in the messages table for consistency
+- Previously messages only had indirect access to machine ID through session relationship
+- Benefits:
+  - Improved query performance - no joins needed to filter messages by machine
+  - Consistency with other tables that have direct references to all context (user, project, machine)
+  - Better analytics capabilities for machine-specific message aggregation
+- Updated all code and tests to include clientMachineId when creating messages

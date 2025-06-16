@@ -569,6 +569,7 @@ export class JSONLService {
         sessionId: entry.sessionId,
         projectId,
         userId,
+        clientMachineId,
         timestamp: entry.timestamp ? new Date(entry.timestamp) : null,
         role: entry.message.role || entry.type || "unknown",
         model: entry.message.model || null,

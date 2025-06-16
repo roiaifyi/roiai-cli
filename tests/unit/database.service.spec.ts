@@ -177,7 +177,10 @@ describe('DatabaseService BDD Tests', () => {
         await dbService.findOrCreateSession(messageData.sessionId, messageData.projectId, messageData.userId, machineId);
         
         // Act
-        const message = await dbService.createMessage(messageData);
+        const message = await dbService.createMessage({
+          ...messageData,
+          clientMachineId: machineId
+        });
         
         // Assert
         expect(message.uuid).toBe(messageData.uuid);
@@ -218,11 +221,17 @@ describe('DatabaseService BDD Tests', () => {
         await dbService.findOrCreateSession(messageData.sessionId, messageData.projectId, messageData.userId, machineId);
         
         // Act
-        await dbService.createMessage(messageData);
+        await dbService.createMessage({
+          ...messageData,
+          clientMachineId: machineId
+        });
         
         // Try to create duplicate - should be handled gracefully
         try {
-          await dbService.createMessage(messageData);
+          await dbService.createMessage({
+            ...messageData,
+            clientMachineId: machineId
+          });
         } catch (e) {
           // Expected to throw error for duplicate
         }
@@ -303,6 +312,7 @@ describe('DatabaseService BDD Tests', () => {
           sessionId,
           projectId,
           userId,
+          clientMachineId: machineId,
           role: 'assistant' as const,
           model: 'claude-3-5-sonnet-20241022',
           inputTokens: 100 * (i + 1),
@@ -349,6 +359,7 @@ describe('DatabaseService BDD Tests', () => {
           sessionId,
           projectId,
           userId,
+          clientMachineId: machineId,
           role: 'assistant',
           model: 'claude-3-5-sonnet-20241022',
           inputTokens: 1000,
