@@ -56,7 +56,6 @@ export class UserService {
         email: this.userInfo.email,
       },
       update: {
-        lastSeen: new Date(),
         email: this.userInfo.email
       }
     });
@@ -71,7 +70,6 @@ export class UserService {
         osInfo: `${os.platform()} ${os.release()}`
       },
       update: {
-        lastSeen: new Date(),
         machineName: os.hostname(),
         osInfo: `${os.platform()} ${os.release()}`
       }

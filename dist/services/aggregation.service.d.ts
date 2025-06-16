@@ -5,6 +5,7 @@ export declare class AggregationService {
     recalculateAllAggregates(): Promise<void>;
     private recalculateSessionAggregates;
     private recalculateProjectAggregates;
+    private recalculateMachineAggregates;
     private recalculateUserAggregates;
     verifyAggregates(): Promise<any>;
     getUsageByProject(): Promise<{

@@ -34,6 +34,18 @@ class IncrementalAggregationService {
                 totalCacheReadTokens: { increment: message.cacheReadTokens }
             }
         });
+        // Update machine aggregates
+        await client.machine.update({
+            where: { id: message.clientMachineId },
+            data: {
+                totalMessages: { increment: 1 },
+                totalCost: { increment: message.messageCost },
+                totalInputTokens: { increment: message.inputTokens },
+                totalOutputTokens: { increment: message.outputTokens },
+                totalCacheCreationTokens: { increment: message.cacheCreationTokens },
+                totalCacheReadTokens: { increment: message.cacheReadTokens }
+            }
+        });
         // Update user aggregates
         await client.user.update({
             where: { id: message.userId },
@@ -59,6 +71,13 @@ class IncrementalAggregationService {
                 totalSessions: { increment: 1 }
             }
         });
+        // Update machine session count
+        await client.machine.update({
+            where: { id: session.clientMachineId },
+            data: {
+                totalSessions: { increment: 1 }
+            }
+        });
         // Update user session count
         await client.user.update({
             where: { id: session.userId },
@@ -72,6 +91,13 @@ class IncrementalAggregationService {
      */
     async onProjectCreated(project, tx) {
         const client = tx || database_1.prisma;
+        // Update machine project count
+        await client.machine.update({
+            where: { id: project.clientMachineId },
+            data: {
+                totalProjects: { increment: 1 }
+            }
+        });
         // Update user project count
         await client.user.update({
             where: { id: project.userId },

@@ -122,9 +122,7 @@ class JSONLService {
                 id: userId,
                 email: userEmail,
             },
-            update: {
-                lastSeen: new Date(),
-            },
+            update: {},
         });
         // Ensure machine exists
         await database_1.prisma.machine.upsert({
@@ -134,9 +132,7 @@ class JSONLService {
                 userId,
                 machineName: machineId,
             },
-            update: {
-                lastSeen: new Date(),
-            },
+            update: {},
         });
     }
     async processProjectDirectory(projectPath, totalFiles, currentFileOffset, totalProjects, currentProjectIndex) {
@@ -210,7 +206,7 @@ class JSONLService {
             });
             // Update user's project count (only if using incremental aggregation)
             if (this.useIncrementalAggregation) {
-                await this.incrementalAggregation.onProjectCreated({ userId });
+                await this.incrementalAggregation.onProjectCreated({ userId, clientMachineId: machineId });
                 this.incrementalChanges.newProjects.push(projectName);
             }
             return project;
@@ -224,9 +220,7 @@ class JSONLService {
                         clientMachineId: machineId,
                     },
                 },
-                data: {
-                    lastSeen: new Date(),
-                },
+                data: {},
             });
         }
     }
@@ -265,7 +259,6 @@ class JSONLService {
                     projectId,
                     userId,
                     clientMachineId: machineId,
-                    startTime: stats.birthtime,
                 },
             });
             // Update aggregates for new session (only if using incremental aggregation)
@@ -273,6 +266,7 @@ class JSONLService {
                 await this.incrementalAggregation.onSessionCreated({
                     projectId,
                     userId,
+                    clientMachineId: machineId,
                 });
                 this.incrementalChanges.newSessions.push(sessionId);
             }
@@ -281,9 +275,7 @@ class JSONLService {
             // Update existing session
             await database_1.prisma.session.update({
                 where: { id: sessionId },
-                data: {
-                    endTime: stats.mtime,
-                },
+                data: {},
             });
         }
         // Count total lines first for progress
@@ -347,7 +339,7 @@ class JSONLService {
                 }
                 processing.add(entry.uuid);
                 // Process this message
-                await this.processMessage(entry, projectId, result.tokenUsageByModel);
+                await this.processMessage(entry, projectId, machineId, result.tokenUsageByModel);
                 processed.add(entry.uuid);
                 processing.delete(entry.uuid);
                 result.messagesProcessed++;
@@ -420,7 +412,7 @@ class JSONLService {
     //   }
     //   return lineCount;
     // }
-    async processMessage(entry, projectId, tokenUsageByModel) {
+    async processMessage(entry, projectId, clientMachineId, tokenUsageByModel) {
         if (!entry.message || !entry.sessionId || !entry.uuid)
             return;
         const userId = this.userService.getUserId();
@@ -517,6 +509,7 @@ class JSONLService {
                 sessionId: entry.sessionId,
                 projectId,
                 userId,
+                clientMachineId,
                 inputTokens,
                 outputTokens,
                 cacheCreationTokens,

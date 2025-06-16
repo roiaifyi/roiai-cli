@@ -14,6 +14,7 @@ export class IncrementalAggregationService {
       sessionId: string;
       projectId: string;
       userId: string;
+      clientMachineId: string;
       inputTokens: number;
       outputTokens: number;
       cacheCreationTokens: number;
@@ -50,6 +51,19 @@ export class IncrementalAggregationService {
       }
     });
 
+    // Update machine aggregates
+    await client.machine.update({
+      where: { id: message.clientMachineId },
+      data: {
+        totalMessages: { increment: 1 },
+        totalCost: { increment: message.messageCost },
+        totalInputTokens: { increment: message.inputTokens },
+        totalOutputTokens: { increment: message.outputTokens },
+        totalCacheCreationTokens: { increment: message.cacheCreationTokens },
+        totalCacheReadTokens: { increment: message.cacheReadTokens }
+      }
+    });
+
     // Update user aggregates
     await client.user.update({
       where: { id: message.userId },
@@ -71,6 +85,7 @@ export class IncrementalAggregationService {
     session: {
       projectId: string;
       userId: string;
+      clientMachineId: string;
     },
     tx?: TransactionClient
   ): Promise<void> {
@@ -79,6 +94,14 @@ export class IncrementalAggregationService {
     // Update project session count
     await client.project.update({
       where: { id: session.projectId },
+      data: {
+        totalSessions: { increment: 1 }
+      }
+    });
+
+    // Update machine session count
+    await client.machine.update({
+      where: { id: session.clientMachineId },
       data: {
         totalSessions: { increment: 1 }
       }
@@ -99,10 +122,19 @@ export class IncrementalAggregationService {
   async onProjectCreated(
     project: {
       userId: string;
+      clientMachineId: string;
     },
     tx?: TransactionClient
   ): Promise<void> {
     const client = tx || prisma;
+
+    // Update machine project count
+    await client.machine.update({
+      where: { id: project.clientMachineId },
+      data: {
+        totalProjects: { increment: 1 }
+      }
+    });
 
     // Update user project count
     await client.user.update({

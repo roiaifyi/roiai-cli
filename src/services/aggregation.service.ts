@@ -14,7 +14,10 @@ export class AggregationService {
       // 2. Recalculate Project aggregates
       await this.recalculateProjectAggregates(tx);
       
-      // 3. Recalculate User aggregates
+      // 3. Recalculate Machine aggregates
+      await this.recalculateMachineAggregates(tx);
+      
+      // 4. Recalculate User aggregates
       await this.recalculateUserAggregates(tx);
     });
     
@@ -94,6 +97,55 @@ export class AggregationService {
         where: { id: project.id },
         data: {
           totalSessions: project.sessions.length,
+          totalMessages: messageAggregates.totalMessages,
+          totalCost: messageAggregates.totalCost,
+          totalInputTokens: messageAggregates.totalInputTokens,
+          totalOutputTokens: messageAggregates.totalOutputTokens,
+          totalCacheCreationTokens: messageAggregates.totalCacheCreationTokens,
+          totalCacheReadTokens: messageAggregates.totalCacheReadTokens
+        }
+      });
+    }
+  }
+
+  private async recalculateMachineAggregates(tx: any): Promise<void> {
+    console.log('  📊 Recalculating machine aggregates...');
+    
+    const machines = await tx.machine.findMany({
+      include: {
+        projects: true,
+        sessions: true
+      }
+    });
+
+    for (const machine of machines) {
+      // Get all messages for this machine
+      const messages = await tx.message.findMany({
+        where: { session: { clientMachineId: machine.id } }
+      });
+
+      const messageAggregates = messages.reduce((acc: any, msg: any) => {
+        acc.totalMessages++;
+        acc.totalCost = acc.totalCost.add(new Decimal(msg.messageCost));
+        acc.totalInputTokens += msg.inputTokens;
+        acc.totalOutputTokens += msg.outputTokens;
+        acc.totalCacheCreationTokens += msg.cacheCreationTokens;
+        acc.totalCacheReadTokens += msg.cacheReadTokens;
+        return acc;
+      }, {
+        totalMessages: 0,
+        totalCost: new Decimal(0),
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        totalCacheCreationTokens: 0,
+        totalCacheReadTokens: 0
+      });
+
+      await tx.machine.update({
+        where: { id: machine.id },
+        data: {
+          totalProjects: machine.projects.length,
+          totalSessions: machine.sessions.length,
           totalMessages: messageAggregates.totalMessages,
           totalCost: messageAggregates.totalCost,
           totalInputTokens: messageAggregates.totalInputTokens,

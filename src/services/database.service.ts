@@ -3,18 +3,17 @@ import { PrismaClient, Prisma } from '@prisma/client';
 export class DatabaseService {
   constructor(private prisma: PrismaClient) {}
   
-  async findOrCreateUser(userId: string, email?: string) {
+  async findOrCreateUser(userId: string, email?: string, username?: string) {
     return await this.prisma.user.upsert({
       where: { id: userId },
       update: { 
-        lastSeen: new Date(),
-        ...(email && { email })
+        ...(email && { email }),
+        ...(username && { username })
       },
       create: {
         id: userId,
         email,
-        createdAt: new Date(),
-        lastSeen: new Date()
+        username
       }
     });
   }
@@ -23,15 +22,12 @@ export class DatabaseService {
     return await this.prisma.machine.upsert({
       where: { id: machineId },
       update: {
-        lastSeen: new Date(),
         ...(machineName && { machineName })
       },
       create: {
         id: machineId,
         userId,
-        machineName,
-        firstSeen: new Date(),
-        lastSeen: new Date()
+        machineName
       }
     });
   }
@@ -39,16 +35,12 @@ export class DatabaseService {
   async findOrCreateProject(projectId: string, projectName: string, userId: string, clientMachineId: string) {
     return await this.prisma.project.upsert({
       where: { id: projectId },
-      update: {
-        lastSeen: new Date()
-      },
+      update: {},
       create: {
         id: projectId,
         projectName,
         userId,
-        clientMachineId,
-        firstSeen: new Date(),
-        lastSeen: new Date()
+        clientMachineId
       }
     });
   }
@@ -56,15 +48,12 @@ export class DatabaseService {
   async findOrCreateSession(sessionId: string, projectId: string, userId: string, clientMachineId: string) {
     return await this.prisma.session.upsert({
       where: { id: sessionId },
-      update: {
-        endTime: new Date()
-      },
+      update: {},
       create: {
         id: sessionId,
         projectId,
         userId,
-        clientMachineId,
-        startTime: new Date()
+        clientMachineId
       }
     });
   }

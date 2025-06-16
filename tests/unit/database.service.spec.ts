@@ -27,13 +27,13 @@ describe('DatabaseService BDD Tests', () => {
         };
         
         // Act
-        const user = await dbService.findOrCreateUser(userData.id, userData.email);
+        const user = await dbService.findOrCreateUser(userData.id, userData.email, undefined);
         
         // Assert
         expect(user.id).toBe(userData.id);
         expect(user.email).toBe(userData.email);
         expect(user.createdAt).toBeInstanceOf(Date);
-        expect(user.lastSeen).toBeInstanceOf(Date);
+        expect(user.updatedAt).toBeInstanceOf(Date);
         expect(user.totalMessages).toBe(0);
         expect(user.totalCost.toNumber()).toBe(0);
       });
@@ -46,8 +46,8 @@ describe('DatabaseService BDD Tests', () => {
         };
         
         // Act
-        const user1 = await dbService.findOrCreateUser(userData.id, userData.email);
-        const user2 = await dbService.findOrCreateUser(userData.id, userData.email);
+        const user1 = await dbService.findOrCreateUser(userData.id, userData.email, undefined);
+        const user2 = await dbService.findOrCreateUser(userData.id, userData.email, undefined);
         
         // Assert
         expect(user1.id).toBe(user2.id);
@@ -67,7 +67,7 @@ describe('DatabaseService BDD Tests', () => {
         const machineName = 'Test Laptop';
         
         // Create user first
-        await dbService.findOrCreateUser(userId, 'user@example.com');
+        await dbService.findOrCreateUser(userId, 'user@example.com', undefined);
         
         // Act
         const machine = await dbService.findOrCreateMachine(
@@ -80,8 +80,8 @@ describe('DatabaseService BDD Tests', () => {
         expect(machine.id).toBe(machineId);
         expect(machine.userId).toBe(userId);
         expect(machine.machineName).toBe(machineName);
-        expect(machine.firstSeen).toBeInstanceOf(Date);
-        expect(machine.lastSeen).toBeInstanceOf(Date);
+        expect(machine.createdAt).toBeInstanceOf(Date);
+        expect(machine.updatedAt).toBeInstanceOf(Date);
       });
     });
     
@@ -98,7 +98,7 @@ describe('DatabaseService BDD Tests', () => {
         };
         
         // Create dependencies
-        await dbService.findOrCreateUser(userId, 'user@example.com');
+        await dbService.findOrCreateUser(userId, 'user@example.com', undefined);
         await dbService.findOrCreateMachine(machineId, userId, 'Test Machine');
         
         // Act
@@ -128,7 +128,7 @@ describe('DatabaseService BDD Tests', () => {
         const sessionId = 'test-session';
         
         // Create dependencies
-        await dbService.findOrCreateUser(userId, 'user@example.com');
+        await dbService.findOrCreateUser(userId, 'user@example.com', undefined);
         await dbService.findOrCreateMachine(machineId, userId, 'Test Machine');
         await dbService.findOrCreateProject(projectId, 'Test Project', userId, machineId);
         
@@ -291,7 +291,7 @@ describe('DatabaseService BDD Tests', () => {
         const sessionId = 'batch-session';
         
         // Create dependencies
-        await dbService.findOrCreateUser(userId, 'batch@example.com');
+        await dbService.findOrCreateUser(userId, 'batch@example.com', undefined);
         await dbService.findOrCreateMachine(machineId, userId, 'Batch Machine');
         await dbService.findOrCreateProject(projectId, 'Batch Project', userId, machineId);
         await dbService.findOrCreateSession(sessionId, projectId, userId, machineId);
@@ -336,7 +336,7 @@ describe('DatabaseService BDD Tests', () => {
       const projectId = 'stats-project';
       const sessionId = 'stats-session';
       
-      await dbService.findOrCreateUser(userId, 'stats@example.com');
+      await dbService.findOrCreateUser(userId, 'stats@example.com', undefined);
       await dbService.findOrCreateMachine(machineId, userId, 'Stats Machine');
       await dbService.findOrCreateProject(projectId, 'Stats Project', userId, machineId);
       await dbService.findOrCreateSession(sessionId, projectId, userId, machineId);

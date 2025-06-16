@@ -54,7 +54,6 @@ class UserService {
                 email: this.userInfo.email,
             },
             update: {
-                lastSeen: new Date(),
                 email: this.userInfo.email
             }
         });
@@ -68,7 +67,6 @@ class UserService {
                 osInfo: `${os_1.default.platform()} ${os_1.default.release()}`
             },
             update: {
-                lastSeen: new Date(),
                 machineName: os_1.default.hostname(),
                 osInfo: `${os_1.default.platform()} ${os_1.default.release()}`
             }

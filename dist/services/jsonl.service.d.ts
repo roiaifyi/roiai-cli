@@ -24,7 +24,8 @@ export declare class JSONLService {
     private processProjectDirectory;
     ensureProject(projectName: string): Promise<{
         id: string;
-        lastSeen: Date;
+        createdAt: Date;
+        updatedAt: Date;
         totalSessions: number;
         totalMessages: number;
         totalCost: Decimal;
@@ -33,7 +34,6 @@ export declare class JSONLService {
         totalCacheCreationTokens: bigint;
         totalCacheReadTokens: bigint;
         userId: string;
-        firstSeen: Date;
         projectName: string;
         clientMachineId: string;
     }>;

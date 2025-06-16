@@ -151,9 +151,7 @@ export class JSONLService {
         id: userId,
         email: userEmail,
       },
-      update: {
-        lastSeen: new Date(),
-      },
+      update: {},
     });
 
     // Ensure machine exists
@@ -164,9 +162,7 @@ export class JSONLService {
         userId,
         machineName: machineId,
       },
-      update: {
-        lastSeen: new Date(),
-      },
+      update: {},
     });
   }
 
@@ -260,7 +256,7 @@ export class JSONLService {
 
       // Update user's project count (only if using incremental aggregation)
       if (this.useIncrementalAggregation) {
-        await this.incrementalAggregation.onProjectCreated({ userId });
+        await this.incrementalAggregation.onProjectCreated({ userId, clientMachineId: machineId });
         this.incrementalChanges.newProjects.push(projectName);
       }
 
@@ -274,9 +270,7 @@ export class JSONLService {
             clientMachineId: machineId,
           },
         },
-        data: {
-          lastSeen: new Date(),
-        },
+        data: {},
       });
     }
   }
@@ -328,7 +322,6 @@ export class JSONLService {
           projectId,
           userId,
           clientMachineId: machineId,
-          startTime: stats.birthtime,
         },
       });
 
@@ -337,6 +330,7 @@ export class JSONLService {
         await this.incrementalAggregation.onSessionCreated({
           projectId,
           userId,
+          clientMachineId: machineId,
         });
         this.incrementalChanges.newSessions.push(sessionId);
       }
@@ -345,7 +339,6 @@ export class JSONLService {
       await prisma.session.update({
         where: { id: sessionId },
         data: {
-          endTime: stats.mtime,
         },
       });
     }
@@ -420,7 +413,7 @@ export class JSONLService {
         processing.add(entry.uuid);
 
         // Process this message
-        await this.processMessage(entry, projectId, result.tokenUsageByModel);
+        await this.processMessage(entry, projectId, machineId, result.tokenUsageByModel);
         processed.add(entry.uuid);
         processing.delete(entry.uuid);
         result.messagesProcessed++;
@@ -503,7 +496,7 @@ export class JSONLService {
   //   return lineCount;
   // }
 
-  private async processMessage(entry: JSONLEntry, projectId: string, tokenUsageByModel: Map<string, TokenUsageByModel>) {
+  private async processMessage(entry: JSONLEntry, projectId: string, clientMachineId: string, tokenUsageByModel: Map<string, TokenUsageByModel>) {
     if (!entry.message || !entry.sessionId || !entry.uuid) return;
 
     const userId = this.userService.getUserId();
@@ -619,6 +612,7 @@ export class JSONLService {
         sessionId: entry.sessionId,
         projectId,
         userId,
+        clientMachineId,
         inputTokens,
         outputTokens,
         cacheCreationTokens,

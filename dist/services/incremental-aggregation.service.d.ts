@@ -10,6 +10,7 @@ export declare class IncrementalAggregationService {
         sessionId: string;
         projectId: string;
         userId: string;
+        clientMachineId: string;
         inputTokens: number;
         outputTokens: number;
         cacheCreationTokens: number;
@@ -22,12 +23,14 @@ export declare class IncrementalAggregationService {
     onSessionCreated(session: {
         projectId: string;
         userId: string;
+        clientMachineId: string;
     }, tx?: TransactionClient): Promise<void>;
     /**
      * Update aggregates when a new project is created
      */
     onProjectCreated(project: {
         userId: string;
+        clientMachineId: string;
     }, tx?: TransactionClient): Promise<void>;
     /**
      * Handle batch message creation with efficient aggregation
