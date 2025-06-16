@@ -34,7 +34,7 @@ describe('DatabaseService BDD Tests', () => {
         expect(user.email).toBe(userData.email);
         expect(user.createdAt).toBeInstanceOf(Date);
         expect(user.updatedAt).toBeInstanceOf(Date);
-        expect(user.totalMessages).toBe(0);
+        expect(user.totalMessages).toBe(0n);
         expect(user.totalCost.toNumber()).toBe(0);
       });
       
@@ -114,7 +114,7 @@ describe('DatabaseService BDD Tests', () => {
         expect(project.projectName).toBe(projectData.name);
         expect(project.userId).toBe(projectData.userId);
         expect(project.clientMachineId).toBe(projectData.machineId);
-        expect(project.totalMessages).toBe(0);
+        expect(project.totalMessages).toBe(0n);
         expect(project.totalCost.toNumber()).toBe(0);
       });
     });
@@ -145,7 +145,7 @@ describe('DatabaseService BDD Tests', () => {
         expect(session.projectId).toBe(projectId);
         expect(session.userId).toBe(userId);
         expect(session.clientMachineId).toBe(machineId);
-        expect(session.totalMessages).toBe(0);
+        expect(session.totalMessages).toBe(0n);
         expect(session.totalCost.toNumber()).toBe(0);
       });
     });
@@ -185,10 +185,10 @@ describe('DatabaseService BDD Tests', () => {
         expect(message.sessionId).toBe(messageData.sessionId);
         expect(message.role).toBe(messageData.role);
         expect(message.model).toBe(messageData.model);
-        expect(message.inputTokens).toBe(messageData.inputTokens);
-        expect(message.outputTokens).toBe(messageData.outputTokens);
-        expect(message.cacheCreationTokens).toBe(messageData.cacheCreationTokens);
-        expect(message.cacheReadTokens).toBe(messageData.cacheReadTokens);
+        expect(message.inputTokens).toBe(BigInt(messageData.inputTokens));
+        expect(message.outputTokens).toBe(BigInt(messageData.outputTokens));
+        expect(message.cacheCreationTokens).toBe(BigInt(messageData.cacheCreationTokens));
+        expect(message.cacheReadTokens).toBe(BigInt(messageData.cacheReadTokens));
         expect(message.messageCost.toNumber()).toBe(0.01);
       });
       
@@ -256,7 +256,7 @@ describe('DatabaseService BDD Tests', () => {
         
         // Assert
         expect(fileStatus.filePath).toBe(filePath);
-        expect(fileStatus.fileSize).toBe(fileData.fileSize);
+        expect(fileStatus.fileSize).toBe(BigInt(fileData.fileSize));
         expect(fileStatus.lastModified?.getTime()).toBe(fileData.lastModified.getTime());
         expect(fileStatus.checksum).toBe(fileData.checksum);
         expect(fileStatus.lastProcessedAt).toBeInstanceOf(Date);

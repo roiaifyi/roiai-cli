@@ -143,14 +143,14 @@ describe('AggregationService BDD Tests', () => {
         expect(Number(alphaUsage?.cacheCreationInputTokens)).toBe(200 + 300); // 500
         expect(Number(alphaUsage?.cacheReadInputTokens)).toBe(150);
         expect(alphaUsage?.totalCost).toBe(0.01 + 0.008 + 0.015); // 0.033
-        expect(alphaUsage?.messageCount).toBe(3);
+        expect(alphaUsage?.messageCount).toBe(3n);
         
         const betaUsage = projectUsage.find(p => p.projectName === 'Project Beta');
         expect(betaUsage).toBeDefined();
         expect(Number(betaUsage?.inputTokens)).toBe(2000);
         expect(Number(betaUsage?.outputTokens)).toBe(1000);
         expect(betaUsage?.totalCost).toBe(0.02);
-        expect(betaUsage?.messageCount).toBe(1);
+        expect(betaUsage?.messageCount).toBe(1n);
       });
     });
     
@@ -167,14 +167,14 @@ describe('AggregationService BDD Tests', () => {
         expect(Number(user1Usage?.inputTokens)).toBe(1000 + 800 + 2000); // 3800
         expect(Number(user1Usage?.outputTokens)).toBe(500 + 300 + 1000); // 1800
         expect(user1Usage?.totalCost).toBeCloseTo(0.038, 10);
-        expect(user1Usage?.messageCount).toBe(3);
+        expect(user1Usage?.messageCount).toBe(3n);
         
         const user2Usage = userUsage.find(u => u.userName === 'user2@example.com');
         expect(user2Usage).toBeDefined();
         expect(Number(user2Usage?.inputTokens)).toBe(1500);
         expect(Number(user2Usage?.outputTokens)).toBe(700);
         expect(user2Usage?.totalCost).toBe(0.015);
-        expect(user2Usage?.messageCount).toBe(1);
+        expect(user2Usage?.messageCount).toBe(1n);
       });
     });
     
@@ -199,8 +199,8 @@ describe('AggregationService BDD Tests', () => {
         
         // Verify totals for Dec 1
         const dec1Total = dec1Messages.reduce((acc, msg) => ({
-          inputTokens: acc.inputTokens + msg.inputTokens,
-          outputTokens: acc.outputTokens + msg.outputTokens,
+          inputTokens: Number(acc.inputTokens) + Number(msg.inputTokens),
+          outputTokens: Number(acc.outputTokens) + Number(msg.outputTokens),
           totalCost: acc.totalCost + msg.totalCost
         }), { inputTokens: 0, outputTokens: 0, totalCost: 0 });
         
@@ -220,10 +220,10 @@ describe('AggregationService BDD Tests', () => {
         
         const claudeUsage = modelUsage[0];
         expect(claudeUsage.model).toBe('claude-3-5-sonnet-20241022');
-        expect(claudeUsage.inputTokens).toBe(1000 + 800 + 2000 + 1500); // 5300
-        expect(claudeUsage.outputTokens).toBe(500 + 300 + 1000 + 700); // 2500
-        expect(claudeUsage.cacheCreationInputTokens).toBe(200 + 300); // 500
-        expect(claudeUsage.cacheReadInputTokens).toBe(150);
+        expect(claudeUsage.inputTokens).toBe(5300n); // 1000 + 800 + 2000 + 1500
+        expect(claudeUsage.outputTokens).toBe(2500n); // 500 + 300 + 1000 + 700
+        expect(claudeUsage.cacheCreationInputTokens).toBe(500n); // 200 + 300
+        expect(claudeUsage.cacheReadInputTokens).toBe(150n);
         expect(claudeUsage.totalCost).toBeCloseTo(0.053, 10);
         expect(claudeUsage.messageCount).toBe(4);
       });
@@ -235,10 +235,10 @@ describe('AggregationService BDD Tests', () => {
         const summary = await aggregationService.getTotalUsage();
         
         // Assert
-        expect(summary.totalInputTokens).toBe(5300);
-        expect(summary.totalOutputTokens).toBe(2500);
-        expect(summary.totalCacheCreationTokens).toBe(500);
-        expect(summary.totalCacheReadTokens).toBe(150);
+        expect(summary.totalInputTokens).toBe(5300n);
+        expect(summary.totalOutputTokens).toBe(2500n);
+        expect(summary.totalCacheCreationTokens).toBe(500n);
+        expect(summary.totalCacheReadTokens).toBe(150n);
         expect(summary.totalCost).toBe(0.053);
         expect(summary.totalMessages).toBe(4);
         expect(summary.uniqueUsers).toBe(2);

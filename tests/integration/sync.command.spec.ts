@@ -119,7 +119,7 @@ describe('Sync Command BDD Tests', () => {
         });
         expect(fileStatus).toBeTruthy();
         expect(fileStatus?.lastProcessedAt).toBeTruthy();
-        expect(fileStatus?.lastProcessedLine).toBe(2);
+        expect(fileStatus?.lastProcessedLine).toBe(2n);
         await prisma.$disconnect();
       });
     });
@@ -299,10 +299,10 @@ describe('Sync Command BDD Tests', () => {
           orderBy: { timestamp: 'asc' }
         });
         
-        expect(messages[0].cacheCreationTokens).toBe(2000);
-        expect(messages[0].cacheReadTokens).toBe(0);
-        expect(messages[1].cacheCreationTokens).toBe(0);
-        expect(messages[1].cacheReadTokens).toBe(1500);
+        expect(messages[0].cacheCreationTokens).toBe(2000n);
+        expect(messages[0].cacheReadTokens).toBe(0n);
+        expect(messages[1].cacheCreationTokens).toBe(0n);
+        expect(messages[1].cacheReadTokens).toBe(1500n);
         
         await prisma.$disconnect();
       });

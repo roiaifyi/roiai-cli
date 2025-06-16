@@ -1,0 +1,56 @@
+[2025-06-16] BigInt Migration for Message-Related Fields
+
+## Decision Rationale
+The user requested changing message-related fields to bigger data types (BigInt) for future-proofing. This is a wise decision as message counts and token usage can grow very large over time.
+
+## Changes Made
+
+### Schema Updates (prisma/schema.prisma)
+1. Changed from Int to BigInt for:
+   - All `totalMessages` fields across User, Machine, Project, Session models
+   - All token-related fields: `totalInputTokens`, `totalOutputTokens`, `totalCacheCreationTokens`, `totalCacheReadTokens`
+   - Message model token fields: `inputTokens`, `outputTokens`, `cacheCreationTokens`, `cacheReadTokens`
+   - FileStatus fields: `fileSize`, `lastProcessedLine`
+   - SyncStatus.id field
+
+2. Kept as Int (per user's clarification):
+   - `totalProjects` fields
+   - `totalSessions` fields
+
+### Code Updates
+1. Fixed aggregation.service.ts:
+   - Updated reduce accumulators to use BigInt literals (0n) for proper arithmetic
+   - BigInt values are automatically handled by Prisma
+
+2. Fixed incremental-aggregation.service.ts:
+   - Updated comparison to handle mixed BigInt and number types
+   - totalMessages uses 0n, while totalSessions/totalProjects use 0
+
+3. Fixed all tests to expect BigInt values:
+   - Used toBe(0n) instead of toBe(0) for BigInt fields
+   - Used BigInt() constructor to convert test data
+   - Handled BigInt to number conversions in aggregation tests
+
+## Implementation Process
+1. Updated schema file with BigInt types
+2. Removed old database and migrations
+3. Created fresh migration with new schema
+4. Regenerated Prisma client
+5. Fixed TypeScript compilation errors related to BigInt arithmetic
+6. Updated all tests to handle BigInt comparisons
+
+## Key Insights
+- SQLite supports BIGINT natively, mapped to JavaScript BigInt by Prisma
+- BigInt arithmetic requires all operands to be BigInt (can't mix with numbers)
+- Test assertions need to compare BigInt with BigInt (0n not 0)
+- Prisma handles BigInt serialization/deserialization automatically
+
+## Future Considerations
+- When displaying BigInt values in UI, may need to convert to string or number
+- For very large numbers, consider formatting utilities
+- API responses may need special handling for BigInt serialization
+
+## SQLite Limitation Fix
+- Discovered that SQLite doesn't support BIGINT with AUTOINCREMENT
+- Changed SyncStatus.id back to Int since it's just for tracking sync operations
+- This is sufficient as the sync status table won't have billions of rows

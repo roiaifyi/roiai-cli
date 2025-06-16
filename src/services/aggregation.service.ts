@@ -43,12 +43,12 @@ export class AggregationService {
         acc.totalCacheReadTokens += msg.cacheReadTokens;
         return acc;
       }, {
-        totalMessages: 0,
+        totalMessages: 0n,
         totalCost: new Decimal(0),
-        totalInputTokens: 0,
-        totalOutputTokens: 0,
-        totalCacheCreationTokens: 0,
-        totalCacheReadTokens: 0
+        totalInputTokens: 0n,
+        totalOutputTokens: 0n,
+        totalCacheCreationTokens: 0n,
+        totalCacheReadTokens: 0n
       });
 
       await tx.session.update({
@@ -85,12 +85,12 @@ export class AggregationService {
         acc.totalCacheReadTokens += msg.cacheReadTokens;
         return acc;
       }, {
-        totalMessages: 0,
+        totalMessages: 0n,
         totalCost: new Decimal(0),
-        totalInputTokens: 0,
-        totalOutputTokens: 0,
-        totalCacheCreationTokens: 0,
-        totalCacheReadTokens: 0
+        totalInputTokens: 0n,
+        totalOutputTokens: 0n,
+        totalCacheCreationTokens: 0n,
+        totalCacheReadTokens: 0n
       });
 
       await tx.project.update({
@@ -133,12 +133,12 @@ export class AggregationService {
         acc.totalCacheReadTokens += msg.cacheReadTokens;
         return acc;
       }, {
-        totalMessages: 0,
+        totalMessages: 0n,
         totalCost: new Decimal(0),
-        totalInputTokens: 0,
-        totalOutputTokens: 0,
-        totalCacheCreationTokens: 0,
-        totalCacheReadTokens: 0
+        totalInputTokens: 0n,
+        totalOutputTokens: 0n,
+        totalCacheCreationTokens: 0n,
+        totalCacheReadTokens: 0n
       });
 
       await tx.machine.update({
@@ -178,12 +178,12 @@ export class AggregationService {
         acc.totalCacheReadTokens += msg.cacheReadTokens;
         return acc;
       }, {
-        totalMessages: 0,
+        totalMessages: 0n,
         totalCost: new Decimal(0),
-        totalInputTokens: 0,
-        totalOutputTokens: 0,
-        totalCacheCreationTokens: 0,
-        totalCacheReadTokens: 0
+        totalInputTokens: 0n,
+        totalOutputTokens: 0n,
+        totalCacheCreationTokens: 0n,
+        totalCacheReadTokens: 0n
       });
 
       await tx.user.update({

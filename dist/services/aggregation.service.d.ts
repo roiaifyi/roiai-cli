@@ -10,7 +10,7 @@ export declare class AggregationService {
     verifyAggregates(): Promise<any>;
     getUsageByProject(): Promise<{
         projectName: string;
-        messageCount: number;
+        messageCount: bigint;
         totalCost: number;
         inputTokens: bigint;
         outputTokens: bigint;
@@ -19,7 +19,7 @@ export declare class AggregationService {
     }[]>;
     getUsageByUser(): Promise<{
         userName: string;
-        messageCount: number;
+        messageCount: bigint;
         totalCost: number;
         inputTokens: bigint;
         outputTokens: bigint;
@@ -29,27 +29,27 @@ export declare class AggregationService {
     getDailyUsage(startDate: Date, endDate: Date): Promise<{
         date: string;
         messageCount: number;
-        inputTokens: number;
-        outputTokens: number;
-        cacheCreationInputTokens: number;
-        cacheReadInputTokens: number;
+        inputTokens: number | bigint;
+        outputTokens: number | bigint;
+        cacheCreationInputTokens: number | bigint;
+        cacheReadInputTokens: number | bigint;
         totalCost: number;
     }[]>;
     getUsageByModel(): Promise<{
         model: string | null;
         messageCount: number;
-        inputTokens: number;
-        outputTokens: number;
-        cacheCreationInputTokens: number;
-        cacheReadInputTokens: number;
+        inputTokens: number | bigint;
+        outputTokens: number | bigint;
+        cacheCreationInputTokens: number | bigint;
+        cacheReadInputTokens: number | bigint;
         totalCost: number;
     }[]>;
     getTotalUsage(): Promise<{
         totalMessages: number;
-        totalInputTokens: number;
-        totalOutputTokens: number;
-        totalCacheCreationTokens: number;
-        totalCacheReadTokens: number;
+        totalInputTokens: number | bigint;
+        totalOutputTokens: number | bigint;
+        totalCacheCreationTokens: number | bigint;
+        totalCacheReadTokens: number | bigint;
         totalCost: number;
         uniqueUsers: number;
         uniqueProjects: number;

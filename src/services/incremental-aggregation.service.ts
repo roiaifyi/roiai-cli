@@ -289,7 +289,7 @@ export class IncrementalAggregationService {
     });
 
     // If no user or aggregates are all zero, we need full recalculation
-    if (!user || (user.totalMessages === 0 && user.totalSessions === 0 && user.totalProjects === 0)) {
+    if (!user || (user.totalMessages === 0n && user.totalSessions === 0 && user.totalProjects === 0)) {
       return false;
     }
 

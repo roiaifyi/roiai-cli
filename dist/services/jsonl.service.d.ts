@@ -27,7 +27,7 @@ export declare class JSONLService {
         createdAt: Date;
         updatedAt: Date;
         totalSessions: number;
-        totalMessages: number;
+        totalMessages: bigint;
         totalCost: Decimal;
         totalInputTokens: bigint;
         totalOutputTokens: bigint;
