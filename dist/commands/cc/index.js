@@ -5,9 +5,11 @@ const commander_1 = require("commander");
 const sync_command_1 = require("./sync.command");
 const watch_command_1 = require("./watch.command");
 const push_command_1 = require("./push.command");
+const push_status_command_1 = require("./push-status.command");
 exports.ccCommand = new commander_1.Command('cc')
     .description('Claude Code usage tracking commands')
     .addCommand(sync_command_1.syncCommand)
     .addCommand(watch_command_1.watchCommand)
-    .addCommand(push_command_1.pushCommand);
+    .addCommand(push_command_1.pushCommand)
+    .addCommand(push_status_command_1.pushStatusCommand);
 //# sourceMappingURL=index.js.map

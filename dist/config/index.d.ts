@@ -12,11 +12,12 @@ export interface Config {
         cacheDurationDefault: number;
         batchSize: number;
     };
-    sync: {
-        apiEndpoint: string;
+    push: {
+        endpoint: string;
         apiToken: string;
         batchSize: number;
         maxRetries: number;
+        timeout: number;
     };
     watch: {
         pollInterval: number;
@@ -41,11 +42,12 @@ declare class ConfigManager {
     getDatabaseConfig(): {
         path: string;
     };
-    getSyncConfig(): {
-        apiEndpoint: string;
+    getPushConfig(): {
+        endpoint: string;
         apiToken: string;
         batchSize: number;
         maxRetries: number;
+        timeout: number;
     };
     getWatchConfig(): {
         pollInterval: number;

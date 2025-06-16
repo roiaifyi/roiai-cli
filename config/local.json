@@ -10,9 +10,12 @@
     "cacheDurationDefault": 5
   },
 
-  "sync": {
-    "apiEndpoint": "https://your-api-server.com/claude-stats/upload",
-    "apiToken": "your-secret-api-token-here"
+  "push": {
+    "endpoint": "http://localhost:3456/v1/usage/push",
+    "apiToken": "test-token",
+    "batchSize": 1000,
+    "maxRetries": 5,
+    "timeout": 30000
   },
 
   "database": {

@@ -55,9 +55,12 @@
     "@jest/globals": "^30.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/config": "^3.3.5",
+    "@types/express": "^4.17.23",
     "@types/jest": "^29.5.14",
     "@types/node": "^24.0.1",
     "@types/node-fetch": "^2.6.12",
+    "@types/uuid": "^10.0.0",
+    "express": "^4.21.2",
     "jest": "^30.0.0",
     "nodemon": "^3.1.10",
     "ts-jest": "^29.4.0",
@@ -66,13 +69,16 @@
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
+    "axios": "^1.10.0",
     "better-sqlite3": "^11.10.0",
     "chalk": "^4.1.2",
     "chokidar": "^4.0.3",
+    "cli-table3": "^0.6.5",
     "commander": "^14.0.0",
     "config": "^4.0.0",
     "node-fetch": "^2.7.0",
     "ora": "^5.4.1",
-    "prisma": "^6.9.0"
+    "prisma": "^6.9.0",
+    "uuid": "^11.1.0"
   }
 }

@@ -52,11 +52,12 @@ The main configuration file controls all aspects of the CLI. Create this file by
     "cacheDurationDefault": 5,               // Cache duration (5 or 60 minutes)
     "batchSize": 1000                        // Processing batch size
   },
-  "sync": {
-    "apiEndpoint": "https://api.example.com/upload",  // Remote API endpoint
-    "apiToken": "your-secret-token",                  // API authentication
-    "batchSize": 1000,                                // Upload batch size
-    "maxRetries": 3                                   // Max retry attempts
+  "push": {
+    "endpoint": "https://api.example.com/v1/usage/push",  // Remote API endpoint
+    "apiToken": "your-bearer-token",                      // Bearer token for authentication
+    "batchSize": 1000,                                    // Messages per batch
+    "maxRetries": 5,                                      // Max retry attempts
+    "timeout": 30000                                      // Request timeout in ms (30s)
   },
   "database": {
     "path": "./prisma/dev.db"                // SQLite database location

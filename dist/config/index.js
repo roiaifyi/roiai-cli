@@ -40,8 +40,8 @@ class ConfigManager {
     getDatabaseConfig() {
         return this.config.database;
     }
-    getSyncConfig() {
-        return this.config.sync;
+    getPushConfig() {
+        return this.config.push;
     }
     getWatchConfig() {
         return this.config.watch;

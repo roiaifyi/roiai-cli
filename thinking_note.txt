@@ -63,3 +63,100 @@ The user requested changing message-related fields to bigger data types (BigInt)
   - Consistency with other tables that have direct references to all context (user, project, machine)
   - Better analytics capabilities for machine-specific message aggregation
 - Updated all code and tests to include clientMachineId when creating messages
+
+[2025-06-16] Push Command Implementation
+
+## Decision Rationale
+
+### Architecture Decisions
+1. **Separate Push Service**: Created a dedicated PushService class to handle all push-related logic, keeping business logic separate from the CLI command. This promotes testability and reusability.
+
+2. **Batch Processing**: Implemented configurable batch sizes to handle large datasets efficiently. The SQL-based selection ensures natural resumption after interruptions without complex state management.
+
+3. **Entity Deduplication**: Used Map data structures to deduplicate entities before sending, reducing payload size and server processing time. Maps maintain insertion order which could be useful for debugging.
+
+4. **Retry Mechanism**: Leveraged the existing sync_status table with retry_count field instead of creating a separate state management system. This simplifies the implementation and makes it more robust.
+
+### Key Insights
+
+1. **Idempotency through Batch IDs**: Each push request includes a unique batch ID, allowing the server to handle duplicate requests gracefully.
+
+2. **Transaction Safety**: All sync_status updates are wrapped in transactions to ensure atomicity when processing server responses.
+
+3. **Progressive Feedback**: Used ora spinner with detailed progress messages to keep users informed during long-running operations.
+
+### Problem Solving
+
+1. **TypeScript Import Issues**: Initially imported unused entity types which caused compilation warnings. Removed them since TypeScript can infer the types from usage.
+
+2. **Axios Error Handling**: The mock tests revealed that axios error objects need special handling. Had to cast errors to access axios-specific properties like isAxiosError.
+
+3. **Test Structure**: Created both unit tests (mocking all dependencies) and integration tests (with mock server) to ensure comprehensive coverage.
+
+### Assumptions
+
+1. **Server API Contract**: Assumed the server will always return structured responses even for partial failures, allowing fine-grained error handling.
+
+2. **Message Ordering**: Messages are selected and pushed in chronological order (ORDER BY localTimestamp ASC) to maintain temporal consistency.
+
+3. **Entity Relationships**: Assumed all messages have valid relationships to sessions, projects, machines, and users. The code handles missing optional fields gracefully.
+
+### Alternative Approaches Considered
+
+1. **State File**: Considered using a separate state file for push progress, but decided the sync_status table provides better reliability and crash recovery.
+
+2. **Parallel Batches**: Considered processing multiple batches in parallel, but decided sequential processing is safer for initial implementation and easier to debug.
+
+3. **Compression**: Considered gzipping request bodies, but decided to implement basic functionality first and add compression as an optimization later.
+
+### Complex Logic Breakdown
+
+1. **Entity Loading Strategy**: 
+   - Single query with nested includes to load all related data
+   - Reduces database round trips from potentially 5 queries to 1
+   - Trade-off: Larger result set but better performance
+
+2. **Response Processing**:
+   - Uses Sets for O(1) lookup of persisted/deduplicated messages
+   - Map for failed messages to preserve error details
+   - Single transaction updates all records to maintain consistency
+
+### TODOs and Future Considerations
+
+1. **Performance Optimization**: 
+   - Add request body compression for large batches
+   - Consider connection pooling for high-frequency pushes
+   - Implement progress persistence for very large datasets
+
+2. **Enhanced Error Handling**:
+   - Add exponential backoff for network errors
+   - Implement circuit breaker pattern for repeated failures
+   - Add detailed error categorization for better user guidance
+
+3. **Monitoring and Metrics**:
+   - Add push duration tracking
+   - Implement success rate monitoring
+   - Create alerts for high failure rates
+
+4. **Security Enhancements**:
+   - Add request signing for additional security
+   - Implement API key rotation support
+   - Add rate limiting awareness
+
+### Testing Approach
+
+1. **Unit Tests**: Focused on individual method behavior with all dependencies mocked. This allows testing edge cases and error conditions easily.
+
+2. **Integration Tests**: Created a mock HTTP server to test the full push flow. This validates the integration between components and HTTP communication.
+
+3. **Test Helpers**: Created reusable mock server and test data creation utilities to reduce test code duplication.
+
+### Implementation Order Rationale
+
+1. Started with type definitions to establish clear contracts
+2. Implemented core service logic with clear separation of concerns
+3. Added CLI commands with user-friendly output
+4. Created comprehensive tests to ensure reliability
+5. Fixed issues discovered during testing
+
+The implementation follows the documented design closely while making practical adjustments discovered during development.

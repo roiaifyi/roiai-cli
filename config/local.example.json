@@ -24,12 +24,21 @@
     "cacheDurationDefault": 5
   },
   
-  "sync": {
-    "// apiEndpoint": "Your remote server API endpoint for data upload",
-    "apiEndpoint": "https://your-api-server.com/claude-stats/upload",
+  "push": {
+    "// endpoint": "Your remote server API endpoint for usage data push",
+    "endpoint": "https://api.roiai.com/v1/usage/push",
     
-    "// apiToken": "Your API authentication token (keep this secret!)",
-    "apiToken": "your-secret-api-token-here"
+    "// apiToken": "Bearer token for API authentication (keep this secret!)",
+    "apiToken": "your-bearer-token-here",
+    
+    "// batchSize": "Number of messages to push per batch (default: 1000)",
+    "batchSize": 1000,
+    
+    "// maxRetries": "Maximum number of retry attempts for failed messages (default: 5)",
+    "maxRetries": 5,
+    
+    "// timeout": "Request timeout in milliseconds (default: 30000 = 30 seconds)",
+    "timeout": 30000
   },
   
   "database": {

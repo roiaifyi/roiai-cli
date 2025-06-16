@@ -1,19 +1,28 @@
 {
-  "database": {
-    "path": "./test.db"
-  },
   "user": {
-    "infoPath": "~/.claude/user_info.json"
+    "infoPath": "./config/user_info.example.json"
   },
+
   "claudeCode": {
-    "rawDataPath": "./test_claude_raw_data",
+    "rawDataPath": "./tests/fixtures/claude-data",
     "pricingUrl": "https://raw.githubusercontent.com/alansparrow/ai-models-pricing/main/claude/pricing-data.json",
-    "pricingCacheTimeout": 0,
-    "cacheDurationDefault": 5,
-    "batchSize": 100
+    "pricingCacheTimeout": 3600000,
+    "cacheDurationDefault": 5
   },
-  "sync": {
-    "apiEndpoint": "https://test-api-server.com/claude-stats/upload",
-    "enabled": false
+
+  "push": {
+    "endpoint": "http://localhost:3456/v1/usage/push",
+    "apiToken": "test-token",
+    "batchSize": 100,
+    "maxRetries": 5,
+    "timeout": 30000
+  },
+
+  "database": {
+    "path": ":memory:"
+  },
+
+  "logging": {
+    "level": "error"
   }
 }

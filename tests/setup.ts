@@ -4,6 +4,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+// Set test environment
+process.env.NODE_ENV = 'test';
+
+// Mock console methods to reduce noise during tests
+global.console = {
+  ...console,
+  log: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  // Keep error and debug for debugging
+  error: console.error,
+  debug: console.debug,
+} as Console;
+
 export const TEST_DB_PATH = path.join(os.tmpdir(), `test-roiai-${process.pid}.db`);
 export const TEST_CONFIG_PATH = path.join(os.tmpdir(), `test-config-${process.pid}.json`);
 export const TEST_DATA_DIR = path.join(os.tmpdir(), `test-data-${process.pid}`);

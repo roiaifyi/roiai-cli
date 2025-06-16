@@ -12,11 +12,12 @@
     "cacheDurationDefault": 5,
     "batchSize": 1000
   },
-  "sync": {
-    "apiEndpoint": "https://api.example.com/claude-stats/upload",
+  "push": {
+    "endpoint": "https://api.roiai.com/v1/usage/push",
     "apiToken": "",
     "batchSize": 1000,
-    "maxRetries": 3
+    "maxRetries": 5,
+    "timeout": 30000
   },
   "watch": {
     "pollInterval": 5000,
