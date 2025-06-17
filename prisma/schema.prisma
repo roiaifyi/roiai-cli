@@ -101,7 +101,6 @@ model Session {
   user                    User      @relation(fields: [userId], references: [id])
   machine                 Machine   @relation(fields: [clientMachineId], references: [id])
   messages                Message[]
-  fileStatus              FileStatus[]
 
   @@map("sessions")
 }
@@ -147,7 +146,6 @@ model Message {
 model FileStatus {
   filePath                String    @id @map("file_path")
   projectId               String?   @map("project_id")
-  sessionId               String?   @map("session_id")
   userId                  String?   @map("user_id")
   fileSize                BigInt?   @map("file_size")
   lastModified            DateTime? @map("last_modified")
@@ -156,7 +154,6 @@ model FileStatus {
   checksum                String?
   
   project                 Project?  @relation(fields: [projectId], references: [id])
-  session                 Session?  @relation(fields: [sessionId], references: [id])
   user                    User?     @relation(fields: [userId], references: [id])
 
   @@map("file_status")

@@ -408,7 +408,6 @@ export class JSONLService {
         where: { filePath },
         create: {
           filePath,
-          sessionId: sessionId, // Use filename sessionId for file tracking
           projectId,
           userId: this.userService.getUserId(),
           fileSize: stats.size,
@@ -418,7 +417,6 @@ export class JSONLService {
           checksum,
         },
         update: {
-          sessionId: sessionId, // Use filename sessionId for file tracking
           fileSize: stats.size,
           lastModified: stats.mtime,
           lastProcessedLine: lineNumber,
