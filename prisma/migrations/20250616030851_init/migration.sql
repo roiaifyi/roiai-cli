@@ -105,7 +105,6 @@ CREATE TABLE "messages" (
 CREATE TABLE "file_status" (
     "file_path" TEXT NOT NULL PRIMARY KEY,
     "project_id" TEXT,
-    "session_id" TEXT,
     "user_id" TEXT,
     "file_size" BIGINT,
     "last_modified" DATETIME,
@@ -113,7 +112,6 @@ CREATE TABLE "file_status" (
     "last_processed_at" DATETIME,
     "checksum" TEXT,
     CONSTRAINT "file_status_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects" ("project_id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "file_status_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "sessions" ("session_id") ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT "file_status_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
