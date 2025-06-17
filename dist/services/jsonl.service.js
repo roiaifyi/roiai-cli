@@ -299,10 +299,9 @@ class JSONLService {
                 }
                 try {
                     const entry = JSON.parse(line);
-                    // Use filename sessionId if entry doesn't have one
-                    if (!entry.sessionId) {
-                        entry.sessionId = sessionId;
-                    }
+                    // Always use filename sessionId to ensure consistency with created session
+                    // This prevents foreign key constraint errors when entries have mismatched sessionIds
+                    entry.sessionId = sessionId;
                     if (entry.type === "summary") {
                         sessionData.set(sessionId, {
                             summary: entry.summary,
