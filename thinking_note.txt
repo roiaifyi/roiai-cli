@@ -203,3 +203,21 @@ To identify which specific foreign key is failing, we could:
 ## Most Likely Cause
 
 After careful analysis, the most suspicious area is the session creation. The code creates/updates the session with the sessionId from the filename, but then in processMessage, it uses `entry.sessionId`. If these don't match, the foreign key constraint would fail.
+
+[2025-06-17] Session Creation Strategy Change
+
+Issue: Foreign key constraint errors when creating messages
+Original Approach: Created sessions based on filename, forced all messages to use that sessionId
+Problem: JSONL files can contain messages from multiple sessions, forcing incorrect sessionId associations
+
+New Approach: Dynamic session creation based on message data
+1. Read sessionId from each message entry
+2. Check if session exists before creating message
+3. Create session if it doesn't exist
+4. Track unique sessions in each file
+
+Benefits:
+- Preserves actual conversation structure
+- No foreign key violations
+- Supports multi-session files
+- More accurate data representation

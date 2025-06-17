@@ -244,40 +244,9 @@ class JSONLService {
             fileStatus.checksum) {
             return result;
         }
-        // Ensure session exists using filename as sessionId
-        const userId = this.userService.getUserId();
         const machineId = this.userService.getClientMachineId();
-        // Check if session exists
-        const existingSession = await database_1.prisma.session.findUnique({
-            where: { id: sessionId },
-        });
-        if (!existingSession) {
-            // Create new session
-            await database_1.prisma.session.create({
-                data: {
-                    id: sessionId,
-                    projectId,
-                    userId,
-                    clientMachineId: machineId,
-                },
-            });
-            // Update aggregates for new session (only if using incremental aggregation)
-            if (this.useIncrementalAggregation) {
-                await this.incrementalAggregation.onSessionCreated({
-                    projectId,
-                    userId,
-                    clientMachineId: machineId,
-                });
-                this.incrementalChanges.newSessions.push(sessionId);
-            }
-        }
-        else {
-            // Update existing session
-            await database_1.prisma.session.update({
-                where: { id: sessionId },
-                data: {},
-            });
-        }
+        // Track sessions we've created/seen in this file
+        const sessionsInFile = new Set();
         // Count total lines first for progress
         // const totalLines = await this.countFileLines(filePath);
         // Process file line by line
@@ -299,11 +268,16 @@ class JSONLService {
                 }
                 try {
                     const entry = JSON.parse(line);
-                    // Always use filename sessionId to ensure consistency with created session
-                    // This prevents foreign key constraint errors when entries have mismatched sessionIds
-                    entry.sessionId = sessionId;
+                    // Use filename sessionId if entry doesn't have one
+                    if (!entry.sessionId) {
+                        entry.sessionId = sessionId;
+                    }
+                    // Track session ID
+                    if (entry.sessionId) {
+                        sessionsInFile.add(entry.sessionId);
+                    }
                     if (entry.type === "summary") {
-                        sessionData.set(sessionId, {
+                        sessionData.set(entry.sessionId || sessionId, {
                             summary: entry.summary,
                             leafUuid: entry.leafUuid,
                         });
@@ -358,7 +332,7 @@ class JSONLService {
                 where: { filePath },
                 create: {
                     filePath,
-                    sessionId, // Add sessionId
+                    sessionId: sessionId, // Use filename sessionId for file tracking
                     projectId,
                     userId: this.userService.getUserId(),
                     fileSize: stats.size,
@@ -368,7 +342,7 @@ class JSONLService {
                     checksum,
                 },
                 update: {
-                    sessionId, // Update sessionId
+                    sessionId: sessionId, // Use filename sessionId for file tracking
                     fileSize: stats.size,
                     lastModified: stats.mtime,
                     lastProcessedLine: lineNumber,
@@ -376,8 +350,8 @@ class JSONLService {
                     checksum,
                 },
             });
-            // Always count this session as processed since we created/updated it
-            result.sessionsProcessed = 1;
+            // Count unique sessions processed in this file
+            result.sessionsProcessed = sessionsInFile.size;
         }
         catch (error) {
             result.errors.push(`Failed to process file ${filePath}: ${error}`);
@@ -451,6 +425,30 @@ class JSONLService {
                 pricePerOutputToken = new library_1.Decimal(pricing.output);
                 pricePerCacheWriteToken = new library_1.Decimal(pricing.cacheWrite);
                 pricePerCacheReadToken = new library_1.Decimal(pricing.cacheRead);
+            }
+        }
+        // Ensure session exists before creating message
+        const existingSession = await database_1.prisma.session.findUnique({
+            where: { id: entry.sessionId },
+        });
+        if (!existingSession) {
+            // Create new session
+            await database_1.prisma.session.create({
+                data: {
+                    id: entry.sessionId,
+                    projectId,
+                    userId,
+                    clientMachineId,
+                },
+            });
+            // Update aggregates for new session (only if using incremental aggregation)
+            if (this.useIncrementalAggregation) {
+                await this.incrementalAggregation.onSessionCreated({
+                    projectId,
+                    userId,
+                    clientMachineId,
+                });
+                this.incrementalChanges.newSessions.push(entry.sessionId);
             }
         }
         // Create message
