@@ -14,5 +14,6 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  testTimeout: 30000
+  testTimeout: 30000,
+  maxWorkers: 1  // Run tests sequentially to avoid port conflicts
 };

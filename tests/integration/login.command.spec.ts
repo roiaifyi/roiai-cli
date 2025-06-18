@@ -1,64 +1,79 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { execSync } from 'child_process';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { execSync, spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import express from 'express';
-import { Server } from 'http';
 import { TEST_DB_PATH, TEST_DATA_DIR } from '../setup';
 
 describe('Login Command Integration', () => {
-  let server: Server;
-  const port = 54321; // Use a fixed port for testing
+  let mockServerProcess: ChildProcess;
+  const port = 54322; // Use different port to avoid conflicts
   const cliPath = path.join(__dirname, '../../dist/index.js');
   const testUserInfoPath = path.join(TEST_DATA_DIR, 'user_info.json');
   
-  beforeEach((done) => {
+  beforeAll((done) => {
+    // Start the mock server as a separate process
+    const mockServerPath = path.join(__dirname, '../helpers/mock-server.js');
+    mockServerProcess = spawn('node', [mockServerPath], {
+      env: {
+        ...process.env,
+        MOCK_SERVER_PORT: port.toString()
+      },
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+    });
+    
+    // Wait for server to be ready
+    mockServerProcess.on('message', (msg: any) => {
+      if (msg.type === 'ready') {
+        done();
+      }
+    });
+    
+    // Handle server errors
+    mockServerProcess.stderr?.on('data', (data) => {
+      console.error('Mock server error:', data.toString());
+    });
+    
+    mockServerProcess.on('error', (err) => {
+      console.error('Failed to start mock server:', err);
+      done(err);
+    });
+  });
+  
+  afterAll((done) => {
+    // Kill the mock server
+    if (mockServerProcess && !mockServerProcess.killed) {
+      mockServerProcess.on('exit', () => done());
+      mockServerProcess.kill('SIGTERM');
+      // Force kill after timeout
+      setTimeout(() => {
+        if (!mockServerProcess.killed) {
+          mockServerProcess.kill('SIGKILL');
+        }
+        done();
+      }, 1000);
+    } else {
+      done();
+    }
+  });
+  
+  beforeEach(() => {
     // Clean up any existing user info
     if (fs.existsSync(testUserInfoPath)) {
       fs.unlinkSync(testUserInfoPath);
     }
     
-    // Create mock auth server
-    const app = express();
-    app.use(express.json());
-    
-    app.get('/health', (_req, res) => {
-      res.json({ status: 'ok' });
-    });
-    
-    app.post('/v1/auth/login', (req, res) => {
-      console.error('Login request received:', req.body);
-      const { email, password, token } = req.body;
-      
-      if (token === 'valid-token' || (email === 'test@example.com' && password === 'password123')) {
-        res.json({
-          userId: 'user-123',
-          email: 'test@example.com',
-          apiToken: 'auth-token-123'
-        });
-      } else {
-        res.status(401).json({ message: 'Invalid credentials' });
-      }
-    });
-    
-    server = app.listen(port, '127.0.0.1', () => {
-      console.error(`Mock auth server started on port ${port}`);
-      // Give the server a moment to fully initialize
-      setTimeout(done, 100);
-    });
+    // Ensure test data directory exists
+    fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   });
   
-  afterEach((done) => {
-    server.close(done);
-    
+  afterEach(() => {
     // Clean up test user info
     if (fs.existsSync(testUserInfoPath)) {
       fs.unlinkSync(testUserInfoPath);
     }
   });
   
-  it.skip('should login successfully with email and password', () => {
-    console.error(`Test is using port ${port} for mock server`);
+  it('should login successfully with email and password', () => {
     const env = {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
@@ -86,11 +101,12 @@ describe('Login Command Integration', () => {
     };
     
     const output = execSync(
-      `node ${cliPath} cc login -e test@example.com -p password123`,
-      { env, encoding: 'utf8' }
+      `node ${cliPath} cc login -e test@example.com -p password123 2>&1`,
+      { env, encoding: 'utf8', shell: '/bin/bash' }
     );
     
-    expect(output).toContain('Successfully logged in as test@example.com');
+    // Check for success indication (console.log output)
+    expect(output).toContain('You can now use \'roiai-cli cc push\' to sync your usage data.');
     
     // Check user info file was created
     expect(fs.existsSync(testUserInfoPath)).toBe(true);
@@ -100,7 +116,7 @@ describe('Login Command Integration', () => {
     expect(userInfo.auth.apiToken).toBe('auth-token-123');
   });
   
-  it.skip('should login successfully with token', () => {
+  it('should login successfully with token', () => {
     const env = {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
@@ -128,14 +144,15 @@ describe('Login Command Integration', () => {
     };
     
     const output = execSync(
-      `node ${cliPath} cc login -t valid-token`,
-      { env, encoding: 'utf8' }
+      `node ${cliPath} cc login -t valid-token 2>&1`,
+      { env, encoding: 'utf8', shell: '/bin/bash' }
     );
     
-    expect(output).toContain('Successfully logged in');
+    // Check for success indication
+    expect(output).toContain('You can now use \'roiai-cli cc push\' to sync your usage data.');
   });
   
-  it.skip('should fail with invalid credentials', () => {
+  it('should fail with invalid credentials', () => {
     const env = {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
@@ -162,15 +179,20 @@ describe('Login Command Integration', () => {
       })
     };
     
-    expect(() => {
+    try {
       execSync(
-        `node ${cliPath} cc login -e wrong@example.com -p wrongpass`,
-        { env, encoding: 'utf8' }
+        `node ${cliPath} cc login -e wrong@example.com -p wrongpass 2>&1`,
+        { env, encoding: 'utf8', shell: '/bin/bash' }
       );
-    }).toThrow('Invalid credentials');
+      // Should not reach here
+      expect(true).toBe(false);
+    } catch (error: any) {
+      // Check that the command failed and output contains the error
+      expect(error.stdout || error.stderr || error.message).toContain('Invalid credentials');
+    }
   });
   
-  it.skip('should not login if already authenticated', () => {
+  it('should not login if already authenticated', () => {
     // Create existing user info with auth
     const existingUserInfo = {
       userId: 'anon-123',
@@ -211,8 +233,8 @@ describe('Login Command Integration', () => {
     };
     
     const output = execSync(
-      `node ${cliPath} cc login -t valid-token`,
-      { env, encoding: 'utf8' }
+      `node ${cliPath} cc login -t valid-token 2>&1`,
+      { env, encoding: 'utf8', shell: '/bin/bash' }
     );
     
     expect(output).toContain('Already logged in as existing@example.com');
