@@ -82,7 +82,7 @@ export function createLoginCommand(): Command {
               headers: {
                 'Content-Type': 'application/json',
               },
-              timeout: 30000
+              timeout: 5000
             }
           );
           

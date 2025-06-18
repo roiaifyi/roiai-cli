@@ -2,10 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { TEST_DB_PATH, TEST_DATA_DIR } from '../setup';
 
 describe('Logout Command Integration', () => {
   const cliPath = path.join(__dirname, '../../dist/index.js');
-  const testUserInfoPath = path.join(__dirname, '../fixtures/test-user-info.json');
+  const testUserInfoPath = path.join(TEST_DATA_DIR, 'user_info.json');
   
   beforeEach(() => {
     // Clean up any existing user info
@@ -38,7 +39,26 @@ describe('Logout Command Integration', () => {
     const env = {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
-        user: { infoPath: testUserInfoPath }
+        database: { path: TEST_DB_PATH },
+        user: { infoPath: testUserInfoPath },
+        claudeCode: {
+          rawDataPath: TEST_DATA_DIR,
+          pricingUrl: 'https://example.com/pricing',
+          pricingCacheTimeout: 0,
+          cacheDurationDefault: 5,
+          batchSize: 100
+        },
+        push: {
+          endpoint: 'http://localhost:3000/v1/usage/push',
+          batchSize: 10,
+          maxRetries: 3,
+          timeout: 5000
+        },
+        watch: {
+          pollInterval: 5000,
+          ignored: ['**/node_modules/**', '**/.git/**']
+        },
+        logging: { level: 'error' }
       })
     };
     
@@ -74,7 +94,26 @@ describe('Logout Command Integration', () => {
     const env = {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
-        user: { infoPath: testUserInfoPath }
+        database: { path: TEST_DB_PATH },
+        user: { infoPath: testUserInfoPath },
+        claudeCode: {
+          rawDataPath: TEST_DATA_DIR,
+          pricingUrl: 'https://example.com/pricing',
+          pricingCacheTimeout: 0,
+          cacheDurationDefault: 5,
+          batchSize: 100
+        },
+        push: {
+          endpoint: 'http://localhost:3000/v1/usage/push',
+          batchSize: 10,
+          maxRetries: 3,
+          timeout: 5000
+        },
+        watch: {
+          pollInterval: 5000,
+          ignored: ['**/node_modules/**', '**/.git/**']
+        },
+        logging: { level: 'error' }
       })
     };
     

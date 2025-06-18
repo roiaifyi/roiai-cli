@@ -41,7 +41,7 @@ node dist/index.js cc watch
 
 ## Testing & Quality
 
-**Note**: No tests are currently implemented. The `npm test` command will fail.
+**Note**: Tests are implemented using Jest. Run `npm test` to execute all tests. Integration tests for HTTP-dependent functionality are skipped due to subprocess connection limitations.
 
 There is no linting or formatting configuration at the project level. When making changes, follow the existing TypeScript conventions in the codebase.
 
