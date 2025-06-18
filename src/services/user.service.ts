@@ -39,7 +39,7 @@ export class UserService {
       .substring(0, 16);
 
     return {
-      userId: 'anonymous',
+      userId: `anon-${machineId}`,
       clientMachineId: machineId,
       email: undefined
     };
@@ -89,5 +89,62 @@ export class UserService {
 
   getClientMachineId(): string {
     return this.getUserInfo().clientMachineId;
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.userInfo?.auth;
+  }
+
+  getAuthenticatedUserId(): string | null {
+    return this.userInfo?.auth?.realUserId || null;
+  }
+
+  getAuthenticatedEmail(): string | null {
+    return this.userInfo?.auth?.email || null;
+  }
+
+  getApiToken(): string | null {
+    return this.userInfo?.auth?.apiToken || null;
+  }
+
+  async login(realUserId: string, email: string, apiToken: string): Promise<void> {
+    if (!this.userInfo) {
+      throw new Error('User info not loaded');
+    }
+
+    this.userInfo.auth = {
+      realUserId,
+      email,
+      apiToken
+    };
+
+    // Save updated user info
+    const configPath = configManager.get().user?.infoPath || '~/.roiai/user_info.json';
+    const userInfoPath = configPath.startsWith('~') 
+      ? path.join(os.homedir(), configPath.slice(1))
+      : path.resolve(configPath);
+
+    // Ensure directory exists
+    await fs.mkdir(path.dirname(userInfoPath), { recursive: true });
+    
+    // Save user info
+    await fs.writeFile(userInfoPath, JSON.stringify(this.userInfo, null, 2));
+  }
+
+  async logout(): Promise<void> {
+    if (!this.userInfo) {
+      throw new Error('User info not loaded');
+    }
+
+    // Remove auth info
+    delete this.userInfo.auth;
+
+    // Save updated user info
+    const configPath = configManager.get().user?.infoPath || '~/.roiai/user_info.json';
+    const userInfoPath = configPath.startsWith('~') 
+      ? path.join(os.homedir(), configPath.slice(1))
+      : path.resolve(configPath);
+    
+    await fs.writeFile(userInfoPath, JSON.stringify(this.userInfo, null, 2));
   }
 }

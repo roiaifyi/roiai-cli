@@ -3,6 +3,7 @@ import ora from 'ora';
 import chalk from 'chalk';
 import { PrismaClient } from '@prisma/client';
 import { PushService } from '../../services/push.service';
+import { UserService } from '../../services/user.service';
 import { configManager } from '../../config';
 import { PushOptions } from '../../models/types';
 
@@ -18,15 +19,24 @@ export function createPushCommand() {
       const prisma = new PrismaClient();
       
       try {
-        const pushConfig = configManager.getPushConfig();
+        // Initialize user service and check authentication
+        const userService = new UserService();
+        await userService.loadUserInfo();
         
-        // Validate configuration
-        if (!pushConfig.apiToken) {
-          spinner.fail('Push API token not configured. Please set push.apiToken in config.');
+        if (!userService.isAuthenticated()) {
+          spinner.fail('Please login first using \'roiai-cli cc login\' to push data');
           process.exit(1);
         }
+        
+        const apiToken = userService.getApiToken();
+        if (!apiToken) {
+          spinner.fail('No API token found. Please login again.');
+          process.exit(1);
+        }
+        
+        const pushConfig = configManager.getPushConfig();
 
-        const pushService = new PushService(prisma, pushConfig);
+        const pushService = new PushService(prisma, pushConfig, userService);
         
         // Use config batch size if not specified in command line
         const batchSize = options.batchSize || pushConfig.batchSize;

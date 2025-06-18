@@ -99,5 +99,10 @@ export interface UserInfo {
     userId: string;
     clientMachineId: string;
     email?: string;
+    auth?: {
+        realUserId: string;
+        email: string;
+        apiToken: string;
+    };
 }
 //# sourceMappingURL=types.d.ts.map

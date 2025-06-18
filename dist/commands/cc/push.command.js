@@ -10,6 +10,7 @@ const ora_1 = __importDefault(require("ora"));
 const chalk_1 = __importDefault(require("chalk"));
 const client_1 = require("@prisma/client");
 const push_service_1 = require("../../services/push.service");
+const user_service_1 = require("../../services/user.service");
 const config_1 = require("../../config");
 function createPushCommand() {
     return new commander_1.Command('push')
@@ -22,13 +23,20 @@ function createPushCommand() {
         const spinner = (0, ora_1.default)('Initializing push...').start();
         const prisma = new client_1.PrismaClient();
         try {
-            const pushConfig = config_1.configManager.getPushConfig();
-            // Validate configuration
-            if (!pushConfig.apiToken) {
-                spinner.fail('Push API token not configured. Please set push.apiToken in config.');
+            // Initialize user service and check authentication
+            const userService = new user_service_1.UserService();
+            await userService.loadUserInfo();
+            if (!userService.isAuthenticated()) {
+                spinner.fail('Please login first using \'roiai-cli cc login\' to push data');
                 process.exit(1);
             }
-            const pushService = new push_service_1.PushService(prisma, pushConfig);
+            const apiToken = userService.getApiToken();
+            if (!apiToken) {
+                spinner.fail('No API token found. Please login again.');
+                process.exit(1);
+            }
+            const pushConfig = config_1.configManager.getPushConfig();
+            const pushService = new push_service_1.PushService(prisma, pushConfig, userService);
             // Use config batch size if not specified in command line
             const batchSize = options.batchSize || pushConfig.batchSize;
             // Get initial statistics

@@ -14,7 +14,7 @@ export interface Config {
     };
     push: {
         endpoint: string;
-        apiToken: string;
+        apiToken?: string;
         batchSize: number;
         maxRetries: number;
         timeout: number;
@@ -44,7 +44,7 @@ declare class ConfigManager {
     };
     getPushConfig(): {
         endpoint: string;
-        apiToken: string;
+        apiToken?: string;
         batchSize: number;
         maxRetries: number;
         timeout: number;

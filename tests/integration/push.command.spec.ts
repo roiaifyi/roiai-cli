@@ -106,7 +106,7 @@ class MockPushServer {
   }
 }
 
-describe.skip('Push Command Integration Tests', () => {
+describe('Push Command Integration Tests', () => {
   let mockServer: MockPushServer;
   let prisma: PrismaClient;
   const testPort = 3456;
@@ -117,8 +117,8 @@ describe.skip('Push Command Integration Tests', () => {
   // Helper to run CLI commands with test config
   const runCli = (command: string) => {
     try {
-      return execSync(
-        `node ${cliPath} ${command}`,
+      const result = execSync(
+        `node ${cliPath} ${command} 2>&1`,
         { 
           encoding: 'utf8',
           env: {
@@ -129,11 +129,10 @@ describe.skip('Push Command Integration Tests', () => {
           }
         }
       );
+      return result;
     } catch (error: any) {
-      console.error('CLI Error:', error.message);
-      console.error('CLI Stderr:', error.stderr?.toString());
-      console.error('CLI Stdout:', error.stdout?.toString());
-      throw error;
+      // Return the combined output even if command failed
+      return error.output ? error.output.join('') : '';
     }
   };
 
@@ -153,8 +152,20 @@ describe.skip('Push Command Integration Tests', () => {
       fs.mkdirSync(testConfigDir, { recursive: true });
     }
 
+    // Create authenticated user info
+    const userInfo = {
+      userId: 'anon-test-machine',
+      clientMachineId: 'test-machine',
+      auth: {
+        realUserId: 'test-user-123',
+        email: 'test@example.com',
+        apiToken: 'test-auth-token'
+      }
+    };
+    fs.writeFileSync(path.join(testDataDir, 'user_info.json'), JSON.stringify(userInfo, null, 2));
+    
     // Create test configuration with all required sections
-    const testDbPath = path.join(process.cwd(), 'prisma', 'test-cli.db');
+    const testDbPath = path.resolve(__dirname, '../../prisma/test-push-integration.db');
     const testConfig = {
       database: {
         path: testDbPath
@@ -171,7 +182,6 @@ describe.skip('Push Command Integration Tests', () => {
       },
       push: {
         endpoint: `http://localhost:${testPort}/v1/usage/push`,
-        apiToken: 'test-token',
         batchSize: 10,
         maxRetries: 3,
         timeout: 5000
@@ -188,7 +198,7 @@ describe.skip('Push Command Integration Tests', () => {
     fs.writeFileSync(testConfigPath, JSON.stringify(testConfig, null, 2));
 
     // Set up test database
-    const testDb = path.join(process.cwd(), 'prisma', 'test-cli.db');
+    const testDb = testDbPath;
     
     // Create database directory if it doesn't exist
     const dbDir = path.dirname(testDb);
@@ -223,7 +233,7 @@ describe.skip('Push Command Integration Tests', () => {
     if (fs.existsSync(testConfigDir)) {
       fs.rmSync(testConfigDir, { recursive: true, force: true });
     }
-    const testDbPath = path.join(process.cwd(), 'prisma', 'test-cli.db');
+    const testDbPath = path.resolve(__dirname, '../../prisma/test-push-integration.db');
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
@@ -232,6 +242,79 @@ describe.skip('Push Command Integration Tests', () => {
       fs.rmSync(testDataDir, { recursive: true, force: true });
     }
   });
+
+  // Helper to create test data with correct user IDs
+  const createTestData = async (messageCount: number = 0, retryCount: number = 0) => {
+    const user = await prisma.user.create({
+      data: {
+        id: 'anon-test-machine',
+        email: 'test@example.com',
+        username: 'testuser'
+      }
+    });
+
+    const machine = await prisma.machine.create({
+      data: {
+        id: 'test-machine',
+        userId: user.id,
+        machineName: 'Test Machine'
+      }
+    });
+
+    const project = await prisma.project.create({
+      data: {
+        id: 'project1',
+        projectName: 'Test Project',
+        userId: user.id,
+        clientMachineId: machine.id
+      }
+    });
+
+    const session = await prisma.session.create({
+      data: {
+        id: 'session1',
+        projectId: project.id,
+        userId: user.id,
+        clientMachineId: machine.id
+      }
+    });
+
+    // Create messages if requested
+    const messages = [];
+    for (let i = 0; i < messageCount; i++) {
+      const message = await prisma.message.create({
+        data: {
+          uuid: `msg${i}`,
+          messageId: `msg${i}`,
+          sessionId: session.id,
+          projectId: project.id,
+          userId: user.id,
+          clientMachineId: machine.id,
+          timestamp: new Date(Date.now() - i * 1000),
+          role: 'user',
+          model: 'claude-3',
+          inputTokens: 100n,
+          outputTokens: 200n,
+          cacheCreationTokens: 0n,
+          cacheReadTokens: 0n,
+          messageCost: 0.003
+        }
+      });
+      messages.push(message);
+
+      await prisma.syncStatus.create({
+        data: {
+          tableName: 'messages',
+          recordId: message.uuid,
+          operation: 'INSERT',
+          localTimestamp: new Date(),
+          retryCount
+        }
+      });
+    }
+
+    return { user, machine, project, session, messages };
+  };
 
   beforeEach(async () => {
     mockServer.reset();
@@ -245,42 +328,45 @@ describe.skip('Push Command Integration Tests', () => {
     await prisma.user.deleteMany();
   });
 
+  describe('Authentication Requirements', () => {
+    it('should fail when not authenticated', async () => {
+      const userInfoPath = path.join(__dirname, '../fixtures/test-user-info.json');
+      
+      // Create anonymous user info without auth
+      const userInfo = {
+        userId: 'anon-test',
+        clientMachineId: 'test-machine'
+      };
+      fs.mkdirSync(path.dirname(userInfoPath), { recursive: true });
+      fs.writeFileSync(userInfoPath, JSON.stringify(userInfo));
+      
+      const env = {
+        ...process.env,
+        NODE_CONFIG: JSON.stringify({
+          user: { infoPath: userInfoPath },
+          push: { endpoint: `http://localhost:${testPort}/v1/usage/push` }
+        })
+      };
+      
+      try {
+        execSync(`node ${cliPath} cc push`, 
+          { env, encoding: 'utf8' }
+        );
+        expect(true).toBe(false); // Should not reach here
+      } catch (error: any) {
+        expect(error.stdout || error.stderr || error.message).toContain('Please login first');
+      } finally {
+        if (fs.existsSync(userInfoPath)) {
+          fs.unlinkSync(userInfoPath);
+        }
+      }
+    });
+  });
+
   describe('Basic Push Flow', () => {
     it('should push messages successfully', async () => {
       // Create test data
-      const user = await prisma.user.create({
-        data: {
-          id: 'user1',
-          email: 'test@example.com',
-          username: 'testuser'
-        }
-      });
-
-      const machine = await prisma.machine.create({
-        data: {
-          id: 'machine1',
-          userId: user.id,
-          machineName: 'Test Machine'
-        }
-      });
-
-      const project = await prisma.project.create({
-        data: {
-          id: 'project1',
-          projectName: 'Test Project',
-          userId: user.id,
-          clientMachineId: machine.id
-        }
-      });
-
-      const session = await prisma.session.create({
-        data: {
-          id: 'session1',
-          projectId: project.id,
-          userId: user.id,
-          clientMachineId: machine.id
-        }
-      });
+      const { user, machine, project, session } = await createTestData();
 
       // Create messages
       const messages = [];
@@ -317,8 +403,35 @@ describe.skip('Push Command Integration Tests', () => {
         });
       }
 
+      // Wait a moment for database writes to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Verify data was created in our test database
+      const unsyncedCount = await prisma.syncStatus.count({
+        where: { syncedAt: null }
+      });
+      expect(unsyncedCount).toBe(15);
+      
+      // Ensure database file exists
+      const dbPath = path.resolve(__dirname, '../../prisma/test-push-integration.db');
+      expect(fs.existsSync(dbPath)).toBe(true);
+      
+      // Force a connection close to ensure data is written
+      await prisma.$disconnect();
+      await prisma.$connect();
+      
       // Run push command with test config
       const output = runCli('cc push -v');
+      
+      // If it says all synced, check the database directly
+      if (output.includes('All messages are already synced')) {
+        // Check what the CLI sees
+        const countAfter = await prisma.syncStatus.count({
+          where: { syncedAt: null }
+        });
+        console.log('Unsynced count after push attempt:', countAfter);
+        console.log('Full output:', output);
+      }
 
       // Verify output
       expect(output).toContain('Found 15 unsynced messages');
@@ -330,6 +443,11 @@ describe.skip('Push Command Integration Tests', () => {
       expect(requests).toHaveLength(2); // 15 messages with batch size 10 = 2 batches
       expect(requests[0].messages).toHaveLength(10);
       expect(requests[1].messages).toHaveLength(5);
+      
+      // Verify user ID was replaced with authenticated user ID
+      expect(requests[0].messages[0].userId).toBe('test-user-123');
+      expect(requests[0].entities.users['test-user-123']).toBeDefined();
+      expect(requests[0].entities.users['anon-test-machine']).toBeUndefined();
 
       // Verify sync status updated
       const syncedCount = await prisma.syncStatus.count({
@@ -339,8 +457,8 @@ describe.skip('Push Command Integration Tests', () => {
     });
 
     it('should handle partial failures', async () => {
-      // Create test data (simplified)
-      await createTestData(prisma, 5);
+      // Create test data
+      await createTestData(5);
 
       // Configure server to fail some messages
       mockServer.setResponseOverride({
@@ -392,7 +510,7 @@ describe.skip('Push Command Integration Tests', () => {
     });
 
     it('should handle network errors gracefully', async () => {
-      await createTestData(prisma, 5);
+      await createTestData(5);
 
       // Configure server to fail
       mockServer.setFailure(500);
@@ -405,7 +523,7 @@ describe.skip('Push Command Integration Tests', () => {
 
     it('should respect retry limits', async () => {
       // Create messages with high retry count
-      await createTestData(prisma, 5, 3);
+      await createTestData(5, 3);
 
       const output = runCli('cc push');
 
@@ -416,7 +534,7 @@ describe.skip('Push Command Integration Tests', () => {
     });
 
     it('should handle force flag to reset retries', async () => {
-      await createTestData(prisma, 5, 3);
+      await createTestData(5, 3);
 
       const output = runCli('cc push --force');
 
@@ -429,7 +547,7 @@ describe.skip('Push Command Integration Tests', () => {
     });
 
     it('should handle dry-run mode', async () => {
-      await createTestData(prisma, 25);
+      await createTestData(25);
       
       // Debug: Check if sync_status records were created
       const syncCount = await prisma.syncStatus.count();
@@ -463,7 +581,7 @@ describe.skip('Push Command Integration Tests', () => {
   describe('Push Status Command', () => {
     it('should show correct statistics', async () => {
       // Create mixed state data
-      await createTestData(prisma, 10);
+      await createTestData(10);
       
       // Mark some as synced
       await prisma.syncStatus.updateMany({
@@ -490,68 +608,3 @@ describe.skip('Push Command Integration Tests', () => {
     });
   });
 });
-
-// Helper function to create test data
-async function createTestData(prisma: PrismaClient, count: number, retryCount: number = 0): Promise<void> {
-  const user = await prisma.user.create({
-    data: {
-      id: 'user1',
-      email: 'test@example.com'
-    }
-  });
-
-  const machine = await prisma.machine.create({
-    data: {
-      id: 'machine1',
-      userId: user.id
-    }
-  });
-
-  const project = await prisma.project.create({
-    data: {
-      id: 'project1',
-      projectName: 'Test Project',
-      userId: user.id,
-      clientMachineId: machine.id
-    }
-  });
-
-  const session = await prisma.session.create({
-    data: {
-      id: 'session1',
-      projectId: project.id,
-      userId: user.id,
-      clientMachineId: machine.id
-    }
-  });
-
-  for (let i = 0; i < count; i++) {
-    const message = await prisma.message.create({
-      data: {
-        uuid: `msg${i}`,
-        messageId: `id${i}`,
-        sessionId: session.id,
-        projectId: project.id,
-        userId: user.id,
-        clientMachineId: machine.id,
-        role: 'user',
-        model: 'claude-3',
-        inputTokens: 100,
-        outputTokens: 200,
-        cacheCreationTokens: 0,
-        cacheReadTokens: 0,
-        messageCost: 0.003
-      }
-    });
-
-    await prisma.syncStatus.create({
-      data: {
-        tableName: 'messages',
-        recordId: message.uuid,
-        operation: 'INSERT',
-        localTimestamp: new Date(),
-        retryCount
-      }
-    });
-  }
-}

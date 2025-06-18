@@ -33,7 +33,14 @@ exports.syncCommand = new commander_1.Command('sync')
         spinner.text = 'Loading user information...';
         await userService.loadUserInfo();
         const userInfo = userService.getUserInfo();
-        spinner.succeed(`Logged in as: ${userInfo.userId} (Machine: ${userInfo.clientMachineId})`);
+        if (userService.isAuthenticated()) {
+            const email = userService.getAuthenticatedEmail();
+            const realUserId = userService.getAuthenticatedUserId();
+            spinner.succeed(`Logged in as: ${email} (User ID: ${realUserId})`);
+        }
+        else {
+            spinner.succeed(`Running in anonymous mode (Machine: ${userInfo.clientMachineId})`);
+        }
         // Handle force flag
         if (options.force) {
             spinner.start('Clearing existing data...');

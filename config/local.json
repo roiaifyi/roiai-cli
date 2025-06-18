@@ -12,7 +12,6 @@
 
   "push": {
     "endpoint": "http://localhost:3456/v1/usage/push",
-    "apiToken": "test-token",
     "batchSize": 1000,
     "maxRetries": 5,
     "timeout": 30000

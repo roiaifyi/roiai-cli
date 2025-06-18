@@ -97,7 +97,12 @@ export interface ProcessingProgress {
 }
 
 export interface UserInfo {
-  userId: string;
+  userId: string;  // Always anon-{machineId} format
   clientMachineId: string;
-  email?: string;
+  email?: string;  // Deprecated, use auth.email
+  auth?: {
+    realUserId: string;
+    email: string;
+    apiToken: string;
+  };
 }

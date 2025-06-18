@@ -38,7 +38,7 @@ class UserService {
             .digest('hex')
             .substring(0, 16);
         return {
-            userId: 'anonymous',
+            userId: `anon-${machineId}`,
             clientMachineId: machineId,
             email: undefined
         };
@@ -83,6 +83,50 @@ class UserService {
     }
     getClientMachineId() {
         return this.getUserInfo().clientMachineId;
+    }
+    isAuthenticated() {
+        return !!this.userInfo?.auth;
+    }
+    getAuthenticatedUserId() {
+        return this.userInfo?.auth?.realUserId || null;
+    }
+    getAuthenticatedEmail() {
+        return this.userInfo?.auth?.email || null;
+    }
+    getApiToken() {
+        return this.userInfo?.auth?.apiToken || null;
+    }
+    async login(realUserId, email, apiToken) {
+        if (!this.userInfo) {
+            throw new Error('User info not loaded');
+        }
+        this.userInfo.auth = {
+            realUserId,
+            email,
+            apiToken
+        };
+        // Save updated user info
+        const configPath = config_1.configManager.get().user?.infoPath || '~/.roiai/user_info.json';
+        const userInfoPath = configPath.startsWith('~')
+            ? path_1.default.join(os_1.default.homedir(), configPath.slice(1))
+            : path_1.default.resolve(configPath);
+        // Ensure directory exists
+        await promises_1.default.mkdir(path_1.default.dirname(userInfoPath), { recursive: true });
+        // Save user info
+        await promises_1.default.writeFile(userInfoPath, JSON.stringify(this.userInfo, null, 2));
+    }
+    async logout() {
+        if (!this.userInfo) {
+            throw new Error('User info not loaded');
+        }
+        // Remove auth info
+        delete this.userInfo.auth;
+        // Save updated user info
+        const configPath = config_1.configManager.get().user?.infoPath || '~/.roiai/user_info.json';
+        const userInfoPath = configPath.startsWith('~')
+            ? path_1.default.join(os_1.default.homedir(), configPath.slice(1))
+            : path_1.default.resolve(configPath);
+        await promises_1.default.writeFile(userInfoPath, JSON.stringify(this.userInfo, null, 2));
     }
 }
 exports.UserService = UserService;

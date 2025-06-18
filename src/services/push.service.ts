@@ -8,23 +8,43 @@ import {
   EntityMaps,
   MessageEntity
 } from '../models/types';
+import { UserService } from './user.service';
 
 export class PushService {
   private prisma: PrismaClient;
   private httpClient: AxiosInstance;
   private config: PushConfig;
+  private authenticatedUserId: string | null = null;
+  private anonymousUserId: string | null = null;
 
-  constructor(prisma: PrismaClient, config: PushConfig) {
+  constructor(prisma: PrismaClient, config: PushConfig, userService?: UserService) {
     this.prisma = prisma;
     this.config = config;
-    this.httpClient = axios.create({
-      baseURL: config.endpoint,
-      timeout: config.timeout,
-      headers: {
-        'Authorization': `Bearer ${config.apiToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    
+    if (userService) {
+      this.authenticatedUserId = userService.getAuthenticatedUserId();
+      this.anonymousUserId = userService.getUserId();
+      const apiToken = userService.getApiToken();
+      
+      this.httpClient = axios.create({
+        baseURL: config.endpoint,
+        timeout: config.timeout,
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    } else {
+      // For testing or backward compatibility
+      this.httpClient = axios.create({
+        baseURL: config.endpoint,
+        timeout: config.timeout,
+        headers: {
+          'Authorization': `Bearer ${config.apiToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
   }
 
   async selectUnpushedBatch(batchSize: number): Promise<string[]> {
@@ -71,10 +91,13 @@ export class PushService {
     const messageEntities: MessageEntity[] = [];
 
     for (const msg of messages) {
+      // Replace anonymous userId with authenticated userId if available
+      const userId = this.replaceUserId(msg.userId);
+      
       // Add user entity
-      if (!entities.users.has(msg.userId)) {
-        entities.users.set(msg.userId, {
-          id: msg.userId,
+      if (!entities.users.has(userId)) {
+        entities.users.set(userId, {
+          id: userId,
           email: msg.session?.project?.user?.email,
           username: msg.session?.project?.user?.username
         });
@@ -84,7 +107,7 @@ export class PushService {
       if (!entities.machines.has(msg.clientMachineId)) {
         entities.machines.set(msg.clientMachineId, {
           id: msg.clientMachineId,
-          userId: msg.userId,
+          userId: userId,
           machineName: msg.session?.project?.machine?.machineName
         });
       }
@@ -94,7 +117,7 @@ export class PushService {
         entities.projects.set(msg.projectId, {
           id: msg.projectId,
           projectName: msg.session?.project?.projectName || '',
-          userId: msg.userId,
+          userId: userId,
           clientMachineId: msg.clientMachineId
         });
       }
@@ -104,7 +127,7 @@ export class PushService {
         entities.sessions.set(msg.sessionId, {
           id: msg.sessionId,
           projectId: msg.projectId,
-          userId: msg.userId,
+          userId: userId,
           clientMachineId: msg.clientMachineId
         });
       }
@@ -115,7 +138,7 @@ export class PushService {
         messageId: msg.messageId,
         sessionId: msg.sessionId,
         projectId: msg.projectId,
-        userId: msg.userId,
+        userId: userId,
         role: msg.role,
         model: msg.model || undefined,
         inputTokens: Number(msg.inputTokens),
@@ -261,6 +284,14 @@ export class PushService {
     });
 
     return count;
+  }
+
+  private replaceUserId(userId: string): string {
+    // If we have an authenticated user ID and the current ID is the anonymous one, replace it
+    if (this.authenticatedUserId && this.anonymousUserId && userId === this.anonymousUserId) {
+      return this.authenticatedUserId;
+    }
+    return userId;
   }
 
   async getPushStatistics() {

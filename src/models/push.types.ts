@@ -101,7 +101,7 @@ export interface PushOptions {
 
 export interface PushConfig {
   endpoint: string;
-  apiToken: string;
+  apiToken?: string;  // Optional, now comes from user auth
   batchSize: number;
   maxRetries: number;
   timeout: number;

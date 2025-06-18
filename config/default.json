@@ -14,7 +14,6 @@
   },
   "push": {
     "endpoint": "https://api.roiai.com/v1/usage/push",
-    "apiToken": "",
     "batchSize": 1000,
     "maxRetries": 5,
     "timeout": 30000
