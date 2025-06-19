@@ -3,11 +3,16 @@ import path from 'path';
 import fs from 'fs';
 
 export interface Config {
+  app: {
+    dataDir: string;              // Base directory for app data (e.g., ~/.roiai-cli)
+    machineInfoFilename: string;  // Filename for machine info
+  };
   database: {
     path: string;
   };
   user?: {
-    infoPath?: string;
+    infoFilename?: string;  // Just the filename, stored in app.dataDir
+    infoPath?: string;      // Full path (for testing or custom locations)
   };
   claudeCode: {
     rawDataPath: string;
@@ -41,6 +46,15 @@ class ConfigManager {
   }
 
   private validateConfig(): void {
+    // Validate app config
+    if (!this.config.app?.dataDir) {
+      throw new Error('App data directory is required in configuration');
+    }
+    
+    if (!this.config.app?.machineInfoFilename) {
+      throw new Error('Machine info filename is required in configuration');
+    }
+    
     // Ensure paths are absolute
     if (!path.isAbsolute(this.config.claudeCode.rawDataPath)) {
       this.config.claudeCode.rawDataPath = path.resolve(process.cwd(), this.config.claudeCode.rawDataPath);

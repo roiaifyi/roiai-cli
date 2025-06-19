@@ -105,4 +105,16 @@ export interface UserInfo {
         apiToken: string;
     };
 }
+export interface MachineInfo {
+    uuid: string;
+    machineId: string;
+    osInfo: {
+        platform: string;
+        release: string;
+        arch: string;
+        hostname: string;
+    };
+    createdAt: string;
+    version: number;
+}
 //# sourceMappingURL=types.d.ts.map

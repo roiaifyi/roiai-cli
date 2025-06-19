@@ -1,9 +1,13 @@
 {
+  "app": {
+    "dataDir": "~/.roiai-cli",
+    "machineInfoFilename": "machine_info.json"
+  },
   "database": {
     "path": "./prisma/dev.db"
   },
   "user": {
-    "infoPath": "~/.claude/user_info.json"
+    "infoFilename": "user_info.json"
   },
   "claudeCode": {
     "rawDataPath": "./claude_raw_data",

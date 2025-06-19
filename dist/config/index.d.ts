@@ -1,8 +1,13 @@
 export interface Config {
+    app: {
+        dataDir: string;
+        machineInfoFilename: string;
+    };
     database: {
         path: string;
     };
     user?: {
+        infoFilename?: string;
         infoPath?: string;
     };
     claudeCode: {

@@ -3,6 +3,8 @@ import fs from 'fs/promises';
 import os from 'os';
 import { UserService } from '../../src/services/user.service';
 import { configManager } from '../../src/config';
+import { MachineService } from '../../src/services/machine.service';
+import { MachineInfo } from '../../src/models/types';
 
 // Mock dependencies
 jest.mock('fs/promises');
@@ -18,15 +20,39 @@ jest.mock('../../src/database', () => ({
   }
 }));
 jest.mock('../../src/config');
+jest.mock('../../src/services/machine.service');
 
 describe('UserService', () => {
   let userService: UserService;
   const mockFs = fs as jest.Mocked<typeof fs>;
   const mockOs = os as jest.Mocked<typeof os>;
   const mockConfigManager = configManager as jest.Mocked<typeof configManager>;
-
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Setup MachineService mock
+    const mockMachineInfo: MachineInfo = {
+      uuid: 'test-uuid',
+      machineId: 'test-machine-id',
+      osInfo: {
+        platform: 'darwin',
+        release: '20.0.0',
+        arch: 'x64',
+        hostname: 'test-machine'
+      },
+      createdAt: '2024-01-01T00:00:00Z',
+      version: 1
+    };
+    
+    const mockLoadMachineInfo = jest.fn(() => Promise.resolve(mockMachineInfo));
+    
+    (MachineService as any).mockImplementation(() => ({
+      loadMachineInfo: mockLoadMachineInfo
+    }));
+    
+    // Mock static method
+    (MachineService as any).getAppDirectory = jest.fn().mockReturnValue('/home/test/.roiai-cli');
+    
     userService = new UserService();
     
     // Setup os mocks
@@ -38,7 +64,11 @@ describe('UserService', () => {
     
     // Setup config mock
     mockConfigManager.get.mockReturnValue({
-      user: { infoPath: '~/.roiai/user_info.json' },
+      app: { 
+        dataDir: '~/.roiai-cli',
+        machineInfoFilename: 'machine_info.json'
+      },
+      user: { infoFilename: 'user_info.json' },
       database: { path: ':memory:' },
       claudeCode: {} as any,
       push: {} as any,
@@ -53,8 +83,8 @@ describe('UserService', () => {
       
       const userInfo = await userService.loadUserInfo();
       
-      expect(userInfo.userId).toMatch(/^anon-[a-f0-9]{16}$/);
-      expect(userInfo.clientMachineId).toMatch(/^[a-f0-9]{16}$/);
+      expect(userInfo.userId).toBe('anon-test-machine-id');
+      expect(userInfo.clientMachineId).toBe('test-machine-id');
       expect(userInfo.email).toBeUndefined();
       expect(userInfo.auth).toBeUndefined();
     });
@@ -141,9 +171,11 @@ describe('UserService', () => {
       const userService2 = new UserService();
       const userInfo2 = await userService2.loadUserInfo();
       
-      // Should generate same anonymous ID for same machine
+      // Should generate same anonymous ID for same machine (from machine info)
       expect(userInfo1.userId).toBe(userInfo2.userId);
       expect(userInfo1.clientMachineId).toBe(userInfo2.clientMachineId);
+      expect(userInfo1.userId).toBe('anon-test-machine-id');
+      expect(userInfo1.clientMachineId).toBe('test-machine-id');
     });
   });
 });

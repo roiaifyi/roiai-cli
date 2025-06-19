@@ -1,6 +1,8 @@
 import { UserInfo } from '../models/types';
 export declare class UserService {
     private userInfo;
+    private machineService;
+    constructor();
     loadUserInfo(): Promise<UserInfo>;
     private generateDefaultUserInfo;
     private ensureUserExists;
@@ -13,5 +15,6 @@ export declare class UserService {
     getApiToken(): string | null;
     login(realUserId: string, email: string, apiToken: string): Promise<void>;
     logout(): Promise<void>;
+    private getUserInfoPath;
 }
 //# sourceMappingURL=user.service.d.ts.map

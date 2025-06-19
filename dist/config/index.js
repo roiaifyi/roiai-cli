@@ -14,6 +14,13 @@ class ConfigManager {
         this.validateConfig();
     }
     validateConfig() {
+        // Validate app config
+        if (!this.config.app?.dataDir) {
+            throw new Error('App data directory is required in configuration');
+        }
+        if (!this.config.app?.machineInfoFilename) {
+            throw new Error('Machine info filename is required in configuration');
+        }
         // Ensure paths are absolute
         if (!path_1.default.isAbsolute(this.config.claudeCode.rawDataPath)) {
             this.config.claudeCode.rawDataPath = path_1.default.resolve(process.cwd(), this.config.claudeCode.rawDataPath);

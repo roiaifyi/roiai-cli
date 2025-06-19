@@ -7,36 +7,33 @@ exports.UserService = void 0;
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
-const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("../database");
 const config_1 = require("../config");
+const machine_service_1 = require("./machine.service");
 class UserService {
     userInfo = null;
+    machineService;
+    constructor() {
+        this.machineService = new machine_service_1.MachineService();
+    }
     async loadUserInfo() {
-        // Get user info path from config
-        const configPath = config_1.configManager.get().user?.infoPath || '~/.claude/user_info.json';
-        const userInfoPath = configPath.startsWith('~')
-            ? path_1.default.join(os_1.default.homedir(), configPath.slice(1))
-            : path_1.default.resolve(configPath);
+        const userInfoPath = this.getUserInfoPath();
         try {
             const data = await promises_1.default.readFile(userInfoPath, 'utf-8');
             this.userInfo = JSON.parse(data);
         }
         catch (error) {
             console.warn(`User info file not found at ${userInfoPath}, generating default values`);
-            this.userInfo = this.generateDefaultUserInfo();
+            this.userInfo = await this.generateDefaultUserInfo();
         }
         // Ensure user exists in database
         await this.ensureUserExists();
         return this.userInfo;
     }
-    generateDefaultUserInfo() {
-        // Generate a machine ID based on hostname and platform
-        const machineId = crypto_1.default
-            .createHash('sha256')
-            .update(`${os_1.default.hostname()}:${os_1.default.platform()}:${os_1.default.arch()}`)
-            .digest('hex')
-            .substring(0, 16);
+    async generateDefaultUserInfo() {
+        // Load machine info (will generate if doesn't exist)
+        const machineInfo = await this.machineService.loadMachineInfo();
+        const machineId = machineInfo.machineId;
         return {
             userId: `anon-${machineId}`,
             clientMachineId: machineId,
@@ -106,10 +103,7 @@ class UserService {
             apiToken
         };
         // Save updated user info
-        const configPath = config_1.configManager.get().user?.infoPath || '~/.roiai/user_info.json';
-        const userInfoPath = configPath.startsWith('~')
-            ? path_1.default.join(os_1.default.homedir(), configPath.slice(1))
-            : path_1.default.resolve(configPath);
+        const userInfoPath = this.getUserInfoPath();
         // Ensure directory exists
         await promises_1.default.mkdir(path_1.default.dirname(userInfoPath), { recursive: true });
         // Save user info
@@ -122,11 +116,21 @@ class UserService {
         // Remove auth info
         delete this.userInfo.auth;
         // Save updated user info
-        const configPath = config_1.configManager.get().user?.infoPath || '~/.roiai/user_info.json';
-        const userInfoPath = configPath.startsWith('~')
-            ? path_1.default.join(os_1.default.homedir(), configPath.slice(1))
-            : path_1.default.resolve(configPath);
+        const userInfoPath = this.getUserInfoPath();
         await promises_1.default.writeFile(userInfoPath, JSON.stringify(this.userInfo, null, 2));
+    }
+    getUserInfoPath() {
+        const config = config_1.configManager.get().user;
+        // Check if we have a full path (for testing or custom configs)
+        if (config?.infoPath) {
+            const configPath = config.infoPath;
+            return configPath.startsWith('~')
+                ? path_1.default.join(os_1.default.homedir(), configPath.slice(1))
+                : path_1.default.resolve(configPath);
+        }
+        // Otherwise use filename in app directory
+        const filename = config?.infoFilename || 'user_info.json';
+        return path_1.default.join(machine_service_1.MachineService.getAppDirectory(), filename);
     }
 }
 exports.UserService = UserService;

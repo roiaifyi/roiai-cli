@@ -2,9 +2,17 @@
   "// NOTE": "Copy this file to 'local.json' and update with your actual values",
   "// NOTE2": "The 'local.json' file is gitignored and won't be committed",
   
+  "app": {
+    "// dataDir": "Directory for storing app data files",
+    "dataDir": "~/.roiai-cli",
+    
+    "// machineInfoFilename": "Filename for machine info JSON file",
+    "machineInfoFilename": "machine_info.json"
+  },
+  
   "user": {
-    "// infoPath": "Path to your user info JSON file",
-    "infoPath": "~/.claude/user_info.json"
+    "// infoFilename": "Filename for user info JSON file (stored in app.dataDir)",
+    "infoFilename": "user_info.json"
   },
   
   "claudeCode": {

@@ -156,7 +156,7 @@ exports.syncCommand = new commander_1.Command('sync')
         console.log(chalk_1.default.gray('   ' + '─'.repeat(30)));
         console.log(`   ${chalk_1.default.bold('Total cost:')} ${chalk_1.default.bold.green('$' + stats.totalCost.toFixed(4))}`);
         // Show aggregated user stats
-        const userStats = await getUserAggregatedStats();
+        const userStats = await getUserAggregatedStats(userService);
         if (userStats) {
             console.log('\n' + chalk_1.default.bold('👤 User Stats:'));
             console.log(`   Projects: ${chalk_1.default.cyan(userStats.totalProjects)}`);
@@ -206,9 +206,7 @@ async function getDatabaseStats() {
         totalCost: Number(totalCostResult._sum.messageCost || 0)
     };
 }
-async function getUserAggregatedStats() {
-    const userService = new user_service_1.UserService();
-    await userService.loadUserInfo();
+async function getUserAggregatedStats(userService) {
     const userId = userService.getUserId();
     const user = await database_1.prisma.user.findUnique({
         where: { id: userId }

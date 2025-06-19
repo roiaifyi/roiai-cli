@@ -1,6 +1,10 @@
 {
+  "app": {
+    "dataDir": "~/.roiai-cli",
+    "machineInfoFilename": "machine_info.json"
+  },
   "user": {
-    "infoPath": "/Users/baotrungtn/repos/claude-stat/roiai-cli/config/user_info.example.json"
+    "infoFilename": "user_info.json"
   },
 
   "claudeCode": {
