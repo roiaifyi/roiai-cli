@@ -17,23 +17,36 @@ function getControlSettings() {
   }
 }
 
-// Mock login endpoint
-app.post('/v1/auth/login', (req, res) => {
-  const { email, password, token } = req.body;
+// Mock login endpoint matching the spec
+app.post('/v1/cli/login', (req, res) => {
+  const { email, password, token, machine_info } = req.body;
   
   if (token === 'valid-token' || (email === 'test@example.com' && password === 'password123')) {
     res.json({
-      userId: 'user-123',
-      email: 'test@example.com',
-      apiToken: 'auth-token-123'
+      success: true,
+      data: {
+        user: {
+          id: 123,
+          email: 'test@example.com',
+          username: 'testuser'
+        },
+        apiKey: 'roiai_auth-token-123',
+        name: `CLI - ${machine_info?.machine_name || 'Test Machine'}`
+      }
     });
   } else {
-    res.status(401).json({ message: 'Invalid credentials' });
+    res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password'
+      }
+    });
   }
 });
 
-// Mock push endpoint
-app.post('/v1/usage/push', (req, res) => {
+// Mock push endpoint matching the spec
+app.post('/v1/data/upsync', (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Unauthorized' });
@@ -41,87 +54,64 @@ app.post('/v1/usage/push', (req, res) => {
   
   // Check for valid token
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-  if (token !== 'test-auth-token') {
-    return res.status(401).json({ message: 'Unauthorized' });
+  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123') {
+    return res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Invalid API key'
+      }
+    });
   }
 
   const request = req.body;
   const control = getControlSettings();
   
+  // Validate request has records array
+  if (!request.records || !Array.isArray(request.records)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'INVALID_REQUEST',
+        message: 'Missing records array'
+      }
+    });
+  }
+  
+  const recordCount = request.records.length;
+  
   // Check if we should simulate failures
   if (control.failureMode === 'total') {
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ 
+      success: false,
+      error: {
+        code: 'SERVER_ERROR',
+        message: 'Internal server error'
+      }
+    });
   }
   
   if (control.failureMode === 'partial') {
     // Simulate partial failure
-    const halfCount = Math.floor(request.messages.length / 2);
-    const failedMessages = request.messages.slice(halfCount).map(m => ({
-      messageId: m.uuid,
-      error: 'Validation error'
-    }));
+    const halfCount = Math.floor(recordCount / 2);
     
     return res.json({
-      batchId: request.batchId,
-      results: {
-        persisted: {
-          count: halfCount,
-          messageIds: request.messages.slice(0, halfCount).map(m => m.uuid)
-        },
-        deduplicated: {
-          count: 0,
-          messageIds: []
-        },
-        failed: {
-          count: failedMessages.length,
-          details: failedMessages
-        }
-      },
-      summary: {
-        totalMessages: request.messages.length,
-        messagesSucceeded: halfCount,
-        messagesFailed: failedMessages.length,
-        entitiesCreated: {
-          users: 0,
-          machines: 0,
-          projects: 0,
-          sessions: 0
-        },
-        aggregatesUpdated: false,
-        processingTimeMs: 50
+      success: true,
+      data: {
+        processed: halfCount,
+        failed: recordCount - halfCount,
+        uploadId: `upload_${Date.now()}`
       }
     });
   }
   
   // Default success response
   res.json({
-    batchId: request.batchId,
-    results: {
-      persisted: {
-        count: request.messages.length,
-        messageIds: request.messages.map(m => m.uuid)
-      },
-      deduplicated: {
-        count: 0,
-        messageIds: []
-      },
-      failed: {
-        count: 0,
-        details: []
-      }
-    },
-    summary: {
-      totalMessages: request.messages.length,
-      messagesSucceeded: request.messages.length,
-      messagesFailed: 0,
-      entitiesCreated: {
-        users: Object.keys(request.entities.users || {}).length,
-        machines: Object.keys(request.entities.machines || {}).length,
-        projects: Object.keys(request.entities.projects || {}).length,
-        sessions: Object.keys(request.entities.sessions || {}).length
-      },
-      aggregatesUpdated: true,
-      processingTimeMs: 100
+    success: true,
+    data: {
+      processed: recordCount,
+      failed: 0,
+      uploadId: `upload_${Date.now()}`
     }
   });
 });

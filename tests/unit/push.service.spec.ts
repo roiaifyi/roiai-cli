@@ -183,23 +183,20 @@ describe('PushService', () => {
         }
       ];
 
-      const request = pushService.buildPushRequest(messages);
+      const request = pushService.buildPushRequest(messages) as any;
 
-      // Check entity deduplication
-      expect(Object.keys(request.entities.users).length).toBe(1);
-      expect(Object.keys(request.entities.machines).length).toBe(1);
-      expect(Object.keys(request.entities.projects).length).toBe(1);
-      expect(Object.keys(request.entities.sessions).length).toBe(1);
-
-      // Check message entities
-      expect(request.messages).toHaveLength(2);
-      expect(request.messages[0].uuid).toBe('msg1');
-      expect(request.messages[1].uuid).toBe('msg2');
-
-      // Check metadata
-      expect(request.metadata.totalMessages).toBe(2);
-      expect(request.batchId).toBeDefined();
-      expect(request.timestamp).toBeDefined();
+      // Check new format has records array
+      expect(request.records).toBeDefined();
+      expect(request.records).toHaveLength(2);
+      
+      // Check first record
+      expect(request.records[0].service).toBe('claude');
+      expect(request.records[0].model).toBe('claude-3');
+      expect(request.records[0].usage.prompt_tokens).toBe(100);
+      expect(request.records[0].usage.completion_tokens).toBe(200);
+      expect(request.records[0].cost).toBe(0.003);
+      expect(request.records[0].metadata.message_id).toBe('id1');
+      expect(request.records[0].metadata.uuid).toBe('msg1');
     });
 
     it('should handle missing optional fields', () => {
@@ -223,11 +220,11 @@ describe('PushService', () => {
         }
       ];
 
-      const request = pushService.buildPushRequest(messages);
+      const request = pushService.buildPushRequest(messages) as any;
 
-      expect(request.messages[0].model).toBeUndefined();
-      expect(request.messages[0].timestamp).toBeUndefined();
-      expect(request.entities.users['user1']?.email).toBeUndefined();
+      expect(request.records).toBeDefined();
+      expect(request.records[0].model).toBe('unknown');
+      expect(request.records[0].timestamp).toBeDefined();
     });
   });
 
@@ -302,17 +299,13 @@ describe('PushService', () => {
 
   describe('processPushResponse', () => {
     it('should update sync status based on response', async () => {
-      const mockResponse: PushResponse = {
-        batchId: 'batch1',
-        results: {
-          persisted: { count: 2, messageIds: ['msg1', 'msg2'] },
-          deduplicated: { count: 1, messageIds: ['msg3'] },
-          failed: { 
-            count: 1, 
-            details: [{ messageId: 'msg4', error: 'Validation failed' }] 
-          }
-        },
-        summary: {} as any
+      const mockResponse = {
+        success: true,
+        data: {
+          processed: 3,
+          failed: 1,
+          uploadId: 'upload_123'
+        }
       };
 
       const messageIds = ['msg1', 'msg2', 'msg3', 'msg4'];
@@ -329,32 +322,40 @@ describe('PushService', () => {
 
       await pushService.processPushResponse(mockResponse, messageIds);
 
-      // Check persisted messages update
+      // Check first 3 messages marked as synced
       expect(mockTx.syncStatus.updateMany).toHaveBeenCalledWith({
         where: { tableName: 'messages', recordId: 'msg1' },
         data: expect.objectContaining({
           syncedAt: expect.any(Date),
-          syncBatchId: 'batch1',
+          syncBatchId: 'upload_123',
           syncResponse: 'persisted'
         })
       });
 
-      // Check deduplicated messages update
+      expect(mockTx.syncStatus.updateMany).toHaveBeenCalledWith({
+        where: { tableName: 'messages', recordId: 'msg2' },
+        data: expect.objectContaining({
+          syncedAt: expect.any(Date),
+          syncBatchId: 'upload_123',
+          syncResponse: 'persisted'
+        })
+      });
+
       expect(mockTx.syncStatus.updateMany).toHaveBeenCalledWith({
         where: { tableName: 'messages', recordId: 'msg3' },
         data: expect.objectContaining({
           syncedAt: expect.any(Date),
-          syncBatchId: 'batch1',
-          syncResponse: 'deduplicated'
+          syncBatchId: 'upload_123',
+          syncResponse: 'persisted'
         })
       });
 
-      // Check failed messages update
+      // Check last message marked as failed
       expect(mockTx.syncStatus.updateMany).toHaveBeenCalledWith({
         where: { tableName: 'messages', recordId: 'msg4' },
         data: {
           retryCount: { increment: 1 },
-          syncResponse: 'Validation failed'
+          syncResponse: 'failed'
         }
       });
     });

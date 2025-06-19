@@ -3,7 +3,9 @@ import ora from 'ora';
 import chalk from 'chalk';
 import prompts from 'prompts';
 import axios from 'axios';
+import os from 'os';
 import { UserService } from '../../services/user.service';
+import { MachineService } from '../../services/machine.service';
 import { configManager } from '../../config';
 
 export function createLoginCommand(): Command {
@@ -72,26 +74,51 @@ export function createLoginCommand(): Command {
         
         // Get push endpoint from config
         const pushConfig = configManager.getPushConfig();
-        const authEndpoint = pushConfig.endpoint.replace('/v1/usage/push', '/v1/auth/login');
+        const authEndpoint = pushConfig.endpoint.replace('/v1/usage/push', '/v1/cli/login');
+        
+        // Load machine info
+        const machineService = new MachineService();
+        const machineInfo = await machineService.loadMachineInfo();
         
         try {
-          // Authenticate with server
-          const response = await axios.post(authEndpoint, 
-            token ? { token } : { email, password },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              timeout: 5000
+          // Build request payload
+          const payload: any = {
+            machine_info: {
+              machine_id: machineInfo.machineId,
+              machine_name: machineInfo.osInfo.hostname,
+              platform: machineInfo.osInfo.platform,
+              hostname: machineInfo.osInfo.hostname,
+              os_version: `${os.type()} ${os.release()}`
             }
-          );
+          };
           
-          const { userId, email: userEmail, apiToken } = response.data;
+          if (token) {
+            payload.token = token;
+          } else {
+            payload.email = email;
+            payload.password = password;
+          }
           
-          // Save authentication info
-          await userService.login(userId, userEmail, apiToken);
+          // Authenticate with server
+          const response = await axios.post(authEndpoint, payload, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            timeout: 5000
+          });
           
-          spinner.succeed(`Successfully logged in as ${userEmail}`);
+          const { success, data } = response.data;
+          
+          if (!success || !data) {
+            throw new Error('Invalid server response');
+          }
+          
+          const { user, apiKey } = data;
+          
+          // Save authentication info with new format
+          await userService.login(user.id.toString(), user.email, apiKey, user.username);
+          
+          spinner.succeed(`Successfully logged in as ${user.email}`);
           console.log(chalk.dim('\nYou can now use \'roiai-cli cc push\' to sync your usage data.'));
           
         } catch (error) {

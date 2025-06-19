@@ -136,10 +136,10 @@ describe('UserService', () => {
       expect(userService.getAuthenticatedEmail()).toBe('test@example.com');
       expect(userService.getApiToken()).toBe('token-123');
       
-      // Check file was written
+      // Check file was written with new format
       expect(mockFs.writeFile).toHaveBeenCalledWith(
         expect.stringContaining('user_info.json'),
-        expect.stringContaining('"auth"')
+        expect.stringContaining('"api_key"')
       );
     });
 

@@ -26,8 +26,11 @@ export class PushService {
       this.anonymousUserId = userService.getUserId();
       const apiToken = userService.getApiToken();
       
+      // Update endpoint to match spec
+      const endpoint = config.endpoint.replace('/v1/usage/push', '/v1/data/upsync');
+      
       this.httpClient = axios.create({
-        baseURL: config.endpoint,
+        baseURL: endpoint,
         timeout: config.timeout,
         headers: {
           'Authorization': `Bearer ${apiToken}`,
@@ -36,8 +39,9 @@ export class PushService {
       });
     } else {
       // For testing or backward compatibility
+      const endpoint = config.endpoint.replace('/v1/usage/push', '/v1/data/upsync');
       this.httpClient = axios.create({
-        baseURL: config.endpoint,
+        baseURL: endpoint,
         timeout: config.timeout,
         headers: {
           'Authorization': `Bearer ${config.apiToken}`,
@@ -150,21 +154,30 @@ export class PushService {
       });
     }
 
-    return {
-      batchId: uuidv4(),
-      timestamp: new Date().toISOString(),
-      entities: {
-        users: Object.fromEntries(entities.users),
-        machines: Object.fromEntries(entities.machines),
-        projects: Object.fromEntries(entities.projects),
-        sessions: Object.fromEntries(entities.sessions)
+    // Convert to the spec format
+    const records = messageEntities.map(msg => ({
+      service: 'claude',  // We're tracking Claude Code usage
+      model: msg.model || 'unknown',
+      timestamp: msg.timestamp || new Date().toISOString(),
+      usage: {
+        prompt_tokens: msg.inputTokens,
+        completion_tokens: msg.outputTokens,
+        total_tokens: msg.inputTokens + msg.outputTokens,
+        cache_creation_tokens: msg.cacheCreationTokens,
+        cache_read_tokens: msg.cacheReadTokens
       },
-      messages: messageEntities,
+      cost: Number(msg.messageCost),
       metadata: {
-        clientVersion: process.env.npm_package_version || '1.0.0',
-        totalMessages: messageEntities.length
+        message_id: msg.messageId,
+        session_id: msg.sessionId,
+        project_id: msg.projectId,
+        machine_id: msg.userId.startsWith('anon-') ? msg.userId.substring(5) : undefined,
+        uuid: msg.uuid,
+        role: msg.role
       }
-    };
+    }));
+
+    return { records } as any;
   }
 
   async executePush(request: PushRequest): Promise<PushResponse> {
@@ -186,43 +199,52 @@ export class PushService {
     }
   }
 
-  async processPushResponse(response: PushResponse, messageIds: string[]): Promise<void> {
+  async processPushResponse(response: any, messageIds: string[]): Promise<void> {
     const now = new Date();
-    const batchId = response.batchId;
+    
+    // Handle the spec response format
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Push failed');
+    }
 
-    // Create maps for quick lookup
-    const persistedSet = new Set(response.results.persisted.messageIds);
-    const deduplicatedSet = new Set(response.results.deduplicated.messageIds);
-    const failedMap = new Map(
-      response.results.failed.details.map(detail => [detail.messageId, detail.error])
-    );
+    const { data } = response;
+    const uploadId = data.uploadId || uuidv4();
+    const processed = data.processed || 0;
+    const failed = data.failed || 0;
 
     // Update sync status records in a transaction
     await this.prisma.$transaction(async (tx) => {
-      for (const messageId of messageIds) {
-        if (persistedSet.has(messageId) || deduplicatedSet.has(messageId)) {
-          // Mark as successfully synced
+      if (processed > 0) {
+        // Mark successful messages as synced
+        // Since we don't have individual message status, mark all as synced if processed > 0
+        const successCount = Math.min(processed, messageIds.length);
+        for (let i = 0; i < successCount; i++) {
           await tx.syncStatus.updateMany({
             where: {
               tableName: 'messages',
-              recordId: messageId
+              recordId: messageIds[i]
             },
             data: {
               syncedAt: now,
-              syncBatchId: batchId,
-              syncResponse: persistedSet.has(messageId) ? 'persisted' : 'deduplicated'
+              syncBatchId: uploadId,
+              syncResponse: 'persisted'
             }
           });
-        } else if (failedMap.has(messageId)) {
-          // Increment retry count and store error
+        }
+      }
+      
+      if (failed > 0) {
+        // Mark remaining messages as failed
+        const startIndex = processed;
+        for (let i = startIndex; i < messageIds.length; i++) {
           await tx.syncStatus.updateMany({
             where: {
               tableName: 'messages',
-              recordId: messageId
+              recordId: messageIds[i]
             },
             data: {
               retryCount: { increment: 1 },
-              syncResponse: failedMap.get(messageId)
+              syncResponse: 'failed'
             }
           });
         }

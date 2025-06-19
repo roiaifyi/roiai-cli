@@ -13,7 +13,7 @@ export declare class UserService {
     getAuthenticatedUserId(): string | null;
     getAuthenticatedEmail(): string | null;
     getApiToken(): string | null;
-    login(realUserId: string, email: string, apiToken: string): Promise<void>;
+    login(realUserId: string, email: string, apiKey: string, username?: string): Promise<void>;
     logout(): Promise<void>;
     private getUserInfoPath;
 }

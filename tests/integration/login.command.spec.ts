@@ -111,9 +111,10 @@ describe('Login Command Integration', () => {
     // Check user info file was created
     expect(fs.existsSync(testUserInfoPath)).toBe(true);
     const userInfo = JSON.parse(fs.readFileSync(testUserInfoPath, 'utf8'));
-    expect(userInfo.auth).toBeDefined();
-    expect(userInfo.auth.email).toBe('test@example.com');
-    expect(userInfo.auth.apiToken).toBe('auth-token-123');
+    // Check new format from spec
+    expect(userInfo.username).toBe('testuser');
+    expect(userInfo.api_key).toBe('roiai_auth-token-123');
+    expect(userInfo.api_secret).toBe('roiai_auth-token-123');
   });
   
   it('should login successfully with token', () => {

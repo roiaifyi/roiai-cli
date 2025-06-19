@@ -146,15 +146,6 @@ exports.syncCommand = new commander_1.Command('sync')
                 console.log(`     Total tokens: ${chalk_1.default.yellow(totalTokens.toLocaleString())}`);
             }
         }
-        // Show database stats
-        const stats = await getDatabaseStats();
-        console.log('\n' + chalk_1.default.bold('💾 Database Stats:'));
-        console.log(`   Total users: ${chalk_1.default.cyan(stats.users)}`);
-        console.log(`   Total projects: ${chalk_1.default.cyan(stats.projects)}`);
-        console.log(`   Total sessions: ${chalk_1.default.cyan(stats.sessions)}`);
-        console.log(`   Total messages: ${chalk_1.default.cyan(stats.messages)}`);
-        console.log(chalk_1.default.gray('   ' + '─'.repeat(30)));
-        console.log(`   ${chalk_1.default.bold('Total cost:')} ${chalk_1.default.bold.green('$' + stats.totalCost.toFixed(4))}`);
         // Show aggregated user stats
         const userStats = await getUserAggregatedStats(userService);
         if (userStats) {
@@ -186,26 +177,6 @@ exports.syncCommand = new commander_1.Command('sync')
         await database_1.db.disconnect();
     }
 });
-async function getDatabaseStats() {
-    const [users, projects, sessions, messages, totalCostResult] = await Promise.all([
-        database_1.prisma.user.count(),
-        database_1.prisma.project.count(),
-        database_1.prisma.session.count(),
-        database_1.prisma.message.count(),
-        database_1.prisma.message.aggregate({
-            _sum: {
-                messageCost: true
-            }
-        })
-    ]);
-    return {
-        users,
-        projects,
-        sessions,
-        messages,
-        totalCost: Number(totalCostResult._sum.messageCost || 0)
-    };
-}
 async function getUserAggregatedStats(userService) {
     const userId = userService.getUserId();
     const user = await database_1.prisma.user.findUnique({

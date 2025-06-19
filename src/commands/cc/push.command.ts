@@ -121,48 +121,30 @@ export function createPushCommand() {
 
           try {
             // Execute push
-            const response = await pushService.executePush(request);
+            const response = await pushService.executePush(request) as any;
             
             // Process response
             await pushService.processPushResponse(response, messageIds);
             
-            const succeeded = response.results.persisted.count + response.results.deduplicated.count;
-            const failed = response.results.failed.count;
-            
-            totalPushed += succeeded;
-            
-            
-            // Debug check
-            if (succeeded + failed !== messageIds.length) {
-              console.error(chalk.red(`  ERROR: Count mismatch! Batch had ${messageIds.length} messages, but response shows ${succeeded} succeeded + ${failed} failed = ${succeeded + failed}`));
+            // Handle the new response format from spec
+            if (!response.success) {
+              throw new Error(response.error?.message || 'Push failed');
             }
+            
+            const { data } = response;
+            const processed = data.processed || 0;
+            const failed = data.failed || 0;
+            
+            totalPushed += processed;
             
             spinner.succeed(
               `Batch ${batchNumber}: ` +
-              `${chalk.green(response.results.persisted.count)} persisted, ` +
-              `${chalk.blue(response.results.deduplicated.count)} deduplicated, ` +
-              `${chalk.red(response.results.failed.count)} failed`
+              `${chalk.green(processed)} processed, ` +
+              `${chalk.red(failed)} failed`
             );
             
-            if (options.verbose && response.results.failed.count > 0) {
-              console.log('\nFailed messages:');
-              response.results.failed.details.slice(0, 5).forEach(detail => {
-                console.log(`  ${detail.messageId}: ${detail.error}`);
-              });
-              if (response.results.failed.details.length > 5) {
-                console.log(`  ... and ${response.results.failed.details.length - 5} more`);
-              }
-            }
-
-            // Show processing time
-            if (options.verbose) {
-              console.log(`  Server processing time: ${response.summary.processingTimeMs}ms`);
-              if (response.summary.entitiesCreated) {
-                const created = response.summary.entitiesCreated;
-                if (Object.values(created).some(v => v > 0)) {
-                  console.log(`  Entities created: ${JSON.stringify(created)}`);
-                }
-              }
+            if (options.verbose && data.uploadId) {
+              console.log(`  Upload ID: ${data.uploadId}`);
             }
 
           } catch (error) {

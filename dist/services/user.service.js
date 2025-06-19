@@ -20,10 +20,29 @@ class UserService {
         const userInfoPath = this.getUserInfoPath();
         try {
             const data = await promises_1.default.readFile(userInfoPath, 'utf-8');
-            this.userInfo = JSON.parse(data);
+            const parsed = JSON.parse(data);
+            // Check if it's the new format from the spec
+            if ('username' in parsed && 'api_key' in parsed) {
+                // Load machine info to get the anonymous user ID
+                const machineInfo = await this.machineService.loadMachineInfo();
+                // Convert new format to our internal format
+                this.userInfo = {
+                    userId: `anon-${machineInfo.machineId}`,
+                    clientMachineId: machineInfo.machineId,
+                    auth: {
+                        realUserId: parsed.username, // Using username as user ID for now
+                        email: `${parsed.username}@roiai.com`, // Generate email from username
+                        apiToken: parsed.api_key
+                    }
+                };
+            }
+            else {
+                // Old format
+                this.userInfo = parsed;
+            }
         }
         catch (error) {
-            console.warn(`User info file not found at ${userInfoPath}, generating default values`);
+            // Silently generate default user info if file doesn't exist
             this.userInfo = await this.generateDefaultUserInfo();
         }
         // Ensure user exists in database
@@ -93,21 +112,27 @@ class UserService {
     getApiToken() {
         return this.userInfo?.auth?.apiToken || null;
     }
-    async login(realUserId, email, apiToken) {
+    async login(realUserId, email, apiKey, username) {
         if (!this.userInfo) {
             throw new Error('User info not loaded');
         }
+        // Update in-memory auth info for backward compatibility
         this.userInfo.auth = {
             realUserId,
             email,
-            apiToken
+            apiToken: apiKey
         };
-        // Save updated user info
+        // Save in the new format according to spec
         const userInfoPath = this.getUserInfoPath();
         // Ensure directory exists
         await promises_1.default.mkdir(path_1.default.dirname(userInfoPath), { recursive: true });
-        // Save user info
-        await promises_1.default.writeFile(userInfoPath, JSON.stringify(this.userInfo, null, 2));
+        // Save user info in new format
+        const newFormat = {
+            username: username || email.split('@')[0],
+            api_key: apiKey,
+            api_secret: apiKey // Same as api_key for Bearer token auth
+        };
+        await promises_1.default.writeFile(userInfoPath, JSON.stringify(newFormat, null, 2));
     }
     async logout() {
         if (!this.userInfo) {

@@ -166,16 +166,6 @@ export const syncCommand = new Command('sync')
         }
       }
 
-      // Show database stats
-      const stats = await getDatabaseStats();
-      console.log('\n' + chalk.bold('💾 Database Stats:'));
-      console.log(`   Total users: ${chalk.cyan(stats.users)}`);
-      console.log(`   Total projects: ${chalk.cyan(stats.projects)}`);
-      console.log(`   Total sessions: ${chalk.cyan(stats.sessions)}`);
-      console.log(`   Total messages: ${chalk.cyan(stats.messages)}`);
-      console.log(chalk.gray('   ' + '─'.repeat(30)));
-      console.log(`   ${chalk.bold('Total cost:')} ${chalk.bold.green('$' + stats.totalCost.toFixed(4))}`);
-
       // Show aggregated user stats
       const userStats = await getUserAggregatedStats(userService);
       if (userStats) {
@@ -208,28 +198,6 @@ export const syncCommand = new Command('sync')
       await db.disconnect();
     }
   });
-
-async function getDatabaseStats() {
-  const [users, projects, sessions, messages, totalCostResult] = await Promise.all([
-    prisma.user.count(),
-    prisma.project.count(),
-    prisma.session.count(),
-    prisma.message.count(),
-    prisma.message.aggregate({
-      _sum: {
-        messageCost: true
-      }
-    })
-  ]);
-
-  return {
-    users,
-    projects,
-    sessions,
-    messages,
-    totalCost: Number(totalCostResult._sum.messageCost || 0)
-  };
-}
 
 async function getUserAggregatedStats(userService: UserService) {
   const userId = userService.getUserId();
