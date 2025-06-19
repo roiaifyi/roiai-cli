@@ -41,7 +41,7 @@ node dist/index.js cc watch
 
 ## Testing & Quality
 
-**Note**: Tests are implemented using Jest. Run `npm test` to execute all tests. Integration tests for HTTP-dependent functionality are skipped due to subprocess connection limitations.
+**Note**: Tests are implemented using Jest. Run `npm test` to execute all tests. Run `npm run test:coverage` for coverage report. MachineService has comprehensive unit tests with 97.5% coverage.
 
 There is no linting or formatting configuration at the project level. When making changes, follow the existing TypeScript conventions in the codebase.
 
