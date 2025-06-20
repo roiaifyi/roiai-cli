@@ -64,3 +64,4 @@ There is no linting or formatting configuration at the project level. When makin
 11. **Configuration**: Extended configuration options for timeouts, display formatting, and file processing settings
 12. **API Modernization**: Removed legacy endpoint compatibility, all configurations now use latest `/v1/data/upsync` and `/v1/cli/login` paths
 13. **API Configuration**: Refactored to separate api.baseUrl from endpoint paths for better environment support and configuration flexibility
+14. **Enhanced Sync Display**: Added detailed model breakdown with token usage and cost analysis in sync command, featuring emoji UI and smart filtering

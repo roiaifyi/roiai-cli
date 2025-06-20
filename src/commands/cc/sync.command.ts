@@ -170,15 +170,42 @@ export const syncCommand = new Command('sync')
       const userStats = await getUserAggregatedStats(userService);
       if (userStats) {
         console.log('\n' + chalk.bold('👤 User Stats:'));
-        console.log(`   Projects: ${chalk.cyan(userStats.totalProjects)}`);
-        console.log(`   Sessions: ${chalk.cyan(userStats.totalSessions)}`);
-        console.log(`   Messages: ${chalk.cyan(userStats.totalMessages)}`);
-        console.log(`   Input tokens: ${chalk.cyan(userStats.totalInputTokens.toLocaleString())}`);
-        console.log(`   Output tokens: ${chalk.cyan(userStats.totalOutputTokens.toLocaleString())}`);
-        console.log(`   Cache creation tokens: ${chalk.cyan(userStats.totalCacheCreationTokens.toLocaleString())}`);
-        console.log(`   Cache read tokens: ${chalk.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
-        console.log(chalk.gray('   ' + '─'.repeat(30)));
-        console.log(`   ${chalk.bold('Total cost:')} ${chalk.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
+        console.log(`   📁 Projects: ${chalk.cyan(userStats.totalProjects)}`);
+        console.log(`   💬 Sessions: ${chalk.cyan(userStats.totalSessions)}`);
+        console.log(`   📝 Messages: ${chalk.cyan(userStats.totalMessages)}`);
+        console.log(`   🔤 Input tokens: ${chalk.cyan(userStats.totalInputTokens.toLocaleString())}`);
+        console.log(`   💭 Output tokens: ${chalk.cyan(userStats.totalOutputTokens.toLocaleString())}`);
+        console.log(`   💾 Cache creation tokens: ${chalk.cyan(userStats.totalCacheCreationTokens.toLocaleString())}`);
+        console.log(`   ⚡ Cache read tokens: ${chalk.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
+
+        // Show detailed user stats by model before total cost
+        const userStatsByModel = await getUserStatsByModel(userService);
+        if (userStatsByModel.length > 0) {
+          console.log('\n' + chalk.bold('   🤖 Usage & Cost by Model:'));
+          
+          for (const modelStats of userStatsByModel) {
+            console.log(`\n      ${chalk.magenta('●')} ${chalk.cyan.bold(modelStats.model)}:`);
+            console.log(`        📊 Messages: ${chalk.white(modelStats.messageCount.toLocaleString())}`);
+            console.log(`        📥 Input: ${chalk.green(modelStats.inputTokens.toLocaleString())} tokens`);
+            console.log(`        📤 Output: ${chalk.green(modelStats.outputTokens.toLocaleString())} tokens`);
+            
+            if (modelStats.cacheCreationTokens > 0) {
+              console.log(`        💾 Cache write: ${chalk.blue(modelStats.cacheCreationTokens.toLocaleString())} tokens`);
+            }
+            if (modelStats.cacheReadTokens > 0) {
+              console.log(`        ⚡ Cache read: ${chalk.blue(modelStats.cacheReadTokens.toLocaleString())} tokens`);
+            }
+            
+            const totalTokens = modelStats.inputTokens + modelStats.outputTokens + 
+                              modelStats.cacheCreationTokens + modelStats.cacheReadTokens;
+            console.log(`        🎯 Total: ${chalk.yellow.bold(totalTokens.toLocaleString())} tokens`);
+            console.log(`        💰 Cost: ${chalk.bold.green('$' + modelStats.cost.toFixed(4))}`);
+          }
+          console.log(); // Add spacing before total cost
+        }
+
+        console.log(chalk.gray('   ' + '─'.repeat(40)));
+        console.log(`   ${chalk.bold('💵 Total Cost:')} ${chalk.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
       }
 
       // Check for pending sync items
@@ -207,4 +234,49 @@ async function getUserAggregatedStats(userService: UserService) {
   });
   
   return user;
+}
+
+async function getUserStatsByModel(userService: UserService) {
+  const userId = userService.getUserId();
+  
+  // Get aggregated stats by model from messages
+  const modelStats = await prisma.message.groupBy({
+    by: ['model'],
+    where: {
+      userId: userId,
+      model: { not: null }  // Only include messages with a model
+    },
+    _count: {
+      uuid: true
+    },
+    _sum: {
+      inputTokens: true,
+      outputTokens: true,
+      cacheCreationTokens: true,
+      cacheReadTokens: true,
+      messageCost: true
+    }
+  });
+
+  // Transform and filter out models with zero usage
+  const result = modelStats
+    .filter(stats => {
+      const totalTokens = Number(stats._sum.inputTokens || 0) + 
+                         Number(stats._sum.outputTokens || 0) + 
+                         Number(stats._sum.cacheCreationTokens || 0) + 
+                         Number(stats._sum.cacheReadTokens || 0);
+      return totalTokens > 0;
+    })
+    .map(stats => ({
+      model: stats.model!,
+      messageCount: stats._count.uuid,
+      inputTokens: Number(stats._sum.inputTokens || 0),
+      outputTokens: Number(stats._sum.outputTokens || 0),
+      cacheCreationTokens: Number(stats._sum.cacheCreationTokens || 0),
+      cacheReadTokens: Number(stats._sum.cacheReadTokens || 0),
+      cost: Number(stats._sum.messageCost || 0)
+    }))
+    .sort((a, b) => b.cost - a.cost); // Sort by cost descending
+
+  return result;
 }
