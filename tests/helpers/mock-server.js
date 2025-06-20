@@ -18,7 +18,7 @@ function getControlSettings() {
 }
 
 // Mock login endpoint matching the spec
-app.post('/v1/cli/login', (req, res) => {
+app.post('/api/v1/cli/login', (req, res) => {
   const { email, password, token, machine_info } = req.body;
   
   if (token === 'valid-token' || (email === 'test@example.com' && password === 'password123')) {
@@ -46,7 +46,7 @@ app.post('/v1/cli/login', (req, res) => {
 });
 
 // Mock push endpoint matching the spec
-app.post('/v1/data/upsync', (req, res) => {
+app.post('/api/v1/data/upsync', (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Unauthorized' });

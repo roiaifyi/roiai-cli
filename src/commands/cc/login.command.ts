@@ -113,7 +113,26 @@ export function createLoginCommand(): Command {
             throw new Error('Invalid server response');
           }
           
-          const { user, apiKey } = data;
+          // Handle both response formats for compatibility
+          let user, apiKey;
+          
+          if (data.user && data.apiKey) {
+            // Original format from mock/test server
+            user = data.user;
+            apiKey = data.apiKey;
+          } else if (data.username && data.api_key) {
+            // New format from roiai-web
+            // We need to get the full user info since we only have username
+            // For now, we'll use the email from the login request
+            user = {
+              id: 'cli-user', // We don't have the actual user ID from this response
+              email: email || data.username,
+              username: data.username
+            };
+            apiKey = data.api_key;
+          } else {
+            throw new Error('Unexpected server response format');
+          }
           
           // Save authentication info with new format
           await userService.login(user.id.toString(), user.email, apiKey, user.username);

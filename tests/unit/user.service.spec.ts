@@ -74,8 +74,8 @@ describe('UserService', () => {
       api: {
         baseUrl: 'https://api.roiai.com',
         endpoints: {
-          login: '/v1/cli/login',
-          push: '/v1/data/upsync'
+          login: '/api/v1/cli/login',
+          push: '/api/v1/data/upsync'
         }
       },
       push: {} as any,

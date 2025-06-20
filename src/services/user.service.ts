@@ -143,8 +143,7 @@ export class UserService {
     // Save user info in new format
     const newFormat = {
       username: username || email.split('@')[0],
-      api_key: apiKey,
-      api_secret: apiKey  // Same as api_key for Bearer token auth
+      api_key: apiKey
     };
     
     await FileSystemUtils.writeJsonFile(userInfoPath, newFormat);

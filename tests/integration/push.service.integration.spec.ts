@@ -88,7 +88,7 @@ describe('PushService Integration Tests', () => {
     
     // Override the httpClient to use the correct test endpoint
     const axios = require('axios');
-    const testEndpoint = `http://127.0.0.1:${testPort}/v1/data/upsync`;
+    const testEndpoint = `http://127.0.0.1:${testPort}/api/v1/data/upsync`;
     pushService['httpClient'] = axios.create({
       baseURL: testEndpoint,
       timeout: pushConfig.timeout,
@@ -325,7 +325,7 @@ describe('PushService Integration Tests', () => {
       
       // Override the httpClient to use the correct test endpoint (same as main service)
       const axios = require('axios');
-      const testEndpoint = `http://127.0.0.1:${testPort}/v1/data/upsync`;
+      const testEndpoint = `http://127.0.0.1:${testPort}/api/v1/data/upsync`;
       unauthService['httpClient'] = axios.create({
         baseURL: testEndpoint,
         timeout: pushConfig.timeout,

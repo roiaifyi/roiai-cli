@@ -28,8 +28,8 @@ export const COMMAND_STRINGS = {
 } as const;
 
 export const API_ENDPOINTS = {
-  LOGIN: '/v1/cli/login',
-  PUSH: '/v1/data/upsync'
+  LOGIN: '/api/v1/cli/login',
+  PUSH: '/api/v1/data/upsync'
 } as const;
 
 export const DEFAULT_API_BASE_URL = 'https://api.roiai.com';

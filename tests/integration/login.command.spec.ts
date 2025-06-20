@@ -116,7 +116,6 @@ describe('Login Command Integration', () => {
     // Check new format from spec
     expect(userInfo.username).toBe('testuser');
     expect(userInfo.api_key).toBe('roiai_auth-token-123');
-    expect(userInfo.api_secret).toBe('roiai_auth-token-123');
   });
   
   it('should login successfully with token', () => {
