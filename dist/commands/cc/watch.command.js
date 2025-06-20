@@ -30,7 +30,8 @@ exports.watchCommand = new commander_1.Command('watch')
         logger_1.logger.info('Loading user information...');
         await userService.loadUserInfo();
         const userInfo = userService.getUserInfo();
-        logger_1.logger.success(`Logged in as: ${userInfo.userId} (Machine: ${userInfo.clientMachineId})`);
+        const userId = userService.getUserId();
+        logger_1.logger.success(`Logged in as: ${userId} (Machine: ${userInfo.clientMachineId})`);
         // Get watch path
         const watchPath = options.path || config_1.configManager.getClaudeCodeConfig().rawDataPath;
         const watchConfig = config_1.configManager.getWatchConfig();

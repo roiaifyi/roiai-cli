@@ -29,16 +29,38 @@ export function createTestConfig(overrides: any = {}) {
 
 // Create test user info
 export function createTestUserInfo(overrides: any = {}) {
+  // First create machine info
+  const machineInfo = {
+    machineId: "test-machine-123",
+    macAddress: "aa:bb:cc:dd:ee:ff",
+    osInfo: {
+      platform: "darwin",
+      release: "20.0.0",
+      arch: "x64",
+      hostname: "test-machine"
+    },
+    createdAt: new Date().toISOString(),
+    version: 2
+  };
+  
+  const machineInfoPath = path.join(TEST_DATA_DIR, 'machine_info.json');
+  fs.mkdirSync(path.dirname(machineInfoPath), { recursive: true });
+  fs.writeFileSync(machineInfoPath, JSON.stringify(machineInfo, null, 2));
+  
+  // Create user info with new structure
   const userInfo = {
-    userId: "test-user-123",
+    anonymousId: "anon-test-machine-123",
     clientMachineId: "test-machine-123",
-    email: "test@example.com",
-    name: "Test User",
+    auth: {
+      userId: "test-user-123",
+      email: "test@example.com",
+      username: "test",
+      apiToken: "test-auth-token"
+    },
     ...overrides
   };
   
   const userInfoPath = path.join(TEST_DATA_DIR, 'user_info.json');
-  fs.mkdirSync(path.dirname(userInfoPath), { recursive: true });
   fs.writeFileSync(userInfoPath, JSON.stringify(userInfo, null, 2));
   
   return userInfo;

@@ -221,13 +221,29 @@ describe('Push Command Integration Tests', () => {
     // Reset mock server mode
     setMockServerMode('none');
     
+    // Create machine info
+    const machineInfo = {
+      machineId: 'test-machine',
+      macAddress: 'aa:bb:cc:dd:ee:ff',
+      osInfo: {
+        platform: 'darwin',
+        release: '20.0.0',
+        arch: 'x64',
+        hostname: 'test-machine'
+      },
+      createdAt: new Date().toISOString(),
+      version: 2
+    };
+    fs.writeFileSync(path.join(TEST_DATA_DIR, 'machine_info.json'), JSON.stringify(machineInfo, null, 2));
+    
     // Restore authenticated user info for tests that need it
     const userInfo = {
-      userId: 'anon-test-machine',
+      anonymousId: 'anon-test-machine',
       clientMachineId: 'test-machine',
       auth: {
-        realUserId: 'test-user-123',
+        userId: 'test-user-123',
         email: 'test@example.com',
+        username: 'test',
         apiToken: 'test-auth-token'
       }
     };
@@ -238,7 +254,7 @@ describe('Push Command Integration Tests', () => {
     it('should fail when not authenticated', async () => {
       // Create anonymous user info without auth
       const userInfo = {
-        userId: 'anon-test',
+        anonymousId: 'anon-test',
         clientMachineId: 'test-machine'
       };
       fs.writeFileSync(path.join(TEST_DATA_DIR, 'user_info.json'), JSON.stringify(userInfo));

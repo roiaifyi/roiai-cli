@@ -21,38 +21,40 @@ class UserService {
     async loadUserInfo() {
         const userInfoPath = this.getUserInfoPath();
         try {
-            const parsed = await file_system_utils_1.FileSystemUtils.readJsonFile(userInfoPath);
+            const fileContent = await file_system_utils_1.FileSystemUtils.readJsonFile(userInfoPath);
             // Check if it's the new authenticated format with user object
-            if (parsed.user && parsed.api_key) {
+            if (this.isStoredUserInfo(fileContent)) {
                 // Load machine info to get the anonymous user ID
                 const machineInfo = await this.machineService.loadMachineInfo();
-                // Convert to internal format
+                // Convert StoredUserInfo to internal UserInfo format
                 this.userInfo = {
-                    userId: `anon-${machineInfo.machineId}`,
+                    anonymousId: `anon-${machineInfo.machineId}`,
                     clientMachineId: machineInfo.machineId,
                     auth: {
-                        realUserId: parsed.user.id,
-                        email: parsed.user.email,
-                        apiToken: parsed.api_key
+                        userId: fileContent.user.id,
+                        email: fileContent.user.email,
+                        username: fileContent.user.username,
+                        apiToken: fileContent.api_key
                     }
                 };
             }
-            else if ('username' in parsed && 'api_key' in parsed) {
+            else if (this.isLegacyStoredUserInfo(fileContent)) {
                 // Legacy authenticated format (for backward compatibility during transition)
                 const machineInfo = await this.machineService.loadMachineInfo();
                 this.userInfo = {
-                    userId: `anon-${machineInfo.machineId}`,
+                    anonymousId: `anon-${machineInfo.machineId}`,
                     clientMachineId: machineInfo.machineId,
                     auth: {
-                        realUserId: parsed.username,
-                        email: `${parsed.username}@roiai.com`,
-                        apiToken: parsed.api_key
+                        userId: fileContent.username, // Using username as userId for legacy format
+                        email: `${fileContent.username}@roiai.com`,
+                        username: fileContent.username,
+                        apiToken: fileContent.api_key
                     }
                 };
             }
             else {
-                // Anonymous user format
-                this.userInfo = parsed;
+                // Anonymous user format (internal UserInfo stored directly)
+                this.userInfo = fileContent;
             }
         }
         catch (error) {
@@ -68,23 +70,29 @@ class UserService {
         const machineInfo = await this.machineService.loadMachineInfo();
         const machineId = machineInfo.machineId;
         return {
-            userId: `anon-${machineId}`,
-            clientMachineId: machineId,
-            email: undefined
+            anonymousId: `anon-${machineId}`,
+            clientMachineId: machineId
         };
     }
     async ensureUserExists() {
         if (!this.userInfo)
             return;
+        // Get the effective user ID (real user ID if authenticated, otherwise anonymous ID)
+        const effectiveUserId = this.userInfo.auth?.userId || this.userInfo.anonymousId;
+        const userEmail = this.userInfo.auth?.email;
+        // Skip if we don't have a valid user ID
+        if (!effectiveUserId) {
+            throw new Error('Invalid user state: no user ID available');
+        }
         // Create or update user
         await database_1.prisma.user.upsert({
-            where: { id: this.userInfo.userId },
+            where: { id: effectiveUserId },
             create: {
-                id: this.userInfo.userId,
-                email: this.userInfo.email,
+                id: effectiveUserId,
+                email: userEmail,
             },
             update: {
-                email: this.userInfo.email
+                email: userEmail
             }
         });
         // Create or update machine
@@ -92,7 +100,7 @@ class UserService {
             where: { id: this.userInfo.clientMachineId },
             create: {
                 id: this.userInfo.clientMachineId,
-                userId: this.userInfo.userId,
+                userId: effectiveUserId,
                 machineName: os_1.default.hostname(),
                 osInfo: `${os_1.default.platform()} ${os_1.default.release()}`
             },
@@ -109,7 +117,9 @@ class UserService {
         return this.userInfo;
     }
     getUserId() {
-        return this.getUserInfo().userId;
+        const userInfo = this.getUserInfo();
+        // Return real user ID if authenticated, otherwise anonymous ID
+        return userInfo.auth?.userId || userInfo.anonymousId;
     }
     getClientMachineId() {
         return this.getUserInfo().clientMachineId;
@@ -118,7 +128,7 @@ class UserService {
         return !!this.userInfo?.auth;
     }
     getAuthenticatedUserId() {
-        return this.userInfo?.auth?.realUserId || null;
+        return this.userInfo?.auth?.userId || null;
     }
     getAuthenticatedEmail() {
         return this.userInfo?.auth?.email || null;
@@ -132,13 +142,14 @@ class UserService {
         }
         // Update in-memory auth info
         this.userInfo.auth = {
-            realUserId,
-            email,
+            userId: realUserId,
+            email: email,
+            username: username || email.split('@')[0],
             apiToken: apiKey
         };
-        // Save complete user info to file
+        // Save complete user info to file in StoredUserInfo format
         const userInfoPath = this.getUserInfoPath();
-        const userInfo = {
+        const storedUserInfo = {
             user: {
                 id: realUserId,
                 email: email,
@@ -146,7 +157,7 @@ class UserService {
             },
             api_key: apiKey
         };
-        await file_system_utils_1.FileSystemUtils.writeJsonFile(userInfoPath, userInfo);
+        await file_system_utils_1.FileSystemUtils.writeJsonFile(userInfoPath, storedUserInfo);
     }
     async logout() {
         if (!this.userInfo) {
@@ -172,6 +183,25 @@ class UserService {
         // Otherwise use filename in app directory
         const filename = config?.infoFilename || 'user_info.json';
         return path_1.default.join(machine_service_1.MachineService.getAppDirectory(), filename);
+    }
+    // Type guard for StoredUserInfo
+    isStoredUserInfo(obj) {
+        return obj &&
+            typeof obj === 'object' &&
+            obj.user &&
+            typeof obj.user === 'object' &&
+            typeof obj.user.id === 'string' &&
+            typeof obj.user.email === 'string' &&
+            typeof obj.user.username === 'string' &&
+            typeof obj.api_key === 'string';
+    }
+    // Type guard for LegacyStoredUserInfo
+    isLegacyStoredUserInfo(obj) {
+        return obj &&
+            typeof obj === 'object' &&
+            typeof obj.username === 'string' &&
+            typeof obj.api_key === 'string' &&
+            !obj.user; // Distinguishes from StoredUserInfo
     }
 }
 exports.UserService = UserService;

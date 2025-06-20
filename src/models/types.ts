@@ -96,15 +96,40 @@ export interface ProcessingProgress {
   processedMessagesInCurrentFile: number;
 }
 
+// Internal user info representation used throughout the app
 export interface UserInfo {
-  userId: string;  // Always anon-{machineId} format
+  // Anonymous tracking ID (format: anon-{machineId})
+  anonymousId: string;
+  
+  // Machine ID for this client
   clientMachineId: string;
-  email?: string;  // Deprecated, use auth.email
-  auth?: {
-    realUserId: string;
+  
+  // Authentication info (present when user is logged in)
+  auth?: AuthInfo;
+}
+
+// Authentication information for logged-in users
+export interface AuthInfo {
+  userId: string;      // Real user ID from the server
+  email: string;       // User's email address
+  username: string;    // User's username
+  apiToken: string;    // API key for authentication
+}
+
+// Stored user info format in user_info.json for authenticated users
+export interface StoredUserInfo {
+  user: {
+    id: string;
     email: string;
-    apiToken: string;
+    username: string;
   };
+  api_key: string;
+}
+
+// Legacy stored format (for backward compatibility)
+export interface LegacyStoredUserInfo {
+  username: string;
+  api_key: string;
 }
 
 export interface MachineInfo {

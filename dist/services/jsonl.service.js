@@ -115,7 +115,7 @@ class JSONLService {
     async ensureUserAndMachine() {
         const userId = this.userService.getUserId();
         const machineId = this.userService.getClientMachineId();
-        const userEmail = this.userService.getUserInfo().email;
+        const userEmail = this.userService.getAuthenticatedEmail();
         // Ensure user exists
         await database_1.prisma.user.upsert({
             where: { id: userId },

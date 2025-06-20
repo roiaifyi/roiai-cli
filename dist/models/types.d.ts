@@ -96,14 +96,27 @@ export interface ProcessingProgress {
     processedMessagesInCurrentFile: number;
 }
 export interface UserInfo {
-    userId: string;
+    anonymousId: string;
     clientMachineId: string;
-    email?: string;
-    auth?: {
-        realUserId: string;
+    auth?: AuthInfo;
+}
+export interface AuthInfo {
+    userId: string;
+    email: string;
+    username: string;
+    apiToken: string;
+}
+export interface StoredUserInfo {
+    user: {
+        id: string;
         email: string;
-        apiToken: string;
+        username: string;
     };
+    api_key: string;
+}
+export interface LegacyStoredUserInfo {
+    username: string;
+    api_key: string;
 }
 export interface MachineInfo {
     machineId: string;

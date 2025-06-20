@@ -78,6 +78,7 @@ describe('Login Command Integration', () => {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
         database: { path: TEST_DB_PATH },
+        app: { dataDir: TEST_DATA_DIR },
         user: { infoPath: testUserInfoPath },
         claudeCode: {
           rawDataPath: TEST_DATA_DIR,
@@ -126,6 +127,7 @@ describe('Login Command Integration', () => {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
         database: { path: TEST_DB_PATH },
+        app: { dataDir: TEST_DATA_DIR },
         user: { infoPath: testUserInfoPath },
         claudeCode: {
           rawDataPath: TEST_DATA_DIR,
@@ -164,6 +166,7 @@ describe('Login Command Integration', () => {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
         database: { path: TEST_DB_PATH },
+        app: { dataDir: TEST_DATA_DIR },
         user: { infoPath: testUserInfoPath },
         claudeCode: {
           rawDataPath: TEST_DATA_DIR,
@@ -203,12 +206,30 @@ describe('Login Command Integration', () => {
   
   it('should not login if already authenticated', () => {
     // Create existing user info with auth
+    // Create machine info first
+    const testMachineInfoPath = path.join(TEST_DATA_DIR, 'machine_info.json');
+    const machineInfo = {
+      machineId: '123',
+      macAddress: 'aa:bb:cc:dd:ee:ff',
+      osInfo: {
+        platform: 'darwin',
+        release: '20.0.0',
+        arch: 'x64',
+        hostname: 'test-machine'
+      },
+      createdAt: new Date().toISOString(),
+      version: 2
+    };
+    fs.mkdirSync(path.dirname(testMachineInfoPath), { recursive: true });
+    fs.writeFileSync(testMachineInfoPath, JSON.stringify(machineInfo));
+    
     const existingUserInfo = {
-      userId: 'anon-123',
+      anonymousId: 'anon-123',
       clientMachineId: '123',
       auth: {
-        realUserId: 'user-existing',
+        userId: 'user-existing',
         email: 'existing@example.com',
+        username: 'existing',
         apiToken: 'existing-token'
       }
     };
@@ -219,6 +240,7 @@ describe('Login Command Integration', () => {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
         database: { path: TEST_DB_PATH },
+        app: { dataDir: TEST_DATA_DIR },
         user: { infoPath: testUserInfoPath },
         claudeCode: {
           rawDataPath: TEST_DATA_DIR,

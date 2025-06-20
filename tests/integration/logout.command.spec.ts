@@ -23,13 +23,31 @@ describe('Logout Command Integration', () => {
   });
   
   it('should logout successfully when authenticated', () => {
+    // Create machine info first
+    const testMachineInfoPath = path.join(TEST_DATA_DIR, 'machine_info.json');
+    const machineInfo = {
+      machineId: '123',
+      macAddress: 'aa:bb:cc:dd:ee:ff',
+      osInfo: {
+        platform: 'darwin',
+        release: '20.0.0',
+        arch: 'x64',
+        hostname: 'test-machine'
+      },
+      createdAt: new Date().toISOString(),
+      version: 2
+    };
+    fs.mkdirSync(path.dirname(testMachineInfoPath), { recursive: true });
+    fs.writeFileSync(testMachineInfoPath, JSON.stringify(machineInfo));
+    
     // Create user info with auth
     const userInfo = {
-      userId: 'anon-123',
+      anonymousId: 'anon-123',
       clientMachineId: '123',
       auth: {
-        realUserId: 'user-123',
+        userId: 'user-123',
         email: 'test@example.com',
+        username: 'test',
         apiToken: 'token-123'
       }
     };
@@ -40,6 +58,7 @@ describe('Logout Command Integration', () => {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
         database: { path: TEST_DB_PATH },
+        app: { dataDir: TEST_DATA_DIR },
         user: { infoPath: testUserInfoPath },
         claudeCode: {
           rawDataPath: TEST_DATA_DIR,
@@ -83,9 +102,26 @@ describe('Logout Command Integration', () => {
   });
   
   it('should show warning when not logged in', () => {
+    // Create machine info (needed for generating default user info)
+    const testMachineInfoPath = path.join(TEST_DATA_DIR, 'machine_info.json');
+    const machineInfo = {
+      machineId: '123',
+      macAddress: 'aa:bb:cc:dd:ee:ff',
+      osInfo: {
+        platform: 'darwin',
+        release: '20.0.0',
+        arch: 'x64',
+        hostname: 'test-machine'
+      },
+      createdAt: new Date().toISOString(),
+      version: 2
+    };
+    fs.mkdirSync(path.dirname(testMachineInfoPath), { recursive: true });
+    fs.writeFileSync(testMachineInfoPath, JSON.stringify(machineInfo));
+    
     // Create user info without auth
     const userInfo = {
-      userId: 'anon-123',
+      anonymousId: 'anon-123',
       clientMachineId: '123'
     };
     fs.mkdirSync(path.dirname(testUserInfoPath), { recursive: true });
@@ -95,6 +131,7 @@ describe('Logout Command Integration', () => {
       ...process.env,
       NODE_CONFIG: JSON.stringify({
         database: { path: TEST_DB_PATH },
+        app: { dataDir: TEST_DATA_DIR },
         user: { infoPath: testUserInfoPath },
         claudeCode: {
           rawDataPath: TEST_DATA_DIR,

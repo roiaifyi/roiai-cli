@@ -90,19 +90,19 @@ describe('UserService', () => {
       
       const userInfo = await userService.loadUserInfo();
       
-      expect(userInfo.userId).toBe('anon-test-machine-id');
+      expect(userInfo.anonymousId).toBe('anon-test-machine-id');
       expect(userInfo.clientMachineId).toBe('test-machine-id');
-      expect(userInfo.email).toBeUndefined();
       expect(userInfo.auth).toBeUndefined();
     });
 
     it('should load existing user info from file', async () => {
       const existingInfo = {
-        userId: 'anon-123456',
+        anonymousId: 'anon-123456',
         clientMachineId: '123456',
         auth: {
-          realUserId: 'user-123',
+          userId: 'user-123',
           email: 'test@example.com',
+          username: 'testuser',
           apiToken: 'token-123'
         }
       };
@@ -179,9 +179,9 @@ describe('UserService', () => {
       const userInfo2 = await userService2.loadUserInfo();
       
       // Should generate same anonymous ID for same machine (from machine info)
-      expect(userInfo1.userId).toBe(userInfo2.userId);
+      expect(userInfo1.anonymousId).toBe(userInfo2.anonymousId);
       expect(userInfo1.clientMachineId).toBe(userInfo2.clientMachineId);
-      expect(userInfo1.userId).toBe('anon-test-machine-id');
+      expect(userInfo1.anonymousId).toBe('anon-test-machine-id');
       expect(userInfo1.clientMachineId).toBe('test-machine-id');
     });
   });

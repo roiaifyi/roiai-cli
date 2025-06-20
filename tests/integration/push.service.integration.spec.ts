@@ -69,11 +69,12 @@ describe('PushService Integration Tests', () => {
     userService = new UserService();
     // Mock the user service methods
     userService.getUserInfo = () => ({
-      userId: 'test-user',
+      anonymousId: 'test-user',
       clientMachineId: 'test-machine',
       auth: {
-        realUserId: 'authenticated-user',
+        userId: 'authenticated-user',
         email: 'test@example.com',
+        username: 'test',
         apiToken: 'test-auth-token'
       }
     });
@@ -309,7 +310,7 @@ describe('PushService Integration Tests', () => {
       // Create service without auth token
       const unauthUserService = new UserService();
       unauthUserService.getUserInfo = () => ({
-        userId: 'test-user',
+        anonymousId: 'test-user',
         clientMachineId: 'test-machine'
       });
       unauthUserService.getUserId = () => 'test-user';
