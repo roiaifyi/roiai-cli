@@ -1,9 +1,10 @@
-import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import { MachineInfo } from '../models/types';
 import { configManager } from '../config';
+import { FileSystemUtils } from '../utils/file-system-utils';
+import { PathUtils } from '../utils/path-utils';
 
 export class MachineService {
   private machineInfo: MachineInfo | null = null;
@@ -19,12 +20,7 @@ export class MachineService {
     const config = configManager.get().app;
     const dataDir = config.dataDir;
     
-    // Handle ~ for home directory
-    if (dataDir.startsWith('~')) {
-      return path.join(os.homedir(), dataDir.slice(1));
-    }
-    
-    return path.resolve(dataDir);
+    return PathUtils.resolvePath(dataDir);
   }
 
   async loadMachineInfo(): Promise<MachineInfo> {
@@ -33,8 +29,7 @@ export class MachineService {
     }
 
     try {
-      const data = await fs.readFile(this.machineInfoPath, 'utf-8');
-      this.machineInfo = JSON.parse(data);
+      this.machineInfo = await FileSystemUtils.readJsonFile<MachineInfo>(this.machineInfoPath);
       return this.machineInfo!;
     } catch (error) {
       // File doesn't exist, generate new machine info
@@ -137,14 +132,7 @@ export class MachineService {
       throw new Error('No machine info to save');
     }
 
-    // Ensure directory exists
-    await fs.mkdir(path.dirname(this.machineInfoPath), { recursive: true });
-    
-    // Save machine info
-    await fs.writeFile(
-      this.machineInfoPath, 
-      JSON.stringify(this.machineInfo, null, 2)
-    );
+    await FileSystemUtils.writeJsonFile(this.machineInfoPath, this.machineInfo);
   }
 
   getMachineId(): string {

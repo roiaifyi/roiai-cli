@@ -17,14 +17,26 @@
     "batchSize": 1000
   },
   "push": {
-    "endpoint": "https://api.roiai.com/v1/usage/push",
+    "endpoint": "https://api.roiai.com/v1/data/upsync",
     "batchSize": 1000,
     "maxRetries": 5,
     "timeout": 30000
   },
   "watch": {
     "pollInterval": 5000,
+    "stabilityThreshold": 2000,
+    "progressUpdateInterval": 100,
     "ignored": ["**/node_modules/**", "**/.git/**"]
+  },
+  "network": {
+    "authTimeout": 5000
+  },
+  "display": {
+    "costPrecision": 4,
+    "speedPrecision": 1,
+    "durationPrecision": 2,
+    "maxErrorsDisplayed": 10,
+    "maxSessionsShown": 5
   },
   "logging": {
     "level": "info"

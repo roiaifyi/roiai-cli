@@ -30,7 +30,19 @@ export interface Config {
   };
   watch: {
     pollInterval: number;
+    stabilityThreshold: number;
+    progressUpdateInterval: number;
     ignored: string[];
+  };
+  network?: {
+    authTimeout: number;
+  };
+  display?: {
+    costPrecision: number;
+    speedPrecision: number;
+    durationPrecision: number;
+    maxErrorsDisplayed: number;
+    maxSessionsShown: number;
   };
   logging: {
     level: string;

@@ -4,12 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
-const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 const database_1 = require("../database");
 const config_1 = require("../config");
 const machine_service_1 = require("./machine.service");
+const path_utils_1 = require("../utils/path-utils");
+const file_system_utils_1 = require("../utils/file-system-utils");
 class UserService {
     userInfo = null;
     machineService;
@@ -19,8 +20,7 @@ class UserService {
     async loadUserInfo() {
         const userInfoPath = this.getUserInfoPath();
         try {
-            const data = await promises_1.default.readFile(userInfoPath, 'utf-8');
-            const parsed = JSON.parse(data);
+            const parsed = await file_system_utils_1.FileSystemUtils.readJsonFile(userInfoPath);
             // Check if it's the new format from the spec
             if ('username' in parsed && 'api_key' in parsed) {
                 // Load machine info to get the anonymous user ID
@@ -124,15 +124,13 @@ class UserService {
         };
         // Save in the new format according to spec
         const userInfoPath = this.getUserInfoPath();
-        // Ensure directory exists
-        await promises_1.default.mkdir(path_1.default.dirname(userInfoPath), { recursive: true });
         // Save user info in new format
         const newFormat = {
             username: username || email.split('@')[0],
             api_key: apiKey,
             api_secret: apiKey // Same as api_key for Bearer token auth
         };
-        await promises_1.default.writeFile(userInfoPath, JSON.stringify(newFormat, null, 2));
+        await file_system_utils_1.FileSystemUtils.writeJsonFile(userInfoPath, newFormat);
     }
     async logout() {
         if (!this.userInfo) {
@@ -142,16 +140,13 @@ class UserService {
         delete this.userInfo.auth;
         // Save updated user info
         const userInfoPath = this.getUserInfoPath();
-        await promises_1.default.writeFile(userInfoPath, JSON.stringify(this.userInfo, null, 2));
+        await file_system_utils_1.FileSystemUtils.writeJsonFile(userInfoPath, this.userInfo);
     }
     getUserInfoPath() {
         const config = config_1.configManager.get().user;
         // Check if we have a full path (for testing or custom configs)
         if (config?.infoPath) {
-            const configPath = config.infoPath;
-            return configPath.startsWith('~')
-                ? path_1.default.join(os_1.default.homedir(), configPath.slice(1))
-                : path_1.default.resolve(configPath);
+            return path_utils_1.PathUtils.resolvePath(config.infoPath);
         }
         // Otherwise use filename in app directory
         const filename = config?.infoFilename || 'user_info.json';

@@ -7,6 +7,7 @@ import os from 'os';
 import { UserService } from '../../services/user.service';
 import { MachineService } from '../../services/machine.service';
 import { configManager } from '../../config';
+import { EndpointResolver } from '../../utils/endpoint-resolver';
 
 export function createLoginCommand(): Command {
   const command = new Command('login');
@@ -72,9 +73,9 @@ export function createLoginCommand(): Command {
         
         spinner.start('Authenticating...');
         
-        // Get push endpoint from config
+        // Get auth endpoint from config
         const pushConfig = configManager.getPushConfig();
-        const authEndpoint = pushConfig.endpoint.replace('/v1/usage/push', '/v1/cli/login');
+        const authEndpoint = EndpointResolver.getLoginEndpoint(pushConfig.endpoint);
         
         // Load machine info
         const machineService = new MachineService();
@@ -104,7 +105,7 @@ export function createLoginCommand(): Command {
             headers: {
               'Content-Type': 'application/json',
             },
-            timeout: 5000
+            timeout: configManager.get().network?.authTimeout || 5000
           });
           
           const { success, data } = response.data;

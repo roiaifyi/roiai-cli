@@ -45,8 +45,8 @@ export const watchCommand = new Command('watch')
         usePolling: true,
         interval: parseInt(options.interval),
         awaitWriteFinish: {
-          stabilityThreshold: 2000,
-          pollInterval: 100
+          stabilityThreshold: watchConfig.stabilityThreshold,
+          pollInterval: watchConfig.progressUpdateInterval
         },
         ignoreInitial: true  // Don't fire 'add' events for existing files
       });

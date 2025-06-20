@@ -1,10 +1,11 @@
-import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { UserInfo } from '../models/types';
 import { prisma } from '../database';
 import { configManager } from '../config';
 import { MachineService } from './machine.service';
+import { PathUtils } from '../utils/path-utils';
+import { FileSystemUtils } from '../utils/file-system-utils';
 
 export class UserService {
   private userInfo: UserInfo | null = null;
@@ -18,8 +19,7 @@ export class UserService {
     const userInfoPath = this.getUserInfoPath();
     
     try {
-      const data = await fs.readFile(userInfoPath, 'utf-8');
-      const parsed = JSON.parse(data);
+      const parsed = await FileSystemUtils.readJsonFile<any>(userInfoPath);
       
       // Check if it's the new format from the spec
       if ('username' in parsed && 'api_key' in parsed) {
@@ -140,9 +140,6 @@ export class UserService {
     // Save in the new format according to spec
     const userInfoPath = this.getUserInfoPath();
 
-    // Ensure directory exists
-    await fs.mkdir(path.dirname(userInfoPath), { recursive: true });
-    
     // Save user info in new format
     const newFormat = {
       username: username || email.split('@')[0],
@@ -150,7 +147,7 @@ export class UserService {
       api_secret: apiKey  // Same as api_key for Bearer token auth
     };
     
-    await fs.writeFile(userInfoPath, JSON.stringify(newFormat, null, 2));
+    await FileSystemUtils.writeJsonFile(userInfoPath, newFormat);
   }
 
   async logout(): Promise<void> {
@@ -164,7 +161,7 @@ export class UserService {
     // Save updated user info
     const userInfoPath = this.getUserInfoPath();
     
-    await fs.writeFile(userInfoPath, JSON.stringify(this.userInfo, null, 2));
+    await FileSystemUtils.writeJsonFile(userInfoPath, this.userInfo);
   }
 
   private getUserInfoPath(): string {
@@ -172,10 +169,7 @@ export class UserService {
     
     // Check if we have a full path (for testing or custom configs)
     if (config?.infoPath) {
-      const configPath = config.infoPath;
-      return configPath.startsWith('~') 
-        ? path.join(os.homedir(), configPath.slice(1))
-        : path.resolve(configPath);
+      return PathUtils.resolvePath(config.infoPath);
     }
     
     // Otherwise use filename in app directory

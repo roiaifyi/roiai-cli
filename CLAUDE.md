@@ -14,11 +14,15 @@ The codebase follows a modular architecture:
 - **Database** (`src/database/`): Prisma ORM integration and database utilities
 - **Models** (`src/models/`): TypeScript type definitions
 - **Config** (`src/config/`): Configuration management using node-config
+- **Base Classes** (`src/base/`): Abstract base classes for shared functionality
+- **Utils** (`src/utils/`): Shared utility functions and constants
 
 Key architectural decisions:
 - Incremental processing tracks file state to avoid reprocessing
 - Batch processing for efficiency with large datasets
 - SQLite for local storage with comprehensive schema tracking users, machines, projects, sessions, and messages
+- Shared utilities reduce code duplication and ensure consistency
+- Configuration-driven behavior for customizable timeouts, display settings, and file processing
 
 ## Development Commands
 
@@ -56,3 +60,6 @@ There is no linting or formatting configuration at the project level. When makin
 7. **App Data Directory**: All app data (user info, machine info) is stored in `~/.roiai-cli/` by default, configurable via `app.dataDir`
 8. **Machine ID**: Persistent machine identification using MAC address + OS info, stored in `machine_info.json`
 9. **Push Request Format**: Updated to new API spec with messages array and metadata containing entities and batch_info with message counts
+10. **Code Quality**: Refactored to eliminate code duplication and unused dependencies, with shared utilities for common operations
+11. **Configuration**: Extended configuration options for timeouts, display formatting, and file processing settings
+12. **API Modernization**: Removed legacy endpoint compatibility, all configurations now use latest `/v1/data/upsync` and `/v1/cli/login` paths

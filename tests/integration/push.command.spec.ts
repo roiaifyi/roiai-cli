@@ -30,7 +30,7 @@ describe('Push Command Integration Tests', () => {
         batchSize: 100
       },
       push: {
-        endpoint: `http://127.0.0.1:${testPort}/v1/usage/push`,
+        endpoint: `http://127.0.0.1:${testPort}/v1/data/upsync`,
         batchSize: 10,
         maxRetries: 3,
         timeout: 5000

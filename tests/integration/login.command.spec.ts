@@ -87,7 +87,7 @@ describe('Login Command Integration', () => {
           batchSize: 100
         },
         push: { 
-          endpoint: `http://127.0.0.1:${port}/v1/usage/push`,
+          endpoint: `http://127.0.0.1:${port}/v1/data/upsync`,
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000
@@ -131,7 +131,7 @@ describe('Login Command Integration', () => {
           batchSize: 100
         },
         push: { 
-          endpoint: `http://127.0.0.1:${port}/v1/usage/push`,
+          endpoint: `http://127.0.0.1:${port}/v1/data/upsync`,
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000
@@ -167,7 +167,7 @@ describe('Login Command Integration', () => {
           batchSize: 100
         },
         push: { 
-          endpoint: `http://127.0.0.1:${port}/v1/usage/push`,
+          endpoint: `http://127.0.0.1:${port}/v1/data/upsync`,
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000
@@ -220,7 +220,7 @@ describe('Login Command Integration', () => {
           batchSize: 100
         },
         push: { 
-          endpoint: `http://127.0.0.1:${port}/v1/usage/push`,
+          endpoint: `http://127.0.0.1:${port}/v1/data/upsync`,
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000

@@ -1,10 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import { logger } from '../utils/logger';
 
 export class AggregationService {
   constructor(private prisma: PrismaClient) {}
   async recalculateAllAggregates(): Promise<void> {
-    console.log('🔄 Recalculating all aggregates...');
+    logger.info('🔄 Recalculating all aggregates...');
     
     // Start a transaction to ensure consistency
     await this.prisma.$transaction(async (tx) => {
@@ -21,11 +22,11 @@ export class AggregationService {
       await this.recalculateUserAggregates(tx);
     });
     
-    console.log('✅ Aggregates recalculated successfully');
+    logger.info('✅ Aggregates recalculated successfully');
   }
 
   private async recalculateSessionAggregates(tx: any): Promise<void> {
-    console.log('  📊 Recalculating session aggregates...');
+    logger.info('  📊 Recalculating session aggregates...');
     
     const sessions = await tx.session.findMany({
       include: {
@@ -66,7 +67,7 @@ export class AggregationService {
   }
 
   private async recalculateProjectAggregates(tx: any): Promise<void> {
-    console.log('  📊 Recalculating project aggregates...');
+    logger.info('  📊 Recalculating project aggregates...');
     
     const projects = await tx.project.findMany({
       include: {
@@ -109,7 +110,7 @@ export class AggregationService {
   }
 
   private async recalculateMachineAggregates(tx: any): Promise<void> {
-    console.log('  📊 Recalculating machine aggregates...');
+    logger.info('  📊 Recalculating machine aggregates...');
     
     const machines = await tx.machine.findMany({
       include: {
@@ -158,7 +159,7 @@ export class AggregationService {
   }
 
   private async recalculateUserAggregates(tx: any): Promise<void> {
-    console.log('  📊 Recalculating user aggregates...');
+    logger.info('  📊 Recalculating user aggregates...');
     
     const users = await tx.user.findMany({
       include: {
@@ -203,7 +204,7 @@ export class AggregationService {
   }
 
   async verifyAggregates(): Promise<any> {
-    console.log('🔍 Verifying aggregates...');
+    logger.info('🔍 Verifying aggregates...');
     
     // Query the verification view created in the migration
     const result = await this.prisma.$queryRaw`

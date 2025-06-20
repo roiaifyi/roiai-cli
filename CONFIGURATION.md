@@ -53,7 +53,7 @@ The main configuration file controls all aspects of the CLI. Create this file by
     "batchSize": 1000                        // Processing batch size
   },
   "push": {
-    "endpoint": "https://api.example.com/v1/usage/push",  // Remote API endpoint
+    "endpoint": "https://api.example.com/v1/data/upsync",  // Remote API endpoint
     "apiToken": "your-bearer-token",                      // Bearer token for authentication
     "batchSize": 1000,                                    // Messages per batch
     "maxRetries": 5,                                      // Max retry attempts

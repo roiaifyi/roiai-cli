@@ -2,13 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AggregationService = void 0;
 const library_1 = require("@prisma/client/runtime/library");
+const logger_1 = require("../utils/logger");
 class AggregationService {
     prisma;
     constructor(prisma) {
         this.prisma = prisma;
     }
     async recalculateAllAggregates() {
-        console.log('🔄 Recalculating all aggregates...');
+        logger_1.logger.info('🔄 Recalculating all aggregates...');
         // Start a transaction to ensure consistency
         await this.prisma.$transaction(async (tx) => {
             // 1. Recalculate Session aggregates
@@ -20,10 +21,10 @@ class AggregationService {
             // 4. Recalculate User aggregates
             await this.recalculateUserAggregates(tx);
         });
-        console.log('✅ Aggregates recalculated successfully');
+        logger_1.logger.info('✅ Aggregates recalculated successfully');
     }
     async recalculateSessionAggregates(tx) {
-        console.log('  📊 Recalculating session aggregates...');
+        logger_1.logger.info('  📊 Recalculating session aggregates...');
         const sessions = await tx.session.findMany({
             include: {
                 messages: true
@@ -60,7 +61,7 @@ class AggregationService {
         }
     }
     async recalculateProjectAggregates(tx) {
-        console.log('  📊 Recalculating project aggregates...');
+        logger_1.logger.info('  📊 Recalculating project aggregates...');
         const projects = await tx.project.findMany({
             include: {
                 sessions: true,
@@ -99,7 +100,7 @@ class AggregationService {
         }
     }
     async recalculateMachineAggregates(tx) {
-        console.log('  📊 Recalculating machine aggregates...');
+        logger_1.logger.info('  📊 Recalculating machine aggregates...');
         const machines = await tx.machine.findMany({
             include: {
                 projects: true,
@@ -143,7 +144,7 @@ class AggregationService {
         }
     }
     async recalculateUserAggregates(tx) {
-        console.log('  📊 Recalculating user aggregates...');
+        logger_1.logger.info('  📊 Recalculating user aggregates...');
         const users = await tx.user.findMany({
             include: {
                 projects: true,
@@ -184,7 +185,7 @@ class AggregationService {
         }
     }
     async verifyAggregates() {
-        console.log('🔍 Verifying aggregates...');
+        logger_1.logger.info('🔍 Verifying aggregates...');
         // Query the verification view created in the migration
         const result = await this.prisma.$queryRaw `
       SELECT 

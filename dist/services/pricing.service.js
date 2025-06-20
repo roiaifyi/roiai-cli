@@ -255,16 +255,6 @@ class PricingService {
     getPricingMetadata() {
         return this.cache.data?.metadata || null;
     }
-    // For testing purposes
-    clearCache() {
-        this.cache = {
-            data: null,
-            lastFetchTime: 0
-        };
-    }
-    getCache() {
-        return { ...this.cache };
-    }
 }
 exports.PricingService = PricingService;
 //# sourceMappingURL=pricing.service.js.map

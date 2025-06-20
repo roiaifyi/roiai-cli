@@ -221,3 +221,57 @@ Benefits:
 - No foreign key violations
 - Supports multi-session files
 - More accurate data representation
+
+[2025-06-20] Hard-coded Values Analysis
+
+SCOPE OF ANALYSIS:
+- Analyzed the entire TypeScript codebase for hard-coded values that should be configurable
+- Focused on values that would benefit users/admins rather than every literal value
+- Looked for magic numbers, timeouts, batch sizes, file paths, URLs, and feature flags
+
+FINDINGS SUMMARY:
+
+1. WATCH COMMAND HARD-CODED VALUES:
+   - stabilityThreshold: 2000ms (file write stability)
+   - pollInterval: 100ms (file polling frequency)
+   - Progress update throttling: 100ms
+   - Default interval: 5000ms (if not specified in CLI)
+
+2. LOGIN COMMAND TIMEOUTS:
+   - Authentication timeout: 5000ms
+   - Machine info version: 2 (for MAC-based approach)
+
+3. FILE PROCESSING CONSTANTS:
+   - Machine ID hash length: 16 characters (substring(0, 16))
+   - Cache duration default: 5 minutes (hard-coded in jsonl.service.ts)
+   - Project ID hash length: 16 characters
+   - Error display limit: 10 errors max, first 10 shown
+
+4. DISPLAY/UI FORMATTING:
+   - Decimal places for costs: 4 (.toFixed(4))
+   - Decimal places for processing speed: 1 (.toFixed(1))
+   - Decimal places for duration: 2 (.toFixed(2))
+   - Session display limit: 5 sessions max
+   - Progress update frequency: 100ms throttling
+
+5. DIRECTORY STRUCTURE:
+   - "projects" subdirectory (hard-coded path component)
+   - JSONL file extension matching
+   - Project name prefix cleaning pattern: /^-Users-[^-]+-/
+
+6. PRICING SERVICE:
+   - Synthetic model list (hard-coded model names)
+   - Default pricing values (fallback when API fails)
+   - Model mapping (variant to base model mapping)
+
+7. NETWORK INTERFACE FILTERING:
+   - Priority prefixes for network interfaces: ['en', 'eth', 'wlan', 'wl', 'wifi']
+   - Excluded interface patterns: 'utun', 'awdl', 'llw', 'veth', 'docker', 'br-', 'lo'
+
+RECOMMENDATIONS:
+1. Move file watcher settings to config
+2. Add timeout configurations for network operations
+3. Make display limits configurable
+4. Allow customization of hash lengths and precision
+5. Make directory structure configurable
+6. Allow custom model mappings and synthetic model definitions

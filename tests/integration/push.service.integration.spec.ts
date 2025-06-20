@@ -22,7 +22,7 @@ describe('PushService Integration Tests', () => {
   };
 
   const pushConfig: PushConfig = {
-    endpoint: `http://127.0.0.1:${testPort}/v1/usage/push`,
+    endpoint: `http://127.0.0.1:${testPort}/v1/data/upsync`,
     apiToken: 'test-auth-token',
     batchSize: 10,
     maxRetries: 3,

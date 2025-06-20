@@ -8,8 +8,10 @@ import {
   EntityMaps,
   MessageEntity
 } from '../models/push.types';
-const { version } = require('../../package.json');
 import { UserService } from './user.service';
+import { version } from '../../package.json';
+import { COMMAND_STRINGS } from '../utils/constants';
+import { EndpointResolver } from '../utils/endpoint-resolver';
 
 export class PushService {
   private prisma: PrismaClient;
@@ -28,24 +30,24 @@ export class PushService {
       const apiToken = userService.getApiToken();
       
       // Update endpoint to match spec
-      const endpoint = config.endpoint.replace('/v1/usage/push', '/v1/data/upsync');
+      const endpoint = EndpointResolver.getPushEndpoint(config.endpoint);
       
       this.httpClient = axios.create({
         baseURL: endpoint,
         timeout: config.timeout,
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
+          'Authorization': `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${apiToken}`,
           'Content-Type': 'application/json'
         }
       });
     } else {
       // For testing or backward compatibility
-      const endpoint = config.endpoint.replace('/v1/usage/push', '/v1/data/upsync');
+      const endpoint = EndpointResolver.getPushEndpoint(config.endpoint);
       this.httpClient = axios.create({
         baseURL: endpoint,
         timeout: config.timeout,
         headers: {
-          'Authorization': `Bearer ${config.apiToken}`,
+          'Authorization': `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${config.apiToken}`,
           'Content-Type': 'application/json'
         }
       });
@@ -55,7 +57,7 @@ export class PushService {
   async selectUnpushedBatch(batchSize: number): Promise<string[]> {
     const unpushedRecords = await this.prisma.syncStatus.findMany({
       where: {
-        tableName: 'messages',
+        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
         syncedAt: null,
         retryCount: { lt: this.config.maxRetries }
       },
@@ -226,7 +228,7 @@ export class PushService {
         for (let i = 0; i < successCount; i++) {
           await tx.syncStatus.updateMany({
             where: {
-              tableName: 'messages',
+              tableName: COMMAND_STRINGS.TABLES.MESSAGES,
               recordId: messageIds[i]
             },
             data: {
@@ -244,7 +246,7 @@ export class PushService {
         for (let i = startIndex; i < messageIds.length; i++) {
           await tx.syncStatus.updateMany({
             where: {
-              tableName: 'messages',
+              tableName: COMMAND_STRINGS.TABLES.MESSAGES,
               recordId: messageIds[i]
             },
             data: {
@@ -260,7 +262,7 @@ export class PushService {
   async resetRetryCount(messageIds?: string[]): Promise<number> {
     const result = await this.prisma.syncStatus.updateMany({
       where: {
-        tableName: 'messages',
+        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
         syncedAt: null,  // Only reset unsynced messages
         ...(messageIds && { recordId: { in: messageIds } })
       },
@@ -276,7 +278,7 @@ export class PushService {
   async incrementRetryCountForBatch(messageIds: string[]): Promise<number> {
     const result = await this.prisma.syncStatus.updateMany({
       where: {
-        tableName: 'messages',
+        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
         recordId: { in: messageIds },
         syncedAt: null
       },
@@ -291,7 +293,7 @@ export class PushService {
   async countMaxedOutMessages(messageIds: string[]): Promise<number> {
     const count = await this.prisma.syncStatus.count({
       where: {
-        tableName: 'messages',
+        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
         recordId: { in: messageIds },
         syncedAt: null,
         retryCount: { gte: this.config.maxRetries }
@@ -304,7 +306,7 @@ export class PushService {
   async countEligibleMessages(): Promise<number> {
     const count = await this.prisma.syncStatus.count({
       where: {
-        tableName: 'messages',
+        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
         syncedAt: null,
         retryCount: { lt: this.config.maxRetries }
       }

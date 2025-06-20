@@ -107,11 +107,9 @@ describe('PricingService', () => {
       expect(mockFetch).toHaveBeenCalledWith(mockConfig.pricingUrl);
       expect(mockLogger.success).toHaveBeenCalledWith('Loaded pricing data from remote source');
       
-      // Verify cache is populated
-      const cache = pricingService.getCache();
-      expect(cache.data).toBeDefined();
-      expect(cache.data?.models).toHaveLength(2);
-      expect(cache.lastFetchTime).toBeGreaterThan(0);
+      // Verify pricing data is loaded by checking if calculateCost works
+      const result = pricingService.calculateCost({ input_tokens: 100, output_tokens: 50 }, 'claude-3-5-sonnet-20241022');
+      expect(result.costs.total).toBeCloseTo(0.0012);
     });
 
     test('should use cached data when within timeout', async () => {
@@ -176,10 +174,9 @@ describe('PricingService', () => {
       );
       expect(mockLogger.warn).toHaveBeenCalledWith('Using default pricing data');
       
-      // Should have default data
-      const cache = pricingService.getCache();
-      expect(cache.data).toBeDefined();
-      expect(cache.data?.metadata?.id).toBe('default');
+      // Should have default data - verify by checking calculateCost works
+      const cost = pricingService.calculateCost({ input_tokens: 100 }, 'claude-sonnet-3.5');
+      expect(cost.costs.input).toBeCloseTo(0.0003);
     });
 
     test('should use expired cache on fetch failure if available', async () => {
@@ -191,8 +188,9 @@ describe('PricingService', () => {
       
       await pricingService.loadPricingData();
       
-      // Clear cache timeout to force refetch
-      pricingService.clearCache();
+      // Wait for cache to expire
+      mockConfig.pricingCacheTimeout = 100;
+      await new Promise(resolve => setTimeout(resolve, 150));
       
       // Load again with expired cache data
       const expiredCache: PricingCache = {
@@ -210,9 +208,9 @@ describe('PricingService', () => {
       
       expect(mockLogger.warn).toHaveBeenCalledWith('Using expired cache due to fetch failure');
       
-      // Should still have the expired cache data
-      const cache = pricingService.getCache();
-      expect(cache.data?.metadata?.id).toBe('anthropic-claude');
+      // Should still have the expired cache data - verify pricing still works
+      const cost = pricingService.calculateCost({ input_tokens: 100 }, 'claude-opus-4');
+      expect(cost.costs.input).toBeCloseTo(0.0015); // 100 * 0.000015
     });
 
     test('should handle HTTP errors', async () => {
@@ -298,9 +296,10 @@ describe('PricingService', () => {
     });
 
     test('should return safe defaults if no data available', () => {
-      pricingService.clearCache();
+      // Create a new instance without loading data
+      const freshService = new PricingService();
       
-      const pricing = pricingService.getModelPricing('claude-gpt-5-turbo');
+      const pricing = freshService.getModelPricing('claude-gpt-5-turbo');
       
       expect(pricing.input).toBe(0.000003);
       expect(pricing.output).toBe(0.000015);
@@ -368,8 +367,8 @@ describe('PricingService', () => {
     });
   });
 
-  describe('clearCache', () => {
-    test('should clear cache data', async () => {
+  describe('cache expiration', () => {
+    test('should refetch data after cache expires', async () => {
       // Load data first
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -377,16 +376,27 @@ describe('PricingService', () => {
       } as any);
       
       await pricingService.loadPricingData();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
       
-      let cache = pricingService.getCache();
-      expect(cache.data).toBeDefined();
+      // Set short timeout and wait for expiration
+      mockConfig.pricingCacheTimeout = 50;
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Clear cache
-      pricingService.clearCache();
+      // Second fetch with different data
+      const modifiedData = { ...samplePricingData };
+      modifiedData.models[0].input = 0.00002; // Different price
       
-      cache = pricingService.getCache();
-      expect(cache.data).toBeNull();
-      expect(cache.lastFetchTime).toBe(0);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => modifiedData
+      } as any);
+      
+      await pricingService.loadPricingData();
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      
+      // Verify new data is being used
+      const cost = pricingService.calculateCost({ input_tokens: 100 }, 'claude-opus-4');
+      expect(cost.costs.input).toBeCloseTo(0.002); // 100 * 0.00002
     });
   });
 

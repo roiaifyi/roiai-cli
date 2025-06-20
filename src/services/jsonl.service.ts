@@ -8,6 +8,7 @@ import { PricingService } from "./pricing.service";
 import { UserService } from "./user.service";
 import { IncrementalAggregationService } from "./incremental-aggregation.service";
 import { Decimal } from "@prisma/client/runtime/library";
+import { logger } from "../utils/logger";
 
 export class JSONLService {
   private globalMessageIds: Set<string> = new Set();
@@ -307,8 +308,8 @@ export class JSONLService {
 
     const machineId = this.userService.getClientMachineId();
     
-    // Track sessions we've created/seen in this file
-    const sessionsInFile = new Set<string>();
+    // Track unique sessions in this file
+    const uniqueSessions = new Set<string>();
 
     // Count total lines first for progress
     // const totalLines = await this.countFileLines(filePath);
@@ -344,7 +345,7 @@ export class JSONLService {
 
           // Track session ID
           if (entry.sessionId) {
-            sessionsInFile.add(entry.sessionId);
+            uniqueSessions.add(entry.sessionId);
           }
 
           if (entry.type === "summary") {
@@ -376,7 +377,7 @@ export class JSONLService {
         if (!entry.uuid) return; // Skip entries without UUID
         if (processed.has(entry.uuid)) return;
         if (processing.has(entry.uuid)) {
-          console.warn(
+          logger.warn(
             `Circular dependency detected for message ${entry.uuid}`
           );
           return;
@@ -426,7 +427,7 @@ export class JSONLService {
       });
 
       // Count unique sessions processed in this file
-      result.sessionsProcessed = sessionsInFile.size;
+      result.sessionsProcessed = uniqueSessions.size;
     } catch (error) {
       result.errors.push(`Failed to process file ${filePath}: ${error}`);
     }
@@ -451,20 +452,6 @@ export class JSONLService {
     });
   }
 
-  // TODO: Implement line counting for more detailed progress tracking
-  // private async countFileLines(filePath: string): Promise<number> {
-  //   const fileStream = fs.createReadStream(filePath);
-  //   const rl = readline.createInterface({
-  //     input: fileStream,
-  //     crlfDelay: Infinity,
-  //   });
-
-  //   let lineCount = 0;
-  //   for await (const _line of rl) {
-  //     lineCount++;
-  //   }
-  //   return lineCount;
-  // }
 
   private async processMessage(entry: JSONLEntry, projectId: string, clientMachineId: string, tokenUsageByModel: Map<string, TokenUsageByModel>) {
     if (!entry.message || !entry.sessionId || !entry.uuid) return;

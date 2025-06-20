@@ -34,7 +34,7 @@
   
   "push": {
     "// endpoint": "Your remote server API endpoint for usage data push",
-    "endpoint": "https://api.roiai.com/v1/usage/push",
+    "endpoint": "https://api.roiai.com/v1/data/upsync",
     
     "// apiToken": "Bearer token for API authentication (keep this secret!)",
     "apiToken": "your-bearer-token-here",

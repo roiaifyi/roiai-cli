@@ -15,7 +15,7 @@
   },
 
   "push": {
-    "endpoint": "http://localhost:3456/v1/usage/push",
+    "endpoint": "http://localhost:3456/v1/data/upsync",
     "batchSize": 1000,
     "maxRetries": 5,
     "timeout": 30000

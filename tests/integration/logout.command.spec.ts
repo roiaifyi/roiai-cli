@@ -49,7 +49,7 @@ describe('Logout Command Integration', () => {
           batchSize: 100
         },
         push: {
-          endpoint: 'http://localhost:3000/v1/usage/push',
+          endpoint: 'http://localhost:3000/v1/data/upsync',
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000
@@ -104,7 +104,7 @@ describe('Logout Command Integration', () => {
           batchSize: 100
         },
         push: {
-          endpoint: 'http://localhost:3000/v1/usage/push',
+          endpoint: 'http://localhost:3000/v1/data/upsync',
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000

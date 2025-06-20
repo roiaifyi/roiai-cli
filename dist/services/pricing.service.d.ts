@@ -34,7 +34,5 @@ export declare class PricingService {
     };
     isSyntheticModel(modelId: string): boolean;
     getPricingMetadata(): any;
-    clearCache(): void;
-    getCache(): PricingCache;
 }
 //# sourceMappingURL=pricing.service.d.ts.map

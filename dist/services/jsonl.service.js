@@ -11,6 +11,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("../database");
 const incremental_aggregation_service_1 = require("./incremental-aggregation.service");
 const library_1 = require("@prisma/client/runtime/library");
+const logger_1 = require("../utils/logger");
 class JSONLService {
     pricingService;
     userService;
@@ -245,8 +246,8 @@ class JSONLService {
             return result;
         }
         const machineId = this.userService.getClientMachineId();
-        // Track sessions we've created/seen in this file
-        const sessionsInFile = new Set();
+        // Track unique sessions in this file
+        const uniqueSessions = new Set();
         // Count total lines first for progress
         // const totalLines = await this.countFileLines(filePath);
         // Process file line by line
@@ -274,7 +275,7 @@ class JSONLService {
                     }
                     // Track session ID
                     if (entry.sessionId) {
-                        sessionsInFile.add(entry.sessionId);
+                        uniqueSessions.add(entry.sessionId);
                     }
                     if (entry.type === "summary") {
                         sessionData.set(entry.sessionId || sessionId, {
@@ -307,7 +308,7 @@ class JSONLService {
                 if (processed.has(entry.uuid))
                     return;
                 if (processing.has(entry.uuid)) {
-                    console.warn(`Circular dependency detected for message ${entry.uuid}`);
+                    logger_1.logger.warn(`Circular dependency detected for message ${entry.uuid}`);
                     return;
                 }
                 processing.add(entry.uuid);
@@ -349,7 +350,7 @@ class JSONLService {
                 },
             });
             // Count unique sessions processed in this file
-            result.sessionsProcessed = sessionsInFile.size;
+            result.sessionsProcessed = uniqueSessions.size;
         }
         catch (error) {
             result.errors.push(`Failed to process file ${filePath}: ${error}`);
@@ -370,19 +371,6 @@ class JSONLService {
             stream.on("error", reject);
         });
     }
-    // TODO: Implement line counting for more detailed progress tracking
-    // private async countFileLines(filePath: string): Promise<number> {
-    //   const fileStream = fs.createReadStream(filePath);
-    //   const rl = readline.createInterface({
-    //     input: fileStream,
-    //     crlfDelay: Infinity,
-    //   });
-    //   let lineCount = 0;
-    //   for await (const _line of rl) {
-    //     lineCount++;
-    //   }
-    //   return lineCount;
-    // }
     async processMessage(entry, projectId, clientMachineId, tokenUsageByModel) {
         if (!entry.message || !entry.sessionId || !entry.uuid)
             return;

@@ -313,15 +313,4 @@ export class PricingService {
     return this.cache.data?.metadata || null;
   }
 
-  // For testing purposes
-  clearCache(): void {
-    this.cache = {
-      data: null,
-      lastFetchTime: 0
-    };
-  }
-
-  getCache(): PricingCache {
-    return { ...this.cache };
-  }
 }

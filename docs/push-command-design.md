@@ -240,7 +240,7 @@ Shows:
 ```json
 {
   "push": {
-    "endpoint": "https://api.roiai.com/v1/usage/push",
+    "endpoint": "https://api.roiai.com/v1/data/upsync",
     "apiToken": "",              // Bearer token for auth
     "batchSize": 1000,           // Messages per batch
     "maxRetries": 5,             // Max retry attempts

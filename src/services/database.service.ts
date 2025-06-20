@@ -156,32 +156,4 @@ export class DatabaseService {
            fileStatus.lastProcessedAt !== null;
   }
   
-  async getUserWithStats(userId: string) {
-    return await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        _count: {
-          select: {
-            messages: true,
-            sessions: true,
-            projects: true
-          }
-        }
-      }
-    });
-  }
-  
-  async getProjectWithStats(projectId: string) {
-    return await this.prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        _count: {
-          select: {
-            messages: true,
-            sessions: true
-          }
-        }
-      }
-    });
-  }
 }
