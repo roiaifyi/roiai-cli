@@ -32,8 +32,8 @@ describe('UserService', () => {
     
     // Setup MachineService mock
     const mockMachineInfo: MachineInfo = {
-      uuid: 'test-uuid',
       machineId: 'test-machine-id',
+      macAddress: 'aa:bb:cc:dd:ee:ff',
       osInfo: {
         platform: 'darwin',
         release: '20.0.0',
@@ -41,7 +41,7 @@ describe('UserService', () => {
         hostname: 'test-machine'
       },
       createdAt: '2024-01-01T00:00:00Z',
-      version: 1
+      version: 2
     };
     
     const mockLoadMachineInfo = jest.fn(() => Promise.resolve(mockMachineInfo));

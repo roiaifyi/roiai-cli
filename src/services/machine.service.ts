@@ -2,7 +2,6 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
 import { MachineInfo } from '../models/types';
 import { configManager } from '../config';
 
@@ -45,8 +44,62 @@ export class MachineService {
     }
   }
 
+  private getPrimaryMacAddress(): string | null {
+    const interfaces = os.networkInterfaces();
+    
+    // Priority order for interface names (common physical interfaces first)
+    const priorityPrefixes = ['en', 'eth', 'wlan', 'wl', 'wifi'];
+    
+    // Get all valid interfaces (non-internal, valid MAC)
+    const validInterfaces: Array<{ name: string; mac: string }> = [];
+    
+    for (const [name, ifaces] of Object.entries(interfaces)) {
+      if (!ifaces || ifaces.length === 0) continue;
+      
+      const iface = ifaces[0];
+      
+      // Skip internal, virtual, and invalid interfaces
+      if (iface.internal || 
+          iface.mac === '00:00:00:00:00:00' ||
+          name.startsWith('utun') ||
+          name.startsWith('awdl') ||
+          name.startsWith('llw') ||
+          name.startsWith('veth') ||
+          name.startsWith('docker') ||
+          name.startsWith('br-') ||
+          name.startsWith('lo')) {
+        continue;
+      }
+      
+      validInterfaces.push({ name, mac: iface.mac });
+    }
+    
+    if (validInterfaces.length === 0) {
+      return null;
+    }
+    
+    // Sort by priority - prefer common physical interface names
+    validInterfaces.sort((a, b) => {
+      const aPriority = priorityPrefixes.findIndex(prefix => a.name.startsWith(prefix));
+      const bPriority = priorityPrefixes.findIndex(prefix => b.name.startsWith(prefix));
+      
+      // If both have priority, sort by priority index
+      if (aPriority !== -1 && bPriority !== -1) {
+        return aPriority - bPriority;
+      }
+      
+      // Prioritized interfaces come first
+      if (aPriority !== -1) return -1;
+      if (bPriority !== -1) return 1;
+      
+      // Otherwise sort alphabetically for consistency
+      return a.name.localeCompare(b.name);
+    });
+    
+    return validInterfaces[0].mac;
+  }
+
   private async generateMachineInfo(): Promise<MachineInfo> {
-    const uuid = uuidv4();
     const osInfo = {
       platform: os.platform(),
       release: os.release(),
@@ -54,8 +107,16 @@ export class MachineService {
       hostname: os.hostname()
     };
 
-    // Generate machine ID by hashing UUID + OS info
-    const machineIdData = `${uuid}:${osInfo.platform}:${osInfo.release}:${osInfo.arch}:${osInfo.hostname}`;
+    // Get primary MAC address
+    const macAddress = this.getPrimaryMacAddress();
+    
+    if (!macAddress) {
+      throw new Error('No valid network interface found for machine identification');
+    }
+
+    // Generate machine ID by hashing MAC + platform + architecture
+    // This ensures consistency across OS reinstalls on the same hardware
+    const machineIdData = `${macAddress}:${osInfo.platform}:${osInfo.arch}`;
     const machineId = crypto
       .createHash('sha256')
       .update(machineIdData)
@@ -63,11 +124,11 @@ export class MachineService {
       .substring(0, 16);
 
     return {
-      uuid,
       machineId,
+      macAddress,
       osInfo,
       createdAt: new Date().toISOString(),
-      version: 1
+      version: 2  // Increment version for new MAC-based approach
     };
   }
 

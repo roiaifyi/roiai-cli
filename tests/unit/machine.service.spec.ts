@@ -3,13 +3,11 @@ import { MachineInfo } from '../../src/models/types';
 import fs from 'fs/promises';
 import os from 'os';
 import crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
 
 // Mock modules
 jest.mock('fs/promises');
 jest.mock('os');
 jest.mock('crypto');
-jest.mock('uuid');
 jest.mock('../../src/config', () => ({
   configManager: {
     get: () => ({
@@ -26,7 +24,6 @@ describe('MachineService', () => {
   const mockFs = fs as jest.Mocked<typeof fs>;
   const mockOs = os as jest.Mocked<typeof os>;
   const mockCrypto = crypto as jest.Mocked<typeof crypto>;
-  const mockUuidv4 = uuidv4 as jest.MockedFunction<typeof uuidv4>;
 
   const mockOsInfo = {
     platform: 'darwin',
@@ -36,11 +33,46 @@ describe('MachineService', () => {
   };
 
   const mockMachineInfo: MachineInfo = {
-    uuid: 'test-uuid-1234',
     machineId: 'test-machine-id',
+    macAddress: 'aa:bb:cc:dd:ee:ff',
     osInfo: mockOsInfo,
     createdAt: '2024-01-01T00:00:00.000Z',
-    version: 1
+    version: 2
+  };
+  
+  const mockNetworkInterfaces = {
+    lo0: [{
+      address: '127.0.0.1',
+      netmask: '255.0.0.0',
+      family: 'IPv4',
+      mac: '00:00:00:00:00:00',
+      internal: true,
+      cidr: '127.0.0.1/8'
+    }],
+    en0: [{
+      address: '192.168.1.100',
+      netmask: '255.255.255.0',
+      family: 'IPv4',
+      mac: 'aa:bb:cc:dd:ee:ff',
+      internal: false,
+      cidr: '192.168.1.100/24'
+    }],
+    en1: [{
+      address: '192.168.1.101',
+      netmask: '255.255.255.0',
+      family: 'IPv4',
+      mac: '11:22:33:44:55:66',
+      internal: false,
+      cidr: '192.168.1.101/24'
+    }],
+    utun0: [{
+      address: 'fe80::1',
+      netmask: 'ffff:ffff:ffff:ffff::',
+      family: 'IPv6',
+      mac: '00:00:00:00:00:00',
+      internal: false,
+      cidr: 'fe80::1/64'
+    }]
   };
 
   beforeEach(() => {
@@ -52,9 +84,7 @@ describe('MachineService', () => {
     mockOs.arch.mockReturnValue('x64');
     mockOs.hostname.mockReturnValue('test-machine');
     mockOs.homedir.mockReturnValue('/Users/test');
-    
-    // Setup UUID mock
-    mockUuidv4.mockReturnValue('test-uuid-1234' as any);
+    mockOs.networkInterfaces.mockReturnValue(mockNetworkInterfaces as any);
     
     // Setup crypto mock
     const mockHash = {
@@ -127,10 +157,10 @@ describe('MachineService', () => {
       const result = await machineService.loadMachineInfo();
       
       expect(result).toMatchObject({
-        uuid: 'test-uuid-1234',
         machineId: 'test-machine-id-',
+        macAddress: 'aa:bb:cc:dd:ee:ff',
         osInfo: mockOsInfo,
-        version: 1
+        version: 2
       });
       expect(result.createdAt).toBeDefined();
       expect(mockFs.mkdir).toHaveBeenCalled();
@@ -145,9 +175,9 @@ describe('MachineService', () => {
       const result = await machineService.loadMachineInfo();
       
       expect(result).toMatchObject({
-        uuid: 'test-uuid-1234',
         machineId: 'test-machine-id-',
-        version: 1
+        macAddress: 'aa:bb:cc:dd:ee:ff',
+        version: 2
       });
       expect(mockFs.writeFile).toHaveBeenCalled();
     });
@@ -162,20 +192,20 @@ describe('MachineService', () => {
       const result = await machineService.loadMachineInfo();
       
       expect(result).toMatchObject({
-        uuid: 'test-uuid-1234',
         machineId: expect.stringMatching(/^test-machine-id-/),
+        macAddress: 'aa:bb:cc:dd:ee:ff',
         osInfo: {
           platform: 'darwin',
           release: '20.6.0',
           arch: 'x64',
           hostname: 'test-machine'
         },
-        version: 1
+        version: 2
       });
       expect(new Date(result.createdAt)).toBeInstanceOf(Date);
     });
 
-    it('should create unique machine ID from UUID and OS info', async () => {
+    it('should create unique machine ID from MAC address and OS info', async () => {
       mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
       mockFs.mkdir.mockResolvedValue(undefined);
       mockFs.writeFile.mockResolvedValue(undefined);
@@ -185,7 +215,7 @@ describe('MachineService', () => {
       expect(mockCrypto.createHash).toHaveBeenCalledWith('sha256');
       const hashMock = mockCrypto.createHash('sha256');
       expect(hashMock.update).toHaveBeenCalledWith(
-        'test-uuid-1234:darwin:20.6.0:x64:test-machine'
+        'aa:bb:cc:dd:ee:ff:darwin:x64'
       );
       expect(hashMock.digest).toHaveBeenCalledWith('hex');
     });
@@ -205,7 +235,7 @@ describe('MachineService', () => {
       );
       expect(mockFs.writeFile).toHaveBeenCalledWith(
         expect.stringContaining('machine_info.json'),
-        expect.stringContaining('"uuid"')
+        expect.stringContaining('"macAddress"')
       );
     });
 
@@ -220,10 +250,10 @@ describe('MachineService', () => {
       const savedData = JSON.parse(writeCall[1] as string);
       
       expect(savedData).toMatchObject({
-        uuid: 'test-uuid-1234',
+        macAddress: 'aa:bb:cc:dd:ee:ff',
         machineId: expect.any(String),
         osInfo: mockOsInfo,
-        version: 1
+        version: 2
       });
     });
   });
@@ -268,8 +298,8 @@ describe('MachineService', () => {
       
       // Should generate new info when JSON parsing fails
       expect(result).toMatchObject({
-        uuid: 'test-uuid-1234',
-        version: 1
+        macAddress: 'aa:bb:cc:dd:ee:ff',
+        version: 2
       });
       expect(mockFs.writeFile).toHaveBeenCalled();
     });

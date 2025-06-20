@@ -108,8 +108,8 @@ export interface UserInfo {
 }
 
 export interface MachineInfo {
-  uuid: string;
   machineId: string;
+  macAddress: string;  // MAC address used to generate the ID
   osInfo: {
     platform: string;
     release: string;
