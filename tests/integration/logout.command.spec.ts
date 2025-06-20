@@ -78,10 +78,8 @@ describe('Logout Command Integration', () => {
     // So we just check for the key parts of the message
     expect(output).toMatch(/Logged out from test@example\.com|Continuing in anonymous mode/);
     
-    // Check auth was removed from user info
-    const updatedUserInfo = JSON.parse(fs.readFileSync(testUserInfoPath, 'utf8'));
-    expect(updatedUserInfo.auth).toBeUndefined();
-    expect(updatedUserInfo.userId).toBe('anon-123');
+    // Check user info file was deleted
+    expect(fs.existsSync(testUserInfoPath)).toBe(false);
   });
   
   it('should show warning when not logged in', () => {

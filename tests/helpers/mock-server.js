@@ -26,12 +26,11 @@ app.post('/api/v1/cli/login', (req, res) => {
       success: true,
       data: {
         user: {
-          id: 123,
+          id: '123',
           email: 'test@example.com',
           username: 'testuser'
         },
-        apiKey: 'roiai_auth-token-123',
-        name: `CLI - ${machine_info?.machine_name || 'Test Machine'}`
+        api_key: 'roiai_auth-token-123'
       }
     });
   } else {

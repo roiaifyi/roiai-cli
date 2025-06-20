@@ -1,5 +1,6 @@
 import path from 'path';
 import os from 'os';
+import fs from 'fs/promises';
 import { UserInfo } from '../models/types';
 import { prisma } from '../database';
 import { configManager } from '../config';
@@ -21,12 +22,25 @@ export class UserService {
     try {
       const parsed = await FileSystemUtils.readJsonFile<any>(userInfoPath);
       
-      // Authenticated user format
-      if ('username' in parsed && 'api_key' in parsed) {
+      // Check if it's the new authenticated format with user object
+      if (parsed.user && parsed.api_key) {
         // Load machine info to get the anonymous user ID
         const machineInfo = await this.machineService.loadMachineInfo();
         
         // Convert to internal format
+        this.userInfo = {
+          userId: `anon-${machineInfo.machineId}`,
+          clientMachineId: machineInfo.machineId,
+          auth: {
+            realUserId: parsed.user.id,
+            email: parsed.user.email,
+            apiToken: parsed.api_key
+          }
+        };
+      } else if ('username' in parsed && 'api_key' in parsed) {
+        // Legacy authenticated format (for backward compatibility during transition)
+        const machineInfo = await this.machineService.loadMachineInfo();
+        
         this.userInfo = {
           userId: `anon-${machineInfo.machineId}`,
           clientMachineId: machineInfo.machineId,
@@ -137,10 +151,14 @@ export class UserService {
       apiToken: apiKey
     };
 
-    // Save user info to file
+    // Save complete user info to file
     const userInfoPath = this.getUserInfoPath();
     const userInfo = {
-      username: username || email.split('@')[0],
+      user: {
+        id: realUserId,
+        email: email,
+        username: username || email.split('@')[0]
+      },
       api_key: apiKey
     };
     
@@ -155,10 +173,14 @@ export class UserService {
     // Remove auth info
     delete this.userInfo.auth;
 
-    // Save updated user info
+    // Delete the user info file to ensure clean logout
     const userInfoPath = this.getUserInfoPath();
     
-    await FileSystemUtils.writeJsonFile(userInfoPath, this.userInfo);
+    try {
+      await fs.unlink(userInfoPath);
+    } catch (error) {
+      // Ignore error if file doesn't exist
+    }
   }
 
   private getUserInfoPath(): string {

@@ -113,27 +113,15 @@ export function createLoginCommand(): Command {
             throw new Error('Invalid server response');
           }
           
-          // Handle both response formats for compatibility
-          let user, apiKey;
+          // Extract user and API key from response
+          const { user, api_key } = data;
           
-          if (data.user && data.apiKey) {
-            // Original format from mock/test server
-            user = data.user;
-            apiKey = data.apiKey;
-          } else if (data.username && data.api_key) {
-            // Response from roiai-web
-            user = {
-              id: 'cli-user', // We don't have the actual user ID from this response
-              email: email || data.username,
-              username: data.username
-            };
-            apiKey = data.api_key;
-          } else {
-            throw new Error('Unexpected server response format');
+          if (!user || !api_key) {
+            throw new Error('Invalid server response format');
           }
           
           // Save authentication info
-          await userService.login(user.id.toString(), user.email, apiKey, user.username);
+          await userService.login(user.id, user.email, api_key, user.username);
           
           spinner.succeed(`Successfully logged in as ${user.email}`);
           console.log(chalk.dim('\nYou can now use \'roiai-cli cc push\' to sync your usage data.'));
