@@ -121,9 +121,7 @@ export function createLoginCommand(): Command {
             user = data.user;
             apiKey = data.apiKey;
           } else if (data.username && data.api_key) {
-            // New format from roiai-web
-            // We need to get the full user info since we only have username
-            // For now, we'll use the email from the login request
+            // Response from roiai-web
             user = {
               id: 'cli-user', // We don't have the actual user ID from this response
               email: email || data.username,
@@ -134,7 +132,7 @@ export function createLoginCommand(): Command {
             throw new Error('Unexpected server response format');
           }
           
-          // Save authentication info with new format
+          // Save authentication info
           await userService.login(user.id.toString(), user.email, apiKey, user.username);
           
           spinner.succeed(`Successfully logged in as ${user.email}`);

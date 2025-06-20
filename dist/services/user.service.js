@@ -21,28 +21,28 @@ class UserService {
         const userInfoPath = this.getUserInfoPath();
         try {
             const parsed = await file_system_utils_1.FileSystemUtils.readJsonFile(userInfoPath);
-            // Check if it's the new format from the spec
+            // Authenticated user format
             if ('username' in parsed && 'api_key' in parsed) {
                 // Load machine info to get the anonymous user ID
                 const machineInfo = await this.machineService.loadMachineInfo();
-                // Convert new format to our internal format
+                // Convert to internal format
                 this.userInfo = {
                     userId: `anon-${machineInfo.machineId}`,
                     clientMachineId: machineInfo.machineId,
                     auth: {
-                        realUserId: parsed.username, // Using username as user ID for now
-                        email: `${parsed.username}@roiai.com`, // Generate email from username
+                        realUserId: parsed.username,
+                        email: `${parsed.username}@roiai.com`,
                         apiToken: parsed.api_key
                     }
                 };
             }
             else {
-                // Old format
+                // Anonymous user format
                 this.userInfo = parsed;
             }
         }
         catch (error) {
-            // Silently generate default user info if file doesn't exist
+            // Generate default user info if file doesn't exist
             this.userInfo = await this.generateDefaultUserInfo();
         }
         // Ensure user exists in database
@@ -116,20 +116,19 @@ class UserService {
         if (!this.userInfo) {
             throw new Error('User info not loaded');
         }
-        // Update in-memory auth info for backward compatibility
+        // Update in-memory auth info
         this.userInfo.auth = {
             realUserId,
             email,
             apiToken: apiKey
         };
-        // Save in the new format according to spec
+        // Save user info to file
         const userInfoPath = this.getUserInfoPath();
-        // Save user info in new format
-        const newFormat = {
+        const userInfo = {
             username: username || email.split('@')[0],
             api_key: apiKey
         };
-        await file_system_utils_1.FileSystemUtils.writeJsonFile(userInfoPath, newFormat);
+        await file_system_utils_1.FileSystemUtils.writeJsonFile(userInfoPath, userInfo);
     }
     async logout() {
         if (!this.userInfo) {

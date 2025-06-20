@@ -113,7 +113,7 @@ describe('Login Command Integration', () => {
     // Check user info file was created
     expect(fs.existsSync(testUserInfoPath)).toBe(true);
     const userInfo = JSON.parse(fs.readFileSync(testUserInfoPath, 'utf8'));
-    // Check new format from spec
+    // Check user info format
     expect(userInfo.username).toBe('testuser');
     expect(userInfo.api_key).toBe('roiai_auth-token-123');
   });
