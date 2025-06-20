@@ -52,8 +52,14 @@ The main configuration file controls all aspects of the CLI. Create this file by
     "cacheDurationDefault": 5,               // Cache duration (5 or 60 minutes)
     "batchSize": 1000                        // Processing batch size
   },
+  "api": {
+    "baseUrl": "https://api.example.com",                // Base API URL
+    "endpoints": {
+      "login": "/v1/cli/login",                           // Login endpoint path
+      "push": "/v1/data/upsync"                           // Push endpoint path
+    }
+  },
   "push": {
-    "endpoint": "https://api.example.com/v1/data/upsync",  // Remote API endpoint
     "apiToken": "your-bearer-token",                      // Bearer token for authentication
     "batchSize": 1000,                                    // Messages per batch
     "maxRetries": 5,                                      // Max retry attempts

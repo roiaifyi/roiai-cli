@@ -14,8 +14,14 @@
     "cacheDurationDefault": 5
   },
 
+  "api": {
+    "baseUrl": "http://localhost:3456",
+    "endpoints": {
+      "login": "/v1/cli/login",
+      "push": "/v1/data/upsync"
+    }
+  },
   "push": {
-    "endpoint": "http://localhost:3456/v1/data/upsync",
     "batchSize": 1000,
     "maxRetries": 5,
     "timeout": 30000

@@ -17,8 +17,14 @@ export interface Config {
         cacheDurationDefault: number;
         batchSize: number;
     };
+    api: {
+        baseUrl: string;
+        endpoints: {
+            login: string;
+            push: string;
+        };
+    };
     push: {
-        endpoint: string;
         apiToken?: string;
         batchSize: number;
         maxRetries: number;
@@ -60,7 +66,6 @@ declare class ConfigManager {
         path: string;
     };
     getPushConfig(): {
-        endpoint: string;
         apiToken?: string;
         batchSize: number;
         maxRetries: number;
@@ -71,6 +76,13 @@ declare class ConfigManager {
         stabilityThreshold: number;
         progressUpdateInterval: number;
         ignored: string[];
+    };
+    getApiConfig(): {
+        baseUrl: string;
+        endpoints: {
+            login: string;
+            push: string;
+        };
     };
 }
 export declare const configManager: ConfigManager;

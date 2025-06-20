@@ -16,8 +16,14 @@
     "cacheDurationDefault": 5,
     "batchSize": 1000
   },
+  "api": {
+    "baseUrl": "https://api.roiai.com",
+    "endpoints": {
+      "login": "/v1/cli/login",
+      "push": "/v1/data/upsync"
+    }
+  },
   "push": {
-    "endpoint": "https://api.roiai.com/v1/data/upsync",
     "batchSize": 1000,
     "maxRetries": 5,
     "timeout": 30000

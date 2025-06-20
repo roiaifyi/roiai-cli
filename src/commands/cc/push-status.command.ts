@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import { PrismaClient } from '@prisma/client';
 import { PushService } from '../../services/push.service';
 import { configManager } from '../../config';
+import { EndpointResolver } from '../../utils/endpoint-resolver';
 import Table from 'cli-table3';
 
 export function createPushStatusCommand() {
@@ -130,7 +131,7 @@ export function createPushStatusCommand() {
         
         // Configuration status
         console.log(chalk.bold('\n⚙️  Configuration\n'));
-        console.log(`Endpoint: ${pushConfig.endpoint || chalk.red('Not configured')}`);
+        console.log(`Endpoint: ${EndpointResolver.getPushEndpoint()}`);
         console.log(`API Token: ${pushConfig.apiToken ? chalk.green('Configured') : chalk.red('Not configured')}`);
         console.log(`Batch Size: ${pushConfig.batchSize}`);
         console.log(`Max Retries: ${pushConfig.maxRetries}`);

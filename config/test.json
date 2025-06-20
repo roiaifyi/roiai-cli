@@ -10,8 +10,14 @@
     "cacheDurationDefault": 5
   },
 
+  "api": {
+    "baseUrl": "http://localhost:3456",
+    "endpoints": {
+      "login": "/v1/cli/login",
+      "push": "/v1/data/upsync"
+    }
+  },
   "push": {
-    "endpoint": "http://localhost:3456/v1/data/upsync",
     "apiToken": "test-token",
     "batchSize": 100,
     "maxRetries": 5,

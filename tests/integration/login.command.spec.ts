@@ -86,8 +86,10 @@ describe('Login Command Integration', () => {
           cacheDurationDefault: 5,
           batchSize: 100
         },
+        api: {
+          baseUrl: `http://127.0.0.1:${port}`
+        },
         push: { 
-          endpoint: `http://127.0.0.1:${port}/v1/data/upsync`,
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000
@@ -130,8 +132,10 @@ describe('Login Command Integration', () => {
           cacheDurationDefault: 5,
           batchSize: 100
         },
+        api: {
+          baseUrl: `http://127.0.0.1:${port}`
+        },
         push: { 
-          endpoint: `http://127.0.0.1:${port}/v1/data/upsync`,
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000
@@ -166,8 +170,10 @@ describe('Login Command Integration', () => {
           cacheDurationDefault: 5,
           batchSize: 100
         },
+        api: {
+          baseUrl: `http://127.0.0.1:${port}`
+        },
         push: { 
-          endpoint: `http://127.0.0.1:${port}/v1/data/upsync`,
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000
@@ -219,8 +225,10 @@ describe('Login Command Integration', () => {
           cacheDurationDefault: 5,
           batchSize: 100
         },
+        api: {
+          baseUrl: `http://127.0.0.1:${port}`
+        },
         push: { 
-          endpoint: `http://127.0.0.1:${port}/v1/data/upsync`,
           batchSize: 10,
           maxRetries: 3,
           timeout: 5000

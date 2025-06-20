@@ -73,9 +73,8 @@ export function createLoginCommand(): Command {
         
         spinner.start('Authenticating...');
         
-        // Get auth endpoint from config
-        const pushConfig = configManager.getPushConfig();
-        const authEndpoint = EndpointResolver.getLoginEndpoint(pushConfig.endpoint);
+        // Get auth endpoint
+        const authEndpoint = EndpointResolver.getLoginEndpoint();
         
         // Load machine info
         const machineService = new MachineService();

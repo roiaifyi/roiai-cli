@@ -53,6 +53,9 @@ class ConfigManager {
     getWatchConfig() {
         return this.config.watch;
     }
+    getApiConfig() {
+        return this.config.api;
+    }
 }
 exports.configManager = new ConfigManager();
 //# sourceMappingURL=index.js.map

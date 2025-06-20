@@ -29,8 +29,8 @@ export class PushService {
       this.anonymousUserId = userService.getUserId();
       const apiToken = userService.getApiToken();
       
-      // Update endpoint to match spec
-      const endpoint = EndpointResolver.getPushEndpoint(config.endpoint);
+      // Get push endpoint
+      const endpoint = EndpointResolver.getPushEndpoint();
       
       this.httpClient = axios.create({
         baseURL: endpoint,
@@ -42,7 +42,7 @@ export class PushService {
       });
     } else {
       // For testing or backward compatibility
-      const endpoint = EndpointResolver.getPushEndpoint(config.endpoint);
+      const endpoint = EndpointResolver.getPushEndpoint();
       this.httpClient = axios.create({
         baseURL: endpoint,
         timeout: config.timeout,
@@ -198,8 +198,9 @@ export class PushService {
           // Server responded with error
           throw new Error(`Push failed: ${axiosError.response.status} - ${axiosError.response.data?.message || 'Unknown error'}`);
         } else if (axiosError.request) {
-          // Network error
-          throw new Error(`Network error: ${axiosError.message}`);
+          // Network error - add more debug info
+          const baseURL = this.httpClient?.defaults?.baseURL || 'unknown';
+          throw new Error(`Network error: ${axiosError.message} (baseURL: ${baseURL}, code: ${axiosError.code})`);
         }
       }
       throw error;

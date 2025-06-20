@@ -21,8 +21,14 @@ export interface Config {
     cacheDurationDefault: number;
     batchSize: number;
   };
+  api: {
+    baseUrl: string;
+    endpoints: {
+      login: string;
+      push: string;
+    };
+  };
   push: {
-    endpoint: string;
     apiToken?: string;  // Optional, now comes from user auth
     batchSize: number;
     maxRetries: number;
@@ -106,6 +112,10 @@ class ConfigManager {
 
   getWatchConfig() {
     return this.config.watch;
+  }
+
+  getApiConfig() {
+    return this.config.api;
   }
 }
 

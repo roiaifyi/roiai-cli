@@ -22,7 +22,6 @@ describe('PushService Integration Tests', () => {
   };
 
   const pushConfig: PushConfig = {
-    endpoint: `http://127.0.0.1:${testPort}/v1/data/upsync`,
     apiToken: 'test-auth-token',
     batchSize: 10,
     maxRetries: 3,
@@ -84,8 +83,20 @@ describe('PushService Integration Tests', () => {
     userService.getAuthenticatedUserId = () => 'authenticated-user';
     userService.getApiToken = () => 'test-auth-token';
     
-    // Create push service
+    // Create push service with custom endpoint
     pushService = new PushService(prisma, pushConfig, userService);
+    
+    // Override the httpClient to use the correct test endpoint
+    const axios = require('axios');
+    const testEndpoint = `http://127.0.0.1:${testPort}/v1/data/upsync`;
+    pushService['httpClient'] = axios.create({
+      baseURL: testEndpoint,
+      timeout: pushConfig.timeout,
+      headers: {
+        'Authorization': 'Bearer test-auth-token',
+        'Content-Type': 'application/json'
+      }
+    });
   });
 
   afterAll(async () => {
@@ -311,6 +322,18 @@ describe('PushService Integration Tests', () => {
         ...pushConfig,
         apiToken: 'invalid-token' // Use invalid token instead of undefined
       }, unauthUserService);
+      
+      // Override the httpClient to use the correct test endpoint (same as main service)
+      const axios = require('axios');
+      const testEndpoint = `http://127.0.0.1:${testPort}/v1/data/upsync`;
+      unauthService['httpClient'] = axios.create({
+        baseURL: testEndpoint,
+        timeout: pushConfig.timeout,
+        headers: {
+          'Authorization': 'Bearer invalid-token',
+          'Content-Type': 'application/json'
+        }
+      });
       
       let errorOccurred = false;
       let errorMessage = '';

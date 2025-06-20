@@ -63,3 +63,4 @@ There is no linting or formatting configuration at the project level. When makin
 10. **Code Quality**: Refactored to eliminate code duplication and unused dependencies, with shared utilities for common operations
 11. **Configuration**: Extended configuration options for timeouts, display formatting, and file processing settings
 12. **API Modernization**: Removed legacy endpoint compatibility, all configurations now use latest `/v1/data/upsync` and `/v1/cli/login` paths
+13. **API Configuration**: Refactored to separate api.baseUrl from endpoint paths for better environment support and configuration flexibility

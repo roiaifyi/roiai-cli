@@ -32,10 +32,17 @@
     "cacheDurationDefault": 5
   },
   
+  "api": {
+    "// baseUrl": "Base URL for the API server",
+    "baseUrl": "https://api.roiai.com",
+    "// endpoints": "API endpoint paths",
+    "endpoints": {
+      "login": "/v1/cli/login",
+      "push": "/v1/data/upsync"
+    }
+  },
+  
   "push": {
-    "// endpoint": "Your remote server API endpoint for usage data push",
-    "endpoint": "https://api.roiai.com/v1/data/upsync",
-    
     "// apiToken": "Bearer token for API authentication (keep this secret!)",
     "apiToken": "your-bearer-token-here",
     

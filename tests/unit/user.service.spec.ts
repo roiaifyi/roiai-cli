@@ -71,6 +71,13 @@ describe('UserService', () => {
       user: { infoFilename: 'user_info.json' },
       database: { path: ':memory:' },
       claudeCode: {} as any,
+      api: {
+        baseUrl: 'https://api.roiai.com',
+        endpoints: {
+          login: '/v1/cli/login',
+          push: '/v1/data/upsync'
+        }
+      },
       push: {} as any,
       watch: {} as any,
       logging: { level: 'info' }

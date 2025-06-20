@@ -31,3 +31,5 @@ export const API_ENDPOINTS = {
   LOGIN: '/v1/cli/login',
   PUSH: '/v1/data/upsync'
 } as const;
+
+export const DEFAULT_API_BASE_URL = 'https://api.roiai.com';

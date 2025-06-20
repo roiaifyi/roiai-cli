@@ -33,7 +33,6 @@ describe('PushService', () => {
   let mockAxiosInstance: any;
 
   const mockConfig: PushConfig = {
-    endpoint: 'https://api.example.com/push',
     apiToken: 'test-token',
     batchSize: 100,
     maxRetries: 3,
