@@ -106,8 +106,8 @@ export interface UserInfo {
     };
 }
 export interface MachineInfo {
-    uuid: string;
     machineId: string;
+    macAddress: string;
     osInfo: {
         platform: string;
         release: string;

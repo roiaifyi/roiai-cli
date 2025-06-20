@@ -7,7 +7,8 @@ import {
   PushConfig,
   EntityMaps,
   MessageEntity
-} from '../models/types';
+} from '../models/push.types';
+const { version } = require('../../package.json');
 import { UserService } from './user.service';
 
 export class PushService {
@@ -93,6 +94,8 @@ export class PushService {
     };
 
     const messageEntities: MessageEntity[] = [];
+    const modelCounts: Record<string, number> = {};
+    const roleCounts: Record<string, number> = {};
 
     for (const msg of messages) {
       // Replace anonymous userId with authenticated userId if available
@@ -152,32 +155,34 @@ export class PushService {
         messageCost: msg.messageCost.toString(),
         timestamp: msg.timestamp?.toISOString()
       });
+
+      // Track counts
+      const model = msg.model || 'unknown';
+      modelCounts[model] = (modelCounts[model] || 0) + 1;
+      roleCounts[msg.role] = (roleCounts[msg.role] || 0) + 1;
     }
 
-    // Convert to the spec format
-    const records = messageEntities.map(msg => ({
-      service: 'claude',  // We're tracking Claude Code usage
-      model: msg.model || 'unknown',
-      timestamp: msg.timestamp || new Date().toISOString(),
-      usage: {
-        prompt_tokens: msg.inputTokens,
-        completion_tokens: msg.outputTokens,
-        total_tokens: msg.inputTokens + msg.outputTokens,
-        cache_creation_tokens: msg.cacheCreationTokens,
-        cache_read_tokens: msg.cacheReadTokens
-      },
-      cost: Number(msg.messageCost),
+    return {
+      messages: messageEntities,
       metadata: {
-        message_id: msg.messageId,
-        session_id: msg.sessionId,
-        project_id: msg.projectId,
-        machine_id: msg.userId.startsWith('anon-') ? msg.userId.substring(5) : undefined,
-        uuid: msg.uuid,
-        role: msg.role
+        entities: {
+          users: Object.fromEntries(entities.users),
+          machines: Object.fromEntries(entities.machines),
+          projects: Object.fromEntries(entities.projects),
+          sessions: Object.fromEntries(entities.sessions)
+        },
+        batch_info: {
+          batch_id: `batch_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          client_version: version,
+          total_messages: messageEntities.length,
+          message_counts: {
+            by_model: modelCounts,
+            by_role: roleCounts
+          }
+        }
       }
-    }));
-
-    return { records } as any;
+    } as any;
   }
 
   async executePush(request: PushRequest): Promise<PushResponse> {

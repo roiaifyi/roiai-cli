@@ -67,18 +67,18 @@ app.post('/v1/data/upsync', (req, res) => {
   const request = req.body;
   const control = getControlSettings();
   
-  // Validate request has records array
-  if (!request.records || !Array.isArray(request.records)) {
+  // Validate request has messages array
+  if (!request.messages || !Array.isArray(request.messages)) {
     return res.status(400).json({
       success: false,
       error: {
         code: 'INVALID_REQUEST',
-        message: 'Missing records array'
+        message: 'Missing messages array'
       }
     });
   }
   
-  const recordCount = request.records.length;
+  const recordCount = request.messages.length;
   
   // Check if we should simulate failures
   if (control.failureMode === 'total') {

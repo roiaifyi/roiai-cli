@@ -1,18 +1,24 @@
 // Push command type definitions
 
 export interface PushRequest {
-  batchId: string;
-  timestamp: string;
-  entities: {
-    users: Record<string, UserEntity>;
-    machines: Record<string, MachineEntity>;
-    projects: Record<string, ProjectEntity>;
-    sessions: Record<string, SessionEntity>;
-  };
   messages: MessageEntity[];
   metadata: {
-    clientVersion: string;
-    totalMessages: number;
+    entities: {
+      users: Record<string, UserEntity>;
+      machines: Record<string, MachineEntity>;
+      projects: Record<string, ProjectEntity>;
+      sessions: Record<string, SessionEntity>;
+    };
+    batch_info: {
+      batch_id: string;
+      timestamp: string;
+      client_version: string;
+      total_messages: number;
+      message_counts: {
+        by_model: Record<string, number>;
+        by_role: Record<string, number>;
+      };
+    };
   };
 }
 

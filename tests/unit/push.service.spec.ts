@@ -185,18 +185,29 @@ describe('PushService', () => {
 
       const request = pushService.buildPushRequest(messages) as any;
 
-      // Check new format has records array
-      expect(request.records).toBeDefined();
-      expect(request.records).toHaveLength(2);
+      // Check new format has messages array and metadata
+      expect(request.messages).toBeDefined();
+      expect(request.messages).toHaveLength(2);
+      expect(request.metadata).toBeDefined();
       
-      // Check first record
-      expect(request.records[0].service).toBe('claude');
-      expect(request.records[0].model).toBe('claude-3');
-      expect(request.records[0].usage.prompt_tokens).toBe(100);
-      expect(request.records[0].usage.completion_tokens).toBe(200);
-      expect(request.records[0].cost).toBe(0.003);
-      expect(request.records[0].metadata.message_id).toBe('id1');
-      expect(request.records[0].metadata.uuid).toBe('msg1');
+      // Check first message
+      expect(request.messages[0].messageId).toBe('id1');
+      expect(request.messages[0].uuid).toBe('msg1');
+      expect(request.messages[0].model).toBe('claude-3');
+      expect(request.messages[0].inputTokens).toBe(100);
+      expect(request.messages[0].outputTokens).toBe(200);
+      
+      // Check metadata
+      expect(request.metadata.batch_info.total_messages).toBe(2);
+      expect(request.metadata.batch_info.message_counts.by_model['claude-3']).toBe(2);
+      expect(request.metadata.batch_info.message_counts.by_role['user']).toBe(1);
+      expect(request.metadata.batch_info.message_counts.by_role['assistant']).toBe(1);
+      
+      // Check entities
+      expect(Object.keys(request.metadata.entities.users)).toEqual(['user1']);
+      expect(Object.keys(request.metadata.entities.machines)).toEqual(['machine1']);
+      expect(Object.keys(request.metadata.entities.projects)).toEqual(['project1']);
+      expect(Object.keys(request.metadata.entities.sessions)).toEqual(['session1']);
     });
 
     it('should handle missing optional fields', () => {
@@ -222,27 +233,34 @@ describe('PushService', () => {
 
       const request = pushService.buildPushRequest(messages) as any;
 
-      expect(request.records).toBeDefined();
-      expect(request.records[0].model).toBe('unknown');
-      expect(request.records[0].timestamp).toBeDefined();
+      expect(request.messages).toBeDefined();
+      expect(request.messages[0].model).toBeUndefined();
+      expect(request.messages[0].timestamp).toBeUndefined();
+      expect(request.metadata.batch_info.message_counts.by_model['unknown']).toBe(1);
     });
   });
 
   describe('executePush', () => {
     it('should successfully push data', async () => {
       const mockRequest: PushRequest = {
-        batchId: 'batch1',
-        timestamp: '2024-01-01T00:00:00Z',
-        entities: {
-          users: {},
-          machines: {},
-          projects: {},
-          sessions: {}
-        },
         messages: [],
         metadata: {
-          clientVersion: '1.0.0',
-          totalMessages: 0
+          entities: {
+            users: {},
+            machines: {},
+            projects: {},
+            sessions: {}
+          },
+          batch_info: {
+            batch_id: 'batch1',
+            timestamp: '2024-01-01T00:00:00Z',
+            client_version: '1.0.0',
+            total_messages: 0,
+            message_counts: {
+              by_model: {},
+              by_role: {}
+            }
+          }
         }
       };
 
