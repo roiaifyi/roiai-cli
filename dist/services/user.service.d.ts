@@ -17,6 +17,5 @@ export declare class UserService {
     logout(): Promise<void>;
     private getUserInfoPath;
     private isStoredUserInfo;
-    private isLegacyStoredUserInfo;
 }
 //# sourceMappingURL=user.service.d.ts.map

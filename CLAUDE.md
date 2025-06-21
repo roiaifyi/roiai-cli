@@ -69,3 +69,4 @@ There is no linting or formatting configuration at the project level. When makin
 16. **Enhanced User Data Storage**: Store complete user info (id, email, username) from server, clean logout deletes user_info.json
 17. **Improved Sync Display**: Filter out models with zero usage from token usage display
 18. **UserInfo Interface Refactoring**: Redesigned to separate anonymous and authenticated states with anonymousId for anonymous tracking and optional auth property for authenticated users
+19. **Legacy Code Removal**: Removed all backward compatibility code for legacy user formats since we're in development mode

@@ -114,10 +114,6 @@ export interface StoredUserInfo {
     };
     api_key: string;
 }
-export interface LegacyStoredUserInfo {
-    username: string;
-    api_key: string;
-}
 export interface MachineInfo {
     machineId: string;
     macAddress: string;

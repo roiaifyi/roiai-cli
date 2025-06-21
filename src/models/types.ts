@@ -126,11 +126,6 @@ export interface StoredUserInfo {
   api_key: string;
 }
 
-// Legacy stored format (for backward compatibility)
-export interface LegacyStoredUserInfo {
-  username: string;
-  api_key: string;
-}
 
 export interface MachineInfo {
   machineId: string;

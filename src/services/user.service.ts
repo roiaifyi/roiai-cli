@@ -1,7 +1,7 @@
 import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
-import { UserInfo, StoredUserInfo, LegacyStoredUserInfo } from '../models/types';
+import { UserInfo, StoredUserInfo } from '../models/types';
 import { prisma } from '../database';
 import { configManager } from '../config';
 import { MachineService } from './machine.service';
@@ -35,20 +35,6 @@ export class UserService {
             userId: fileContent.user.id,
             email: fileContent.user.email,
             username: fileContent.user.username,
-            apiToken: fileContent.api_key
-          }
-        };
-      } else if (this.isLegacyStoredUserInfo(fileContent)) {
-        // Legacy authenticated format (for backward compatibility during transition)
-        const machineInfo = await this.machineService.loadMachineInfo();
-        
-        this.userInfo = {
-          anonymousId: `anon-${machineInfo.machineId}`,
-          clientMachineId: machineInfo.machineId,
-          auth: {
-            userId: fileContent.username, // Using username as userId for legacy format
-            email: `${fileContent.username}@roiai.com`,
-            username: fileContent.username,
             apiToken: fileContent.api_key
           }
         };
@@ -221,12 +207,4 @@ export class UserService {
            typeof obj.api_key === 'string';
   }
 
-  // Type guard for LegacyStoredUserInfo
-  private isLegacyStoredUserInfo(obj: any): obj is LegacyStoredUserInfo {
-    return obj && 
-           typeof obj === 'object' &&
-           typeof obj.username === 'string' &&
-           typeof obj.api_key === 'string' &&
-           !obj.user; // Distinguishes from StoredUserInfo
-  }
 }

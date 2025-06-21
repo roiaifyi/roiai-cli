@@ -38,20 +38,6 @@ class UserService {
                     }
                 };
             }
-            else if (this.isLegacyStoredUserInfo(fileContent)) {
-                // Legacy authenticated format (for backward compatibility during transition)
-                const machineInfo = await this.machineService.loadMachineInfo();
-                this.userInfo = {
-                    anonymousId: `anon-${machineInfo.machineId}`,
-                    clientMachineId: machineInfo.machineId,
-                    auth: {
-                        userId: fileContent.username, // Using username as userId for legacy format
-                        email: `${fileContent.username}@roiai.com`,
-                        username: fileContent.username,
-                        apiToken: fileContent.api_key
-                    }
-                };
-            }
             else {
                 // Anonymous user format (internal UserInfo stored directly)
                 this.userInfo = fileContent;
@@ -194,14 +180,6 @@ class UserService {
             typeof obj.user.email === 'string' &&
             typeof obj.user.username === 'string' &&
             typeof obj.api_key === 'string';
-    }
-    // Type guard for LegacyStoredUserInfo
-    isLegacyStoredUserInfo(obj) {
-        return obj &&
-            typeof obj === 'object' &&
-            typeof obj.username === 'string' &&
-            typeof obj.api_key === 'string' &&
-            !obj.user; // Distinguishes from StoredUserInfo
     }
 }
 exports.UserService = UserService;
