@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import axios, { AxiosInstance } from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+import { v5 as uuidv5 } from 'uuid';
+import crypto from 'crypto';
 import { 
   PushRequest, 
   PushResponse, 
@@ -18,7 +19,6 @@ export class PushService {
   private httpClient: AxiosInstance;
   private config: PushConfig;
   private authenticatedUserId: string | null = null;
-  private anonymousUserId: string | null = null;
 
   constructor(prisma: PrismaClient, config: PushConfig, userService?: UserService) {
     this.prisma = prisma;
@@ -26,7 +26,6 @@ export class PushService {
     
     if (userService) {
       this.authenticatedUserId = userService.getAuthenticatedUserId();
-      this.anonymousUserId = userService.getUserId();
       const apiToken = userService.getApiToken();
       
       // Get push endpoint
@@ -55,23 +54,30 @@ export class PushService {
   }
 
   async selectUnpushedBatch(batchSize: number): Promise<string[]> {
-    const unpushedRecords = await this.prisma.syncStatus.findMany({
+    // Find messages without sync status or with failed sync
+    const messages = await this.prisma.message.findMany({
       where: {
-        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
-        syncedAt: null,
-        retryCount: { lt: this.config.maxRetries }
+        OR: [
+          { syncStatus: null },
+          {
+            syncStatus: {
+              syncedAt: null,
+              retryCount: { lt: this.config.maxRetries }
+            }
+          }
+        ]
       },
-      orderBy: { localTimestamp: 'asc' },
+      orderBy: { timestamp: 'asc' },
       take: batchSize,
-      select: { recordId: true }
+      select: { messageId: true }
     });
 
-    return unpushedRecords.map(record => record.recordId);
+    return messages.map(msg => msg.messageId);
   }
 
   async loadMessagesWithEntities(messageIds: string[]): Promise<any[]> {
     return await this.prisma.message.findMany({
-      where: { uuid: { in: messageIds } },
+      where: { messageId: { in: messageIds } },
       include: {
         session: {
           include: {
@@ -99,55 +105,66 @@ export class PushService {
     const modelCounts: Record<string, number> = {};
     const roleCounts: Record<string, number> = {};
 
+    // Get authenticated user ID for namespace
+    const authenticatedUserId = this.authenticatedUserId;
+    if (!authenticatedUserId) {
+      throw new Error('Cannot push without authentication');
+    }
+
     for (const msg of messages) {
-      // Replace anonymous userId with authenticated userId if available
-      const userId = this.replaceUserId(msg.userId);
+      // Transform all IDs using UUID v5 with user namespace
+      const transformedUserId = this.transformIdForUser(msg.userId, authenticatedUserId);
+      const transformedMachineId = this.transformIdForUser(msg.clientMachineId, authenticatedUserId);
+      const transformedProjectId = this.transformIdForUser(msg.projectId, authenticatedUserId);
+      const transformedSessionId = this.transformIdForUser(msg.sessionId, authenticatedUserId);
+      const transformedMessageId = this.transformIdForUser(msg.id, authenticatedUserId);
       
       // Add user entity
-      if (!entities.users.has(userId)) {
-        entities.users.set(userId, {
-          id: userId,
+      if (!entities.users.has(transformedUserId)) {
+        entities.users.set(transformedUserId, {
+          id: transformedUserId,
           email: msg.session?.project?.user?.email,
           username: msg.session?.project?.user?.username
         });
       }
 
-      // Add machine entity
-      if (!entities.machines.has(msg.clientMachineId)) {
-        entities.machines.set(msg.clientMachineId, {
-          id: msg.clientMachineId,
-          userId: userId,
-          machineName: msg.session?.project?.machine?.machineName
-        });
+      // Add machine entity with both transformed and local IDs
+      if (!entities.machines.has(transformedMachineId)) {
+        entities.machines.set(transformedMachineId, {
+          id: transformedMachineId,
+          userId: transformedUserId,
+          machineName: msg.session?.project?.machine?.machineName,
+          localMachineId: msg.clientMachineId
+        } as any);
       }
 
       // Add project entity
-      if (!entities.projects.has(msg.projectId)) {
-        entities.projects.set(msg.projectId, {
-          id: msg.projectId,
+      if (!entities.projects.has(transformedProjectId)) {
+        entities.projects.set(transformedProjectId, {
+          id: transformedProjectId,
           projectName: msg.session?.project?.projectName || '',
-          userId: userId,
-          clientMachineId: msg.clientMachineId
+          userId: transformedUserId,
+          clientMachineId: transformedMachineId
         });
       }
 
       // Add session entity
-      if (!entities.sessions.has(msg.sessionId)) {
-        entities.sessions.set(msg.sessionId, {
-          id: msg.sessionId,
-          projectId: msg.projectId,
-          userId: userId,
-          clientMachineId: msg.clientMachineId
+      if (!entities.sessions.has(transformedSessionId)) {
+        entities.sessions.set(transformedSessionId, {
+          id: transformedSessionId,
+          projectId: transformedProjectId,
+          userId: transformedUserId,
+          clientMachineId: transformedMachineId
         });
       }
 
-      // Build message entity - convert BigInt to number for JSON serialization
+      // Build message entity with transformed IDs
       messageEntities.push({
-        uuid: msg.uuid,
-        messageId: msg.messageId,
-        sessionId: msg.sessionId,
-        projectId: msg.projectId,
-        userId: userId,
+        id: transformedMessageId,
+        originalMessageId: msg.messageId,
+        sessionId: transformedSessionId,
+        projectId: transformedProjectId,
+        userId: transformedUserId,
         role: msg.role,
         model: msg.model || undefined,
         inputTokens: Number(msg.inputTokens),
@@ -156,7 +173,7 @@ export class PushService {
         cacheReadTokens: Number(msg.cacheReadTokens),
         messageCost: msg.messageCost.toString(),
         timestamp: msg.timestamp?.toISOString()
-      });
+      } as any);
 
       // Track counts
       const model = msg.model || 'unknown';
@@ -216,7 +233,6 @@ export class PushService {
     }
 
     const { data } = response;
-    const uploadId = data.uploadId || uuidv4();
     const processed = data.processed || 0;
     const failed = data.failed || 0;
 
@@ -224,17 +240,18 @@ export class PushService {
     await this.prisma.$transaction(async (tx) => {
       if (processed > 0) {
         // Mark successful messages as synced
-        // Since we don't have individual message status, mark all as synced if processed > 0
         const successCount = Math.min(processed, messageIds.length);
         for (let i = 0; i < successCount; i++) {
-          await tx.syncStatus.updateMany({
-            where: {
-              tableName: COMMAND_STRINGS.TABLES.MESSAGES,
-              recordId: messageIds[i]
-            },
-            data: {
+          // Create or update sync status
+          await tx.messageSyncStatus.upsert({
+            where: { messageId: messageIds[i] },
+            update: {
               syncedAt: now,
-              syncBatchId: uploadId,
+              syncResponse: 'persisted'
+            },
+            create: {
+              messageId: messageIds[i],
+              syncedAt: now,
               syncResponse: 'persisted'
             }
           });
@@ -245,13 +262,15 @@ export class PushService {
         // Mark remaining messages as failed
         const startIndex = processed;
         for (let i = startIndex; i < messageIds.length; i++) {
-          await tx.syncStatus.updateMany({
-            where: {
-              tableName: COMMAND_STRINGS.TABLES.MESSAGES,
-              recordId: messageIds[i]
-            },
-            data: {
+          await tx.messageSyncStatus.upsert({
+            where: { messageId: messageIds[i] },
+            update: {
               retryCount: { increment: 1 },
+              syncResponse: 'failed'
+            },
+            create: {
+              messageId: messageIds[i],
+              retryCount: 1,
               syncResponse: 'failed'
             }
           });
@@ -261,11 +280,10 @@ export class PushService {
   }
 
   async resetRetryCount(messageIds?: string[]): Promise<number> {
-    const result = await this.prisma.syncStatus.updateMany({
+    const result = await this.prisma.messageSyncStatus.updateMany({
       where: {
-        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
         syncedAt: null,  // Only reset unsynced messages
-        ...(messageIds && { recordId: { in: messageIds } })
+        ...(messageIds && { messageId: { in: messageIds } })
       },
       data: {
         retryCount: 0,
@@ -277,10 +295,9 @@ export class PushService {
   }
 
   async incrementRetryCountForBatch(messageIds: string[]): Promise<number> {
-    const result = await this.prisma.syncStatus.updateMany({
+    const result = await this.prisma.messageSyncStatus.updateMany({
       where: {
-        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
-        recordId: { in: messageIds },
+        messageId: { in: messageIds },
         syncedAt: null
       },
       data: {
@@ -292,10 +309,9 @@ export class PushService {
   }
 
   async countMaxedOutMessages(messageIds: string[]): Promise<number> {
-    const count = await this.prisma.syncStatus.count({
+    const count = await this.prisma.messageSyncStatus.count({
       where: {
-        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
-        recordId: { in: messageIds },
+        messageId: { in: messageIds },
         syncedAt: null,
         retryCount: { gte: this.config.maxRetries }
       }
@@ -305,37 +321,65 @@ export class PushService {
   }
 
   async countEligibleMessages(): Promise<number> {
-    const count = await this.prisma.syncStatus.count({
+    // Count messages that either have no sync status or have sync status with retries < max
+    const count = await this.prisma.message.count({
       where: {
-        tableName: COMMAND_STRINGS.TABLES.MESSAGES,
-        syncedAt: null,
-        retryCount: { lt: this.config.maxRetries }
+        OR: [
+          { syncStatus: null },
+          {
+            syncStatus: {
+              syncedAt: null,
+              retryCount: { lt: this.config.maxRetries }
+            }
+          }
+        ]
       }
     });
 
     return count;
   }
 
-  private replaceUserId(userId: string): string {
-    // If we have an authenticated user ID and the current ID is the anonymous one, replace it
-    if (this.authenticatedUserId && this.anonymousUserId && userId === this.anonymousUserId) {
-      return this.authenticatedUserId;
+  private transformIdForUser(localId: string, userNamespace: string): string {
+    // Use UUID v5 to deterministically generate unique IDs per user
+    // This prevents collisions when multiple users share a machine
+    try {
+      // Use a fixed namespace UUID and combine with user ID to create namespace
+      const NAMESPACE_UUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // Standard UUID namespace
+      const userSpecificNamespace = uuidv5(userNamespace, NAMESPACE_UUID);
+      return uuidv5(localId, userSpecificNamespace);
+    } catch (error) {
+      // If transformation fails, use a hash-based approach as fallback
+      const hash = crypto.createHash('sha256')
+        .update(`${userNamespace}:${localId}`)
+        .digest('hex');
+      // Format as UUID v4
+      return [
+        hash.substring(0, 8),
+        hash.substring(8, 12),
+        '4' + hash.substring(13, 16),
+        ((parseInt(hash.substring(16, 18), 16) & 0x3f) | 0x80).toString(16) + hash.substring(18, 20),
+        hash.substring(20, 32)
+      ].join('-');
     }
-    return userId;
   }
 
   async getPushStatistics() {
     const [total, synced, unsynced, retryDistribution] = await Promise.all([
-      this.prisma.syncStatus.count({ where: { tableName: 'messages' } }),
-      this.prisma.syncStatus.count({ 
-        where: { tableName: 'messages', syncedAt: { not: null } } 
+      this.prisma.message.count(),
+      this.prisma.messageSyncStatus.count({ 
+        where: { syncedAt: { not: null } } 
       }),
-      this.prisma.syncStatus.count({ 
-        where: { tableName: 'messages', syncedAt: null } 
+      this.prisma.message.count({
+        where: {
+          OR: [
+            { syncStatus: null },
+            { syncStatus: { syncedAt: null } }
+          ]
+        }
       }),
-      this.prisma.syncStatus.groupBy({
+      this.prisma.messageSyncStatus.groupBy({
         by: ['retryCount'],
-        where: { tableName: 'messages', syncedAt: null },
+        where: { syncedAt: null },
         _count: true
       })
     ]);

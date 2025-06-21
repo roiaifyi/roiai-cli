@@ -149,6 +149,18 @@ class UserService {
             api_key: apiKey
         };
         await file_system_utils_1.FileSystemUtils.writeJsonFile(userInfoPath, storedUserInfo);
+        // Reset sync status for all messages (silently) when a user logs in
+        // This ensures that when switching users, messages can be re-uploaded
+        await database_1.prisma.messageSyncStatus.updateMany({
+            where: {
+                syncedAt: { not: null }
+            },
+            data: {
+                syncedAt: null,
+                retryCount: 0,
+                syncResponse: null
+            }
+        });
     }
     async logout() {
         if (!this.userInfo) {

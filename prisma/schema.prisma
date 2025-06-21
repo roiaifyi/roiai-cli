@@ -106,8 +106,8 @@ model Session {
 }
 
 model Message {
-  uuid                    String    @id
-  messageId               String    @map("message_id")
+  id                      String    @id
+  messageId               String    @unique @map("message_id")
   requestId               String?   @map("request_id")
   sessionId               String    @map("session_id")
   projectId               String    @map("project_id")
@@ -132,6 +132,7 @@ model Message {
   project                 Project   @relation(fields: [projectId], references: [id])
   user                    User      @relation(fields: [userId], references: [id])
   machine                 Machine   @relation(fields: [clientMachineId], references: [id])
+  syncStatus              MessageSyncStatus?
 
   @@index([sessionId])
   @@index([projectId])
@@ -139,7 +140,6 @@ model Message {
   @@index([clientMachineId])
   @@index([timestamp])
   @@index([requestId])
-  @@unique([sessionId, messageId, uuid])
   @@map("messages")
 }
 
@@ -159,18 +159,17 @@ model FileStatus {
   @@map("file_status")
 }
 
-model SyncStatus {
+model MessageSyncStatus {
   id                      Int       @id @default(autoincrement())
-  tableName               String    @map("table_name")
-  recordId                String    @map("record_id")
-  operation               String
-  localTimestamp          DateTime  @default(now()) @map("local_timestamp")
+  messageId               String    @unique @map("message_id")
   syncedAt                DateTime? @map("synced_at")
-  syncBatchId             String?   @map("sync_batch_id")
   syncResponse            String?   @map("sync_response")
   retryCount              Int       @default(0) @map("retry_count")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
   
-  @@unique([tableName, recordId])
+  message                 Message   @relation(fields: [messageId], references: [messageId])
+  
   @@index([syncedAt])
-  @@map("sync_status")
+  @@map("message_sync_status")
 }

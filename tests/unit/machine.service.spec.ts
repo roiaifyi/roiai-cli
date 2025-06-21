@@ -215,7 +215,7 @@ describe('MachineService', () => {
       expect(mockCrypto.createHash).toHaveBeenCalledWith('sha256');
       const hashMock = mockCrypto.createHash('sha256');
       expect(hashMock.update).toHaveBeenCalledWith(
-        'aa:bb:cc:dd:ee:ff:darwin:x64'
+        'aa:bb:cc:dd:ee:ff'
       );
       expect(hashMock.digest).toHaveBeenCalledWith('hex');
     });

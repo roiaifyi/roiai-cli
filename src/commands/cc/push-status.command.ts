@@ -69,32 +69,27 @@ export function createPushStatusCommand() {
           // Recent push history
           console.log(chalk.bold('\n📅 Recent Push Activity\n'));
           
-          const recentPushes = await prisma.syncStatus.groupBy({
-            by: ['syncBatchId', 'syncResponse'],
+          const recentPushes = await prisma.messageSyncStatus.findMany({
             where: {
-              tableName: 'messages',
               syncedAt: { not: null }
             },
-            _count: true,
             orderBy: {
-              _max: {
-                syncedAt: 'desc'
-              }
+              syncedAt: 'desc'
             },
             take: 10
           });
           
           if (recentPushes.length > 0) {
             const historyTable = new Table({
-              head: ['Batch ID', 'Response', 'Count'],
-              colWidths: [40, 15, 10]
+              head: ['Message ID', 'Response', 'Synced At'],
+              colWidths: [40, 15, 25]
             });
             
             recentPushes.forEach(push => {
               historyTable.push([
-                push.syncBatchId?.substring(0, 36) || 'N/A',
+                push.messageId.substring(0, 36),
                 push.syncResponse || 'unknown',
-                push._count
+                push.syncedAt?.toISOString() || 'N/A'
               ]);
             });
             
@@ -104,9 +99,8 @@ export function createPushStatusCommand() {
           }
           
           // Failed messages sample
-          const failedMessages = await prisma.syncStatus.findMany({
+          const failedMessages = await prisma.messageSyncStatus.findMany({
             where: {
-              tableName: 'messages',
               syncedAt: null,
               retryCount: { gte: 3 },
               syncResponse: { not: null }
@@ -121,7 +115,7 @@ export function createPushStatusCommand() {
             console.log(chalk.bold('\n❌ Sample Failed Messages\n'));
             
             failedMessages.forEach(msg => {
-              console.log(`Message: ${msg.recordId}`);
+              console.log(`Message: ${msg.messageId}`);
               console.log(`  Retries: ${msg.retryCount}`);
               console.log(`  Error: ${chalk.red(msg.syncResponse || 'Unknown error')}`);
               console.log();

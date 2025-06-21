@@ -109,12 +109,11 @@ export class MachineService {
       throw new Error('No valid network interface found for machine identification');
     }
 
-    // Generate machine ID by hashing MAC + platform + architecture
-    // This ensures consistency across OS reinstalls on the same hardware
-    const machineIdData = `${macAddress}:${osInfo.platform}:${osInfo.arch}`;
+    // Generate machine ID by hashing only MAC address
+    // This ensures consistency across OS upgrades on the same hardware
     const machineId = crypto
       .createHash('sha256')
-      .update(machineIdData)
+      .update(macAddress)
       .digest('hex')
       .substring(0, 16);
 

@@ -42,9 +42,6 @@ export const syncCommand = new Command('sync')
       const useIncremental = await incrementalAggregationService.shouldUseIncremental();
       const needsFullRecalc = !useIncremental || options.force;
       
-      // Configure JSONLService based on aggregation mode
-      jsonlService.setUseIncrementalAggregation(!needsFullRecalc);
-      
       // Get data path
       const dataPath = options.path || configManager.getClaudeCodeConfig().rawDataPath;
       
@@ -218,7 +215,7 @@ export const syncCommand = new Command('sync')
       }
 
       // Check for pending sync items
-      const pendingSync = await prisma.syncStatus.count({
+      const pendingSync = await prisma.messageSyncStatus.count({
         where: { syncedAt: null }
       });
       
@@ -256,7 +253,7 @@ async function getUserStatsByModel(userService: UserService) {
       model: { not: null }  // Only include messages with a model
     },
     _count: {
-      uuid: true
+      id: true
     },
     _sum: {
       inputTokens: true,
@@ -278,7 +275,7 @@ async function getUserStatsByModel(userService: UserService) {
     })
     .map(stats => ({
       model: stats.model!,
-      messageCount: stats._count.uuid,
+      messageCount: stats._count?.id || 0,
       inputTokens: Number(stats._sum.inputTokens || 0),
       outputTokens: Number(stats._sum.outputTokens || 0),
       cacheCreationTokens: Number(stats._sum.cacheCreationTokens || 0),

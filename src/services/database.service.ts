@@ -59,7 +59,7 @@ export class DatabaseService {
   }
   
   async createMessage(messageData: {
-    uuid: string;
+    id: string;
     messageId: string;
     sessionId: string;
     projectId: string;
@@ -78,7 +78,7 @@ export class DatabaseService {
   }) {
     return await this.prisma.message.create({
       data: {
-        uuid: messageData.uuid,
+        id: messageData.id,
         messageId: messageData.messageId,
         sessionId: messageData.sessionId,
         projectId: messageData.projectId,
@@ -99,7 +99,7 @@ export class DatabaseService {
   }
   
   async createMessagesBatch(messages: Array<{
-    uuid: string;
+    id: string;
     messageId: string;
     sessionId: string;
     projectId: string;

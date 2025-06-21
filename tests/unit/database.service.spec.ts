@@ -154,7 +154,7 @@ describe('DatabaseService BDD Tests', () => {
       it('Then it should store the message with calculated costs', async () => {
         // Arrange
         const messageData = {
-          uuid: 'msg-uuid-123',
+          id: 'msg-uuid-123',
           messageId: 'msg-123',
           sessionId: 'test-session',
           projectId: 'test-project',
@@ -183,7 +183,7 @@ describe('DatabaseService BDD Tests', () => {
         });
         
         // Assert
-        expect(message.uuid).toBe(messageData.uuid);
+        expect(message.id).toBe(messageData.id);
         expect(message.messageId).toBe(messageData.messageId);
         expect(message.sessionId).toBe(messageData.sessionId);
         expect(message.role).toBe(messageData.role);
@@ -198,7 +198,7 @@ describe('DatabaseService BDD Tests', () => {
       it('Then it should handle duplicate messages gracefully', async () => {
         // Arrange
         const messageData = {
-          uuid: 'msg-uuid-123',
+          id: 'msg-uuid-123',
           messageId: 'msg-123',
           sessionId: 'test-session',
           projectId: 'test-project',
@@ -307,7 +307,7 @@ describe('DatabaseService BDD Tests', () => {
         
         // Create batch of messages
         const messages = Array.from({ length: 10 }, (_, i) => ({
-          uuid: `batch-msg-${i}`,
+          id: `batch-msg-${i}`,
           messageId: `msg-${i}`,
           sessionId,
           projectId,

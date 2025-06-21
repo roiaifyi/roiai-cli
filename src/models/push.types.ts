@@ -32,6 +32,7 @@ export interface MachineEntity {
   id: string;
   userId: string;
   machineName?: string;
+  localMachineId: string;
 }
 
 export interface ProjectEntity {
@@ -49,8 +50,8 @@ export interface SessionEntity {
 }
 
 export interface MessageEntity {
-  uuid: string;
-  messageId: string;
+  id: string;
+  originalMessageId: string;
   sessionId: string;
   projectId: string;
   userId: string;

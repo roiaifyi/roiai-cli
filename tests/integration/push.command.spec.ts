@@ -103,16 +103,30 @@ describe('Push Command Integration Tests', () => {
 
     // Create authenticated user info
     const userInfo = {
-      userId: 'anon-test-machine',
-      clientMachineId: 'test-machine',
-      auth: {
-        realUserId: 'test-user-123',
+      user: {
+        id: '550e8400-e29b-41d4-a716-446655440000',  // Valid UUID
         email: 'test@example.com',
-        apiToken: 'test-auth-token'
-      }
+        username: 'testuser'
+      },
+      api_key: 'test-auth-token'
     };
     fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
     fs.writeFileSync(path.join(TEST_DATA_DIR, 'user_info.json'), JSON.stringify(userInfo, null, 2));
+    
+    // Also create machine_info.json
+    const machineInfo = {
+      machineId: 'test-machine',
+      macAddress: 'aa:bb:cc:dd:ee:ff',
+      osInfo: {
+        platform: 'darwin',
+        release: '20.0.0',
+        arch: 'x64',
+        hostname: 'test-host'
+      },
+      createdAt: new Date().toISOString(),
+      version: 2
+    };
+    fs.writeFileSync(path.join(TEST_DATA_DIR, 'machine_info.json'), JSON.stringify(machineInfo, null, 2));
     
     // Use the global test database
     prisma = new PrismaClient({
@@ -183,7 +197,7 @@ describe('Push Command Integration Tests', () => {
     for (let i = 0; i < messageCount; i++) {
       const message = await prisma.message.create({
         data: {
-          uuid: `msg${i}`,
+          id: `msg${i}`,
           messageId: `msg${i}`,
           sessionId: session.id,
           projectId: project.id,
@@ -201,12 +215,9 @@ describe('Push Command Integration Tests', () => {
       });
       messages.push(message);
 
-      await prisma.syncStatus.create({
+      await prisma.messageSyncStatus.create({
         data: {
-          tableName: 'messages',
-          recordId: message.uuid,
-          operation: 'INSERT',
-          localTimestamp: new Date(),
+          messageId: message.messageId,
           retryCount
         }
       });
@@ -277,7 +288,7 @@ describe('Push Command Integration Tests', () => {
       expect(output).toContain('Successfully pushed: 15');
 
       // Verify sync status updated
-      const syncedCount = await prisma.syncStatus.count({
+      const syncedCount = await prisma.messageSyncStatus.count({
         where: { syncedAt: { not: null } }
       });
       expect(syncedCount).toBe(15);
@@ -298,10 +309,10 @@ describe('Push Command Integration Tests', () => {
       expect(output).toContain('failed');
 
       // Verify some messages were marked as synced, others have retry count incremented
-      const syncedMessages = await prisma.syncStatus.findMany({
+      const syncedMessages = await prisma.messageSyncStatus.findMany({
         where: { syncedAt: { not: null } }
       });
-      const failedMessages = await prisma.syncStatus.findMany({
+      const failedMessages = await prisma.messageSyncStatus.findMany({
         where: { 
           syncedAt: null,
           retryCount: { gt: 0 }
@@ -341,9 +352,9 @@ describe('Push Command Integration Tests', () => {
       expect(output).toContain('Successfully pushed: 5');
 
       // Verify retry counts were reset and messages were synced
-      const messages = await prisma.syncStatus.findMany();
-      const syncedMessages = messages.filter(m => m.syncedAt !== null);
-      const unsyncedMessages = messages.filter(m => m.syncedAt === null);
+      const messages = await prisma.messageSyncStatus.findMany();
+      const syncedMessages = messages.filter((m: any) => m.syncedAt !== null);
+      const unsyncedMessages = messages.filter((m: any) => m.syncedAt === null);
       
       // All messages should either be synced (retryCount preserved) or have retryCount 0
       expect(syncedMessages.length).toBe(5);
@@ -360,7 +371,7 @@ describe('Push Command Integration Tests', () => {
       expect(output).toContain('Total batches needed: 3');
 
       // No messages should be marked as synced
-      const syncedCount = await prisma.syncStatus.count({
+      const syncedCount = await prisma.messageSyncStatus.count({
         where: { syncedAt: { not: null } }
       });
       expect(syncedCount).toBe(0);
@@ -373,14 +384,14 @@ describe('Push Command Integration Tests', () => {
       await createTestData(10);
       
       // Mark some as synced
-      await prisma.syncStatus.updateMany({
-        where: { recordId: { in: ['msg0', 'msg1', 'msg2'] } },
+      await prisma.messageSyncStatus.updateMany({
+        where: { messageId: { in: ['msg0', 'msg1', 'msg2'] } },
         data: { syncedAt: new Date() }
       });
 
       // Mark some with retries
-      await prisma.syncStatus.updateMany({
-        where: { recordId: { in: ['msg3', 'msg4'] } },
+      await prisma.messageSyncStatus.updateMany({
+        where: { messageId: { in: ['msg3', 'msg4'] } },
         data: { retryCount: 2 }
       });
 

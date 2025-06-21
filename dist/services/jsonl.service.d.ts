@@ -5,23 +5,20 @@ import { Decimal } from "@prisma/client/runtime/library";
 export declare class JSONLService {
     private pricingService;
     private userService;
-    private globalMessageIds;
-    private incrementalAggregation;
-    private useIncrementalAggregation;
-    private incrementalChanges;
+    private batchProcessor;
     private progressCallback?;
-    constructor(pricingService: PricingService, userService: UserService);
-    setUseIncrementalAggregation(value: boolean): void;
+    private incrementalChanges;
+    constructor(pricingService: PricingService, userService: UserService, batchSize?: number);
+    setProgressCallback(callback: (progress: ProcessingProgress) => void): void;
     getIncrementalChanges(): {
         newProjects: string[];
         newSessions: string[];
         newMessages: number;
         totalCostAdded: number;
     };
-    setProgressCallback(callback: (progress: ProcessingProgress) => void): void;
     processDirectory(directoryPath: string): Promise<ProcessingResult>;
     private ensureUserAndMachine;
-    private processProjectDirectory;
+    private processProject;
     ensureProject(projectName: string): Promise<{
         id: string;
         createdAt: Date;
@@ -40,7 +37,7 @@ export declare class JSONLService {
     processJSONLFile(filePath: string, projectId: string, _projectName?: string): Promise<ProcessingResult>;
     private checkFileStatus;
     private calculateFileChecksum;
-    private processMessage;
+    private updateTokenUsage;
     private mergeTokenUsage;
 }
 //# sourceMappingURL=jsonl.service.d.ts.map

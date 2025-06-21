@@ -61,7 +61,7 @@ describe('AggregationService BDD Tests', () => {
     const messages = [
       // Session 1 - Project Alpha, User 1
       {
-        uuid: 'msg1',
+        id: 'msg1',
         messageId: 'msg_001',
         sessionId: 'session1',
         projectId: 'project1',
@@ -77,7 +77,7 @@ describe('AggregationService BDD Tests', () => {
         messageCost: new Prisma.Decimal(0.01)
       },
       {
-        uuid: 'msg2',
+        id: 'msg2',
         messageId: 'msg_002',
         sessionId: 'session1',
         projectId: 'project1',
@@ -94,7 +94,7 @@ describe('AggregationService BDD Tests', () => {
       },
       // Session 2 - Project Beta, User 1
       {
-        uuid: 'msg3',
+        id: 'msg3',
         messageId: 'msg_003',
         sessionId: 'session2',
         projectId: 'project2',
@@ -111,7 +111,7 @@ describe('AggregationService BDD Tests', () => {
       },
       // Session 3 - Project Alpha, User 2
       {
-        uuid: 'msg4',
+        id: 'msg4',
         messageId: 'msg_004',
         sessionId: 'session3',
         projectId: 'project1',

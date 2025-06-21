@@ -81,7 +81,7 @@ describe('PushService Integration Tests', () => {
     userService.getUserId = () => 'test-user';
     userService.getClientMachineId = () => 'test-machine';
     userService.isAuthenticated = () => true;
-    userService.getAuthenticatedUserId = () => 'authenticated-user';
+    userService.getAuthenticatedUserId = () => '550e8400-e29b-41d4-a716-446655440000'; // Valid UUID
     userService.getApiToken = () => 'test-auth-token';
     
     // Create push service with custom endpoint
@@ -162,7 +162,7 @@ describe('PushService Integration Tests', () => {
     for (let i = 0; i < messageCount; i++) {
       const message = await prisma.message.create({
         data: {
-          uuid: `msg-${i}`,
+          id: `msg-${i}`,
           messageId: `msg-${i}`,
           sessionId: session.id,
           projectId: project.id,
@@ -180,12 +180,9 @@ describe('PushService Integration Tests', () => {
       });
       messages.push(message);
 
-      await prisma.syncStatus.create({
+      await prisma.messageSyncStatus.create({
         data: {
-          tableName: 'messages',
-          recordId: message.uuid,
-          operation: 'INSERT',
-          localTimestamp: new Date(),
+          messageId: message.messageId,
           retryCount
         }
       });
@@ -219,7 +216,7 @@ describe('PushService Integration Tests', () => {
       expect(totalPushed).toBe(15);
       
       // Verify all messages are marked as synced
-      const syncedCount = await prisma.syncStatus.count({
+      const syncedCount = await prisma.messageSyncStatus.count({
         where: { syncedAt: { not: null } }
       });
       expect(syncedCount).toBe(15);
@@ -255,7 +252,7 @@ describe('PushService Integration Tests', () => {
       expect(successCount + failureCount).toBe(10);
       
       // Verify retry counts were incremented for failed messages
-      const failedMessages = await prisma.syncStatus.findMany({
+      const failedMessages = await prisma.messageSyncStatus.findMany({
         where: { 
           syncedAt: null,
           retryCount: { gt: 0 }
@@ -298,8 +295,8 @@ describe('PushService Integration Tests', () => {
       expect(errorMessage).toContain('Push failed');
       
       // Verify retry counts were incremented
-      const syncStatuses = await prisma.syncStatus.findMany({
-        where: { recordId: { in: messageIds } }
+      const syncStatuses = await prisma.messageSyncStatus.findMany({
+        where: { messageId: { in: messageIds } }
       });
       expect(syncStatuses.every(m => m.retryCount === 1)).toBe(true);
     });
@@ -339,20 +336,18 @@ describe('PushService Integration Tests', () => {
       let errorOccurred = false;
       let errorMessage = '';
       
-      const messageIds = await unauthService.selectUnpushedBatch(10);
-      const messages = await unauthService.loadMessagesWithEntities(messageIds);
-      const request = unauthService.buildPushRequest(messages);
-      
       try {
-        await unauthService.executePush(request);
+        const messageIds = await unauthService.selectUnpushedBatch(10);
+        const messages = await unauthService.loadMessagesWithEntities(messageIds);
+        unauthService.buildPushRequest(messages); // This should throw
       } catch (error: any) {
         errorOccurred = true;
-        errorMessage = error.response?.data?.message || error.message;
+        errorMessage = error.message;
       }
       
       expect(errorOccurred).toBe(true);
       // The error message format changed with the new API spec
-      expect(errorMessage.toLowerCase()).toMatch(/unauthorized|invalid|401/);
+      expect(errorMessage).toContain('Cannot push without authentication');
     });
   });
 
@@ -361,8 +356,8 @@ describe('PushService Integration Tests', () => {
       await createTestData(20);
       
       // Mark some as already synced
-      await prisma.syncStatus.updateMany({
-        where: { recordId: { in: ['msg-0', 'msg-1', 'msg-2', 'msg-3', 'msg-4'] } },
+      await prisma.messageSyncStatus.updateMany({
+        where: { messageId: { in: ['msg-0', 'msg-1', 'msg-2', 'msg-3', 'msg-4'] } },
         data: { syncedAt: new Date() }
       });
       
@@ -387,7 +382,7 @@ describe('PushService Integration Tests', () => {
       expect(eligibleCount).toBe(5);
       
       // Verify retry counts were reset
-      const syncStatuses = await prisma.syncStatus.findMany();
+      const syncStatuses = await prisma.messageSyncStatus.findMany();
       expect(syncStatuses.every(m => m.retryCount === 0)).toBe(true);
     });
 
@@ -400,16 +395,16 @@ describe('PushService Integration Tests', () => {
       expect(resetCount).toBe(3);
       
       // Verify only specified messages were reset
-      const resetMessages = await prisma.syncStatus.findMany({
-        where: { recordId: { in: messageIds } }
+      const resetMessages = await prisma.messageSyncStatus.findMany({
+        where: { messageId: { in: messageIds } }
       });
-      expect(resetMessages.every(m => m.retryCount === 0)).toBe(true);
+      expect(resetMessages.every((m: any) => m.retryCount === 0)).toBe(true);
       
       // Verify other messages still have retry count
-      const otherMessages = await prisma.syncStatus.findMany({
-        where: { recordId: { notIn: messageIds } }
+      const otherMessages = await prisma.messageSyncStatus.findMany({
+        where: { messageId: { notIn: messageIds } }
       });
-      expect(otherMessages.every(m => m.retryCount === 2)).toBe(true);
+      expect(otherMessages.every((m: any) => m.retryCount === 2)).toBe(true);
     });
   });
 });

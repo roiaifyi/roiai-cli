@@ -16,6 +16,9 @@ jest.mock('../../src/database', () => ({
     },
     machine: {
       upsert: jest.fn()
+    },
+    messageSyncStatus: {
+      updateMany: jest.fn(() => Promise.resolve({ count: 0 }))
     }
   }
 }));

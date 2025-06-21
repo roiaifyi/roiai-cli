@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AggregationService = void 0;
-const library_1 = require("@prisma/client/runtime/library");
+const client_1 = require("@prisma/client");
 const logger_1 = require("../utils/logger");
 class AggregationService {
     prisma;
@@ -10,178 +10,183 @@ class AggregationService {
     }
     async recalculateAllAggregates() {
         logger_1.logger.info('🔄 Recalculating all aggregates...');
-        // Start a transaction to ensure consistency
-        await this.prisma.$transaction(async (tx) => {
-            // 1. Recalculate Session aggregates
-            await this.recalculateSessionAggregates(tx);
-            // 2. Recalculate Project aggregates
-            await this.recalculateProjectAggregates(tx);
-            // 3. Recalculate Machine aggregates
-            await this.recalculateMachineAggregates(tx);
-            // 4. Recalculate User aggregates
-            await this.recalculateUserAggregates(tx);
-        });
+        // Process aggregates in parallel for better performance
+        await Promise.all([
+            this.recalculateSessionAggregates(),
+            this.recalculateProjectAggregates(),
+            this.recalculateMachineAggregates(),
+            this.recalculateUserAggregates()
+        ]);
         logger_1.logger.info('✅ Aggregates recalculated successfully');
     }
-    async recalculateSessionAggregates(tx) {
+    async recalculateSessionAggregates() {
         logger_1.logger.info('  📊 Recalculating session aggregates...');
-        const sessions = await tx.session.findMany({
-            include: {
-                messages: true
+        // Get aggregated data for all sessions at once
+        const sessionAggregates = await this.prisma.message.groupBy({
+            by: ['sessionId'],
+            _count: {
+                _all: true
+            },
+            _sum: {
+                messageCost: true,
+                inputTokens: true,
+                outputTokens: true,
+                cacheCreationTokens: true,
+                cacheReadTokens: true
             }
         });
-        for (const session of sessions) {
-            const aggregates = session.messages.reduce((acc, msg) => {
-                acc.totalMessages++;
-                acc.totalCost = acc.totalCost.add(new library_1.Decimal(msg.messageCost));
-                acc.totalInputTokens += msg.inputTokens;
-                acc.totalOutputTokens += msg.outputTokens;
-                acc.totalCacheCreationTokens += msg.cacheCreationTokens;
-                acc.totalCacheReadTokens += msg.cacheReadTokens;
-                return acc;
-            }, {
-                totalMessages: 0n,
-                totalCost: new library_1.Decimal(0),
-                totalInputTokens: 0n,
-                totalOutputTokens: 0n,
-                totalCacheCreationTokens: 0n,
-                totalCacheReadTokens: 0n
-            });
-            await tx.session.update({
-                where: { id: session.id },
+        // Batch update sessions using Promise.all for parallelism
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < sessionAggregates.length; i += BATCH_SIZE) {
+            const batch = sessionAggregates.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(agg => this.prisma.session.update({
+                where: { id: agg.sessionId },
                 data: {
-                    totalMessages: aggregates.totalMessages,
-                    totalCost: aggregates.totalCost,
-                    totalInputTokens: aggregates.totalInputTokens,
-                    totalOutputTokens: aggregates.totalOutputTokens,
-                    totalCacheCreationTokens: aggregates.totalCacheCreationTokens,
-                    totalCacheReadTokens: aggregates.totalCacheReadTokens
+                    totalMessages: BigInt(agg._count._all),
+                    totalCost: agg._sum.messageCost || new client_1.Prisma.Decimal(0),
+                    totalInputTokens: agg._sum.inputTokens || 0n,
+                    totalOutputTokens: agg._sum.outputTokens || 0n,
+                    totalCacheCreationTokens: agg._sum.cacheCreationTokens || 0n,
+                    totalCacheReadTokens: agg._sum.cacheReadTokens || 0n
                 }
-            });
+            })));
         }
     }
-    async recalculateProjectAggregates(tx) {
+    async recalculateProjectAggregates() {
         logger_1.logger.info('  📊 Recalculating project aggregates...');
-        const projects = await tx.project.findMany({
-            include: {
-                sessions: true,
-                messages: true
+        // Get session counts per project
+        const sessionCounts = await this.prisma.session.groupBy({
+            by: ['projectId'],
+            _count: {
+                _all: true
             }
         });
-        for (const project of projects) {
-            const messageAggregates = project.messages.reduce((acc, msg) => {
-                acc.totalMessages++;
-                acc.totalCost = acc.totalCost.add(new library_1.Decimal(msg.messageCost));
-                acc.totalInputTokens += msg.inputTokens;
-                acc.totalOutputTokens += msg.outputTokens;
-                acc.totalCacheCreationTokens += msg.cacheCreationTokens;
-                acc.totalCacheReadTokens += msg.cacheReadTokens;
-                return acc;
-            }, {
-                totalMessages: 0n,
-                totalCost: new library_1.Decimal(0),
-                totalInputTokens: 0n,
-                totalOutputTokens: 0n,
-                totalCacheCreationTokens: 0n,
-                totalCacheReadTokens: 0n
-            });
-            await tx.project.update({
-                where: { id: project.id },
+        // Get message aggregates per project
+        const projectAggregates = await this.prisma.message.groupBy({
+            by: ['projectId'],
+            _count: {
+                _all: true
+            },
+            _sum: {
+                messageCost: true,
+                inputTokens: true,
+                outputTokens: true,
+                cacheCreationTokens: true,
+                cacheReadTokens: true
+            }
+        });
+        // Create a map of session counts
+        const sessionCountMap = new Map(sessionCounts.map((s) => [s.projectId, s._count._all]));
+        // Batch update projects
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < projectAggregates.length; i += BATCH_SIZE) {
+            const batch = projectAggregates.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(agg => this.prisma.project.update({
+                where: { id: agg.projectId },
                 data: {
-                    totalSessions: project.sessions.length,
-                    totalMessages: messageAggregates.totalMessages,
-                    totalCost: messageAggregates.totalCost,
-                    totalInputTokens: messageAggregates.totalInputTokens,
-                    totalOutputTokens: messageAggregates.totalOutputTokens,
-                    totalCacheCreationTokens: messageAggregates.totalCacheCreationTokens,
-                    totalCacheReadTokens: messageAggregates.totalCacheReadTokens
+                    totalSessions: sessionCountMap.get(agg.projectId) || 0,
+                    totalMessages: BigInt(agg._count._all),
+                    totalCost: agg._sum.messageCost || new client_1.Prisma.Decimal(0),
+                    totalInputTokens: agg._sum.inputTokens || 0n,
+                    totalOutputTokens: agg._sum.outputTokens || 0n,
+                    totalCacheCreationTokens: agg._sum.cacheCreationTokens || 0n,
+                    totalCacheReadTokens: agg._sum.cacheReadTokens || 0n
                 }
-            });
+            })));
         }
     }
-    async recalculateMachineAggregates(tx) {
+    async recalculateMachineAggregates() {
         logger_1.logger.info('  📊 Recalculating machine aggregates...');
-        const machines = await tx.machine.findMany({
-            include: {
-                projects: true,
-                sessions: true
+        // Get counts
+        const projectCounts = await this.prisma.project.groupBy({
+            by: ['clientMachineId'],
+            _count: { _all: true }
+        });
+        const sessionCounts = await this.prisma.session.groupBy({
+            by: ['clientMachineId'],
+            _count: { _all: true }
+        });
+        // Get message aggregates
+        const machineAggregates = await this.prisma.message.groupBy({
+            by: ['clientMachineId'],
+            _count: {
+                _all: true
+            },
+            _sum: {
+                messageCost: true,
+                inputTokens: true,
+                outputTokens: true,
+                cacheCreationTokens: true,
+                cacheReadTokens: true
             }
         });
-        for (const machine of machines) {
-            // Get all messages for this machine
-            const messages = await tx.message.findMany({
-                where: { session: { clientMachineId: machine.id } }
-            });
-            const messageAggregates = messages.reduce((acc, msg) => {
-                acc.totalMessages++;
-                acc.totalCost = acc.totalCost.add(new library_1.Decimal(msg.messageCost));
-                acc.totalInputTokens += msg.inputTokens;
-                acc.totalOutputTokens += msg.outputTokens;
-                acc.totalCacheCreationTokens += msg.cacheCreationTokens;
-                acc.totalCacheReadTokens += msg.cacheReadTokens;
-                return acc;
-            }, {
-                totalMessages: 0n,
-                totalCost: new library_1.Decimal(0),
-                totalInputTokens: 0n,
-                totalOutputTokens: 0n,
-                totalCacheCreationTokens: 0n,
-                totalCacheReadTokens: 0n
-            });
-            await tx.machine.update({
-                where: { id: machine.id },
+        // Create maps
+        const projectCountMap = new Map(projectCounts.map((p) => [p.clientMachineId, p._count._all]));
+        const sessionCountMap = new Map(sessionCounts.map((s) => [s.clientMachineId, s._count._all]));
+        // Batch update machines
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < machineAggregates.length; i += BATCH_SIZE) {
+            const batch = machineAggregates.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(agg => this.prisma.machine.update({
+                where: { id: agg.clientMachineId },
                 data: {
-                    totalProjects: machine.projects.length,
-                    totalSessions: machine.sessions.length,
-                    totalMessages: messageAggregates.totalMessages,
-                    totalCost: messageAggregates.totalCost,
-                    totalInputTokens: messageAggregates.totalInputTokens,
-                    totalOutputTokens: messageAggregates.totalOutputTokens,
-                    totalCacheCreationTokens: messageAggregates.totalCacheCreationTokens,
-                    totalCacheReadTokens: messageAggregates.totalCacheReadTokens
+                    totalProjects: projectCountMap.get(agg.clientMachineId) || 0,
+                    totalSessions: sessionCountMap.get(agg.clientMachineId) || 0,
+                    totalMessages: BigInt(agg._count._all),
+                    totalCost: agg._sum.messageCost || new client_1.Prisma.Decimal(0),
+                    totalInputTokens: agg._sum.inputTokens || 0n,
+                    totalOutputTokens: agg._sum.outputTokens || 0n,
+                    totalCacheCreationTokens: agg._sum.cacheCreationTokens || 0n,
+                    totalCacheReadTokens: agg._sum.cacheReadTokens || 0n
                 }
-            });
+            })));
         }
     }
-    async recalculateUserAggregates(tx) {
+    async recalculateUserAggregates() {
         logger_1.logger.info('  📊 Recalculating user aggregates...');
-        const users = await tx.user.findMany({
-            include: {
-                projects: true,
-                sessions: true,
-                messages: true
+        // Get counts
+        const projectCounts = await this.prisma.project.groupBy({
+            by: ['userId'],
+            _count: { _all: true }
+        });
+        const sessionCounts = await this.prisma.session.groupBy({
+            by: ['userId'],
+            _count: { _all: true }
+        });
+        // Get message aggregates
+        const userAggregates = await this.prisma.message.groupBy({
+            by: ['userId'],
+            _count: {
+                _all: true
+            },
+            _sum: {
+                messageCost: true,
+                inputTokens: true,
+                outputTokens: true,
+                cacheCreationTokens: true,
+                cacheReadTokens: true
             }
         });
-        for (const user of users) {
-            const messageAggregates = user.messages.reduce((acc, msg) => {
-                acc.totalMessages++;
-                acc.totalCost = acc.totalCost.add(new library_1.Decimal(msg.messageCost));
-                acc.totalInputTokens += msg.inputTokens;
-                acc.totalOutputTokens += msg.outputTokens;
-                acc.totalCacheCreationTokens += msg.cacheCreationTokens;
-                acc.totalCacheReadTokens += msg.cacheReadTokens;
-                return acc;
-            }, {
-                totalMessages: 0n,
-                totalCost: new library_1.Decimal(0),
-                totalInputTokens: 0n,
-                totalOutputTokens: 0n,
-                totalCacheCreationTokens: 0n,
-                totalCacheReadTokens: 0n
-            });
-            await tx.user.update({
-                where: { id: user.id },
+        // Create maps
+        const projectCountMap = new Map(projectCounts.map((p) => [p.userId, p._count._all]));
+        const sessionCountMap = new Map(sessionCounts.map((s) => [s.userId, s._count._all]));
+        // Batch update users
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < userAggregates.length; i += BATCH_SIZE) {
+            const batch = userAggregates.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(agg => this.prisma.user.update({
+                where: { id: agg.userId },
                 data: {
-                    totalProjects: user.projects.length,
-                    totalSessions: user.sessions.length,
-                    totalMessages: messageAggregates.totalMessages,
-                    totalCost: messageAggregates.totalCost,
-                    totalInputTokens: messageAggregates.totalInputTokens,
-                    totalOutputTokens: messageAggregates.totalOutputTokens,
-                    totalCacheCreationTokens: messageAggregates.totalCacheCreationTokens,
-                    totalCacheReadTokens: messageAggregates.totalCacheReadTokens
+                    totalProjects: projectCountMap.get(agg.userId) || 0,
+                    totalSessions: sessionCountMap.get(agg.userId) || 0,
+                    totalMessages: BigInt(agg._count._all),
+                    totalCost: agg._sum.messageCost || new client_1.Prisma.Decimal(0),
+                    totalInputTokens: agg._sum.inputTokens || 0n,
+                    totalOutputTokens: agg._sum.outputTokens || 0n,
+                    totalCacheCreationTokens: agg._sum.cacheCreationTokens || 0n,
+                    totalCacheReadTokens: agg._sum.cacheReadTokens || 0n
                 }
-            });
+            })));
         }
     }
     async verifyAggregates() {
@@ -191,7 +196,7 @@ class AggregationService {
       SELECT 
         u.user_id,
         u.total_messages as stored_messages,
-        COUNT(DISTINCT m.uuid) as actual_messages,
+        COUNT(DISTINCT m.id) as actual_messages,
         u.total_sessions as stored_sessions,
         COUNT(DISTINCT s.session_id) as actual_sessions,
         u.total_projects as stored_projects,
@@ -271,17 +276,17 @@ class AggregationService {
                 messageCost: true
             },
             _count: {
-                uuid: true
+                id: true
             }
         });
         return messages.map(day => ({
             date: day.timestamp ? day.timestamp.toISOString().split('T')[0] : 'Unknown',
-            messageCount: day._count.uuid,
-            inputTokens: day._sum.inputTokens || 0,
-            outputTokens: day._sum.outputTokens || 0,
-            cacheCreationInputTokens: day._sum.cacheCreationTokens || 0,
-            cacheReadInputTokens: day._sum.cacheReadTokens || 0,
-            totalCost: day._sum.messageCost?.toNumber() || 0
+            messageCount: day._count?.id || 0,
+            inputTokens: day._sum?.inputTokens || 0,
+            outputTokens: day._sum?.outputTokens || 0,
+            cacheCreationInputTokens: day._sum?.cacheCreationTokens || 0,
+            cacheReadInputTokens: day._sum?.cacheReadTokens || 0,
+            totalCost: day._sum?.messageCost?.toNumber() || 0
         }));
     }
     async getUsageByModel() {
@@ -295,17 +300,17 @@ class AggregationService {
                 messageCost: true
             },
             _count: {
-                uuid: true
+                id: true
             }
         });
         return models.map(m => ({
             model: m.model,
-            messageCount: m._count.uuid,
-            inputTokens: m._sum.inputTokens || 0,
-            outputTokens: m._sum.outputTokens || 0,
-            cacheCreationInputTokens: m._sum.cacheCreationTokens || 0,
-            cacheReadInputTokens: m._sum.cacheReadTokens || 0,
-            totalCost: m._sum.messageCost?.toNumber() || 0
+            messageCount: m._count?.id || 0,
+            inputTokens: m._sum?.inputTokens || 0,
+            outputTokens: m._sum?.outputTokens || 0,
+            cacheCreationInputTokens: m._sum?.cacheCreationTokens || 0,
+            cacheReadInputTokens: m._sum?.cacheReadTokens || 0,
+            totalCost: m._sum?.messageCost?.toNumber() || 0
         }));
     }
     async getTotalUsage() {
@@ -318,7 +323,7 @@ class AggregationService {
                 messageCost: true
             },
             _count: {
-                uuid: true
+                id: true
             }
         });
         const uniqueCounts = await Promise.all([
@@ -327,7 +332,7 @@ class AggregationService {
             this.prisma.session.count()
         ]);
         return {
-            totalMessages: totals._count?.uuid || 0,
+            totalMessages: totals._count?.id || 0,
             totalInputTokens: totals._sum?.inputTokens || 0,
             totalOutputTokens: totals._sum?.outputTokens || 0,
             totalCacheCreationTokens: totals._sum?.cacheCreationTokens || 0,

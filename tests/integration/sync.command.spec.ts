@@ -59,6 +59,7 @@ describe('Sync Command BDD Tests', () => {
           {
             type: "message",
             uuid: `uuid_001_${testId}`,
+            sessionId: `session_${testId}`,
             message: {
               id: `msg_001_${testId}`,
               role: "assistant",
@@ -75,6 +76,7 @@ describe('Sync Command BDD Tests', () => {
           {
             type: "message",
             uuid: `uuid_002_${testId}`,
+            sessionId: `session_${testId}`,
             message: {
               id: `msg_002_${testId}`,
               role: "assistant",
@@ -134,6 +136,7 @@ describe('Sync Command BDD Tests', () => {
           {
             type: "message",
             uuid: "uuid_001",
+            sessionId: "session_001",
             message: {
               id: "msg_001",
               role: "assistant",
@@ -148,6 +151,7 @@ describe('Sync Command BDD Tests', () => {
           {
             type: "message",
             uuid: "uuid_002",
+            sessionId: "session_002",
             message: {
               id: "msg_002",
               role: "assistant",
@@ -210,6 +214,7 @@ describe('Sync Command BDD Tests', () => {
           JSON.stringify({
             type: "message",
             uuid: "uuid_valid",
+            sessionId: "session_valid",
             message: {
               id: "msg_valid",
               model: "claude-3-5-sonnet-20241022",
@@ -250,6 +255,7 @@ describe('Sync Command BDD Tests', () => {
           {
             type: "message",
             uuid: "uuid_cache_1",
+            sessionId: "session_cache",
             message: {
               id: "msg_cache_1",
               model: "claude-3-5-sonnet-20241022",
@@ -266,6 +272,7 @@ describe('Sync Command BDD Tests', () => {
           {
             type: "message",
             uuid: "uuid_cache_2",
+            sessionId: "session_cache",
             message: {
               id: "msg_cache_2",
               model: "claude-3-5-sonnet-20241022",
@@ -302,6 +309,7 @@ describe('Sync Command BDD Tests', () => {
           orderBy: { timestamp: 'asc' }
         });
         
+        expect(messages).toHaveLength(2);
         expect(messages[0].cacheCreationTokens).toBe(2000n);
         expect(messages[0].cacheReadTokens).toBe(0n);
         expect(messages[1].cacheCreationTokens).toBe(0n);

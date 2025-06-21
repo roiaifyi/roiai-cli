@@ -7,17 +7,20 @@ import axios from 'axios';
 // Mock Prisma
 jest.mock('@prisma/client', () => ({
   PrismaClient: jest.fn().mockImplementation(() => ({
-    syncStatus: {
+    message: {
+      findMany: jest.fn(),
+      count: jest.fn()
+    },
+    messageSyncStatus: {
       findMany: jest.fn(),
       updateMany: jest.fn(),
       count: jest.fn(),
-      groupBy: jest.fn()
-    },
-    message: {
-      findMany: jest.fn()
+      groupBy: jest.fn(),
+      upsert: jest.fn()
     },
     $transaction: jest.fn(async (callback: any) => callback({
-      syncStatus: {
+      messageSyncStatus: {
+        upsert: jest.fn(),
         updateMany: jest.fn()
       }
     }))
@@ -31,6 +34,7 @@ describe('PushService', () => {
   let pushService: PushService;
   let mockPrisma: any;
   let mockAxiosInstance: any;
+  let mockUserService: any;
 
   const mockConfig: PushConfig = {
     apiToken: 'test-token',
@@ -42,10 +46,19 @@ describe('PushService', () => {
   beforeEach(() => {
     mockPrisma = new PrismaClient();
     mockAxiosInstance = {
-      post: jest.fn()
+      post: jest.fn(),
+      defaults: { baseURL: 'http://test.com' }
     };
     (axios.create as jest.MockedFunction<typeof axios.create>).mockReturnValue(mockAxiosInstance as any);
-    pushService = new PushService(mockPrisma, mockConfig);
+    
+    // Create mock UserService
+    mockUserService = {
+      getAuthenticatedUserId: jest.fn().mockReturnValue('550e8400-e29b-41d4-a716-446655440000'), // Valid UUID
+      getUserId: jest.fn().mockReturnValue('anon-user-456'),
+      getApiToken: jest.fn().mockReturnValue('test-api-token')
+    };
+    
+    pushService = new PushService(mockPrisma, mockConfig, mockUserService);
   });
 
   afterEach(() => {
@@ -54,32 +67,38 @@ describe('PushService', () => {
 
   describe('selectUnpushedBatch', () => {
     it('should select unpushed messages with retry limit', async () => {
-      const mockRecords = [
-        { recordId: 'msg1' },
-        { recordId: 'msg2' },
-        { recordId: 'msg3' }
+      const mockMessages = [
+        { messageId: 'msg1' },
+        { messageId: 'msg2' },
+        { messageId: 'msg3' }
       ];
 
-      mockPrisma.syncStatus.findMany.mockResolvedValue(mockRecords);
+      mockPrisma.message.findMany.mockResolvedValue(mockMessages);
 
       const result = await pushService.selectUnpushedBatch(100);
 
-      expect(mockPrisma.syncStatus.findMany).toHaveBeenCalledWith({
+      expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
         where: {
-          tableName: 'messages',
-          syncedAt: null,
-          retryCount: { lt: mockConfig.maxRetries }
+          OR: [
+            { syncStatus: null },
+            {
+              syncStatus: {
+                syncedAt: null,
+                retryCount: { lt: mockConfig.maxRetries }
+              }
+            }
+          ]
         },
-        orderBy: { localTimestamp: 'asc' },
+        orderBy: { timestamp: 'asc' },
         take: 100,
-        select: { recordId: true }
+        select: { messageId: true }
       });
 
       expect(result).toEqual(['msg1', 'msg2', 'msg3']);
     });
 
     it('should return empty array when no unpushed messages', async () => {
-      mockPrisma.syncStatus.findMany.mockResolvedValue([]);
+      mockPrisma.message.findMany.mockResolvedValue([]);
 
       const result = await pushService.selectUnpushedBatch(100);
 
@@ -91,7 +110,7 @@ describe('PushService', () => {
     it('should load messages with all related entities', async () => {
       const mockMessages = [
         {
-          uuid: 'msg1',
+          id: 'msg1',
           messageId: 'id1',
           userId: 'user1',
           clientMachineId: 'machine1',
@@ -112,7 +131,7 @@ describe('PushService', () => {
       const result = await pushService.loadMessagesWithEntities(['msg1']);
 
       expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
-        where: { uuid: { in: ['msg1'] } },
+        where: { messageId: { in: ['msg1'] } },
         include: {
           session: {
             include: {
@@ -135,7 +154,7 @@ describe('PushService', () => {
     it('should build request with deduplicated entities', () => {
       const messages = [
         {
-          uuid: 'msg1',
+          id: 'msg1',
           messageId: 'id1',
           userId: 'user1',
           clientMachineId: 'machine1',
@@ -158,7 +177,7 @@ describe('PushService', () => {
           }
         },
         {
-          uuid: 'msg2',
+          id: 'msg2',
           messageId: 'id2',
           userId: 'user1', // Same user
           clientMachineId: 'machine1', // Same machine
@@ -189,9 +208,9 @@ describe('PushService', () => {
       expect(request.messages).toHaveLength(2);
       expect(request.metadata).toBeDefined();
       
-      // Check first message
-      expect(request.messages[0].messageId).toBe('id1');
-      expect(request.messages[0].uuid).toBe('msg1');
+      // Check first message - IDs should be transformed
+      expect(request.messages[0].id).toBeDefined();
+      expect(request.messages[0].originalMessageId).toBe('id1');
       expect(request.messages[0].model).toBe('claude-3');
       expect(request.messages[0].inputTokens).toBe(100);
       expect(request.messages[0].outputTokens).toBe(200);
@@ -202,17 +221,17 @@ describe('PushService', () => {
       expect(request.metadata.batch_info.message_counts.by_role['user']).toBe(1);
       expect(request.metadata.batch_info.message_counts.by_role['assistant']).toBe(1);
       
-      // Check entities
-      expect(Object.keys(request.metadata.entities.users)).toEqual(['user1']);
-      expect(Object.keys(request.metadata.entities.machines)).toEqual(['machine1']);
-      expect(Object.keys(request.metadata.entities.projects)).toEqual(['project1']);
-      expect(Object.keys(request.metadata.entities.sessions)).toEqual(['session1']);
+      // Check entities - should have transformed IDs
+      expect(Object.keys(request.metadata.entities.users)).toHaveLength(1);
+      expect(Object.keys(request.metadata.entities.machines)).toHaveLength(1);
+      expect(Object.keys(request.metadata.entities.projects)).toHaveLength(1);
+      expect(Object.keys(request.metadata.entities.sessions)).toHaveLength(1);
     });
 
     it('should handle missing optional fields', () => {
       const messages = [
         {
-          uuid: 'msg1',
+          id: 'msg1',
           messageId: 'id1',
           userId: 'user1',
           clientMachineId: 'machine1',
@@ -328,8 +347,8 @@ describe('PushService', () => {
       const messageIds = ['msg1', 'msg2', 'msg3', 'msg4'];
 
       const mockTx = {
-        syncStatus: {
-          updateMany: jest.fn()
+        messageSyncStatus: {
+          upsert: jest.fn()
         }
       };
 
@@ -340,38 +359,55 @@ describe('PushService', () => {
       await pushService.processPushResponse(mockResponse, messageIds);
 
       // Check first 3 messages marked as synced
-      expect(mockTx.syncStatus.updateMany).toHaveBeenCalledWith({
-        where: { tableName: 'messages', recordId: 'msg1' },
-        data: expect.objectContaining({
+      expect(mockTx.messageSyncStatus.upsert).toHaveBeenCalledWith({
+        where: { messageId: 'msg1' },
+        update: {
           syncedAt: expect.any(Date),
-          syncBatchId: 'upload_123',
           syncResponse: 'persisted'
-        })
+        },
+        create: {
+          messageId: 'msg1',
+          syncedAt: expect.any(Date),
+          syncResponse: 'persisted'
+        }
       });
 
-      expect(mockTx.syncStatus.updateMany).toHaveBeenCalledWith({
-        where: { tableName: 'messages', recordId: 'msg2' },
-        data: expect.objectContaining({
+      expect(mockTx.messageSyncStatus.upsert).toHaveBeenCalledWith({
+        where: { messageId: 'msg2' },
+        update: {
           syncedAt: expect.any(Date),
-          syncBatchId: 'upload_123',
           syncResponse: 'persisted'
-        })
+        },
+        create: {
+          messageId: 'msg2',
+          syncedAt: expect.any(Date),
+          syncResponse: 'persisted'
+        }
       });
 
-      expect(mockTx.syncStatus.updateMany).toHaveBeenCalledWith({
-        where: { tableName: 'messages', recordId: 'msg3' },
-        data: expect.objectContaining({
+      expect(mockTx.messageSyncStatus.upsert).toHaveBeenCalledWith({
+        where: { messageId: 'msg3' },
+        update: {
           syncedAt: expect.any(Date),
-          syncBatchId: 'upload_123',
           syncResponse: 'persisted'
-        })
+        },
+        create: {
+          messageId: 'msg3',
+          syncedAt: expect.any(Date),
+          syncResponse: 'persisted'
+        }
       });
 
       // Check last message marked as failed
-      expect(mockTx.syncStatus.updateMany).toHaveBeenCalledWith({
-        where: { tableName: 'messages', recordId: 'msg4' },
-        data: {
+      expect(mockTx.messageSyncStatus.upsert).toHaveBeenCalledWith({
+        where: { messageId: 'msg4' },
+        update: {
           retryCount: { increment: 1 },
+          syncResponse: 'failed'
+        },
+        create: {
+          messageId: 'msg4',
+          retryCount: 1,
           syncResponse: 'failed'
         }
       });
@@ -380,12 +416,12 @@ describe('PushService', () => {
 
   describe('resetRetryCount', () => {
     it('should reset retry count for all messages', async () => {
-      mockPrisma.syncStatus.updateMany.mockResolvedValue({ count: 5 });
+      mockPrisma.messageSyncStatus.updateMany.mockResolvedValue({ count: 5 });
 
       const result = await pushService.resetRetryCount();
 
-      expect(mockPrisma.syncStatus.updateMany).toHaveBeenCalledWith({
-        where: { tableName: 'messages', syncedAt: null },
+      expect(mockPrisma.messageSyncStatus.updateMany).toHaveBeenCalledWith({
+        where: { syncedAt: null },
         data: { retryCount: 0, syncResponse: null }
       });
 
@@ -393,15 +429,14 @@ describe('PushService', () => {
     });
 
     it('should reset retry count for specific messages', async () => {
-      mockPrisma.syncStatus.updateMany.mockResolvedValue({ count: 2 });
+      mockPrisma.messageSyncStatus.updateMany.mockResolvedValue({ count: 2 });
 
       const result = await pushService.resetRetryCount(['msg1', 'msg2']);
 
-      expect(mockPrisma.syncStatus.updateMany).toHaveBeenCalledWith({
+      expect(mockPrisma.messageSyncStatus.updateMany).toHaveBeenCalledWith({
         where: { 
-          tableName: 'messages',
           syncedAt: null,
-          recordId: { in: ['msg1', 'msg2'] }
+          messageId: { in: ['msg1', 'msg2'] }
         },
         data: { retryCount: 0, syncResponse: null }
       });
@@ -412,12 +447,11 @@ describe('PushService', () => {
 
   describe('getPushStatistics', () => {
     it('should return comprehensive statistics', async () => {
-      mockPrisma.syncStatus.count
-        .mockResolvedValueOnce(1000) // total
-        .mockResolvedValueOnce(800)  // synced
-        .mockResolvedValueOnce(200); // unsynced
+      mockPrisma.message.count.mockResolvedValueOnce(1000); // total
+      mockPrisma.messageSyncStatus.count.mockResolvedValueOnce(800);  // synced
+      mockPrisma.message.count.mockResolvedValueOnce(200); // unsynced
 
-      mockPrisma.syncStatus.groupBy.mockResolvedValue([
+      mockPrisma.messageSyncStatus.groupBy.mockResolvedValue([
         { retryCount: 0, _count: 150 },
         { retryCount: 1, _count: 30 },
         { retryCount: 2, _count: 15 },

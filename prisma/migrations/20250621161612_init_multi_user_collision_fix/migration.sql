@@ -74,7 +74,7 @@ CREATE TABLE "sessions" (
 
 -- CreateTable
 CREATE TABLE "messages" (
-    "uuid" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "message_id" TEXT NOT NULL,
     "request_id" TEXT,
     "session_id" TEXT NOT NULL,
@@ -116,20 +116,22 @@ CREATE TABLE "file_status" (
 );
 
 -- CreateTable
-CREATE TABLE "sync_status" (
+CREATE TABLE "message_sync_status" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "table_name" TEXT NOT NULL,
-    "record_id" TEXT NOT NULL,
-    "operation" TEXT NOT NULL,
-    "local_timestamp" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "message_id" TEXT NOT NULL,
     "synced_at" DATETIME,
-    "sync_batch_id" TEXT,
     "sync_response" TEXT,
-    "retry_count" INTEGER NOT NULL DEFAULT 0
+    "retry_count" INTEGER NOT NULL DEFAULT 0,
+    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" DATETIME NOT NULL,
+    CONSTRAINT "message_sync_status_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "messages" ("message_id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateIndex
 CREATE UNIQUE INDEX "projects_project_name_client_machine_id_key" ON "projects"("project_name", "client_machine_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "messages_message_id_key" ON "messages"("message_id");
 
 -- CreateIndex
 CREATE INDEX "messages_session_id_idx" ON "messages"("session_id");
@@ -150,10 +152,7 @@ CREATE INDEX "messages_timestamp_idx" ON "messages"("timestamp");
 CREATE INDEX "messages_request_id_idx" ON "messages"("request_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "messages_session_id_message_id_uuid_key" ON "messages"("session_id", "message_id", "uuid");
+CREATE UNIQUE INDEX "message_sync_status_message_id_key" ON "message_sync_status"("message_id");
 
 -- CreateIndex
-CREATE INDEX "sync_status_synced_at_idx" ON "sync_status"("synced_at");
-
--- CreateIndex
-CREATE UNIQUE INDEX "sync_status_table_name_record_id_key" ON "sync_status"("table_name", "record_id");
+CREATE INDEX "message_sync_status_synced_at_idx" ON "message_sync_status"("synced_at");

@@ -41,7 +41,7 @@ class Database {
     }
     async clearAllData() {
         // Delete in reverse order of dependencies
-        await this.prisma.syncStatus.deleteMany();
+        await this.prisma.messageSyncStatus.deleteMany();
         await this.prisma.fileStatus.deleteMany();
         await this.prisma.message.deleteMany();
         await this.prisma.session.deleteMany();

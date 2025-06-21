@@ -74,7 +74,7 @@ export async function resetTestDatabase() {
   
   try {
     // Delete all data in reverse order of dependencies
-    await prisma.syncStatus.deleteMany();
+    await prisma.messageSyncStatus.deleteMany();
     await prisma.message.deleteMany();
     await prisma.session.deleteMany();
     await prisma.project.deleteMany();
