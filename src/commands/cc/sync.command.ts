@@ -27,18 +27,8 @@ export const syncCommand = new Command('sync')
       spinner.text = 'Loading pricing data...';
       await pricingService.loadPricingData();
 
-      // Load user info
-      spinner.text = 'Loading user information...';
+      // Load user info silently
       await userService.loadUserInfo();
-      const userInfo = userService.getUserInfo();
-      
-      if (userService.isAuthenticated()) {
-        const email = userService.getAuthenticatedEmail();
-        const realUserId = userService.getAuthenticatedUserId();
-        spinner.succeed(`Logged in as: ${email} (User ID: ${realUserId})`);
-      } else {
-        spinner.succeed(`Running in anonymous mode (Machine: ${userInfo.clientMachineId})`);
-      }
 
       // Handle force flag
       if (options.force) {
@@ -57,6 +47,16 @@ export const syncCommand = new Command('sync')
       
       // Get data path
       const dataPath = options.path || configManager.getClaudeCodeConfig().rawDataPath;
+      
+      // Inform user about sync speed
+      if (needsFullRecalc) {
+        if (options.force) {
+          console.log(chalk.blue('ℹ️  Force sync requested. This will take longer as all data will be reprocessed.'));
+        } else {
+          console.log(chalk.blue('ℹ️  First time sync detected. This initial sync will take longer, but future syncs will be blazingly fast!'));
+        }
+        console.log(chalk.gray('   Only new or modified files will be processed in subsequent syncs.\n'));
+      }
       
       // Start processing
       spinner.start('Processing Claude Code data...');
@@ -236,7 +236,7 @@ export const syncCommand = new Command('sync')
   });
 
 async function getUserAggregatedStats(userService: UserService) {
-  const userId = userService.getUserId();
+  const userId = userService.getAnonymousId();
   
   const user = await prisma.user.findUnique({
     where: { id: userId }
@@ -246,7 +246,7 @@ async function getUserAggregatedStats(userService: UserService) {
 }
 
 async function getUserStatsByModel(userService: UserService) {
-  const userId = userService.getUserId();
+  const userId = userService.getAnonymousId();
   
   // Get aggregated stats by model from messages
   const modelStats = await prisma.message.groupBy({

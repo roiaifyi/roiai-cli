@@ -70,3 +70,5 @@ There is no linting or formatting configuration at the project level. When makin
 17. **Improved Sync Display**: Filter out models with zero usage from token usage display
 18. **UserInfo Interface Refactoring**: Redesigned to separate anonymous and authenticated states with anonymousId for anonymous tracking and optional auth property for authenticated users
 19. **Legacy Code Removal**: Removed all backward compatibility code for legacy user formats since we're in development mode
+20. **Anonymous-First Sync**: Sync operations always use anonymous user ID for local storage, while push operations map to authenticated users
+21. **First-Time Sync UX**: Added informative messages about sync performance for first-time and force sync operations

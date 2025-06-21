@@ -107,6 +107,11 @@ class UserService {
         // Return real user ID if authenticated, otherwise anonymous ID
         return userInfo.auth?.userId || userInfo.anonymousId;
     }
+    getAnonymousId() {
+        const userInfo = this.getUserInfo();
+        // Always return anonymous ID regardless of authentication status
+        return userInfo.anonymousId;
+    }
     getClientMachineId() {
         return this.getUserInfo().clientMachineId;
     }

@@ -29,18 +29,8 @@ exports.syncCommand = new commander_1.Command('sync')
         // Load pricing data
         spinner.text = 'Loading pricing data...';
         await pricingService.loadPricingData();
-        // Load user info
-        spinner.text = 'Loading user information...';
+        // Load user info silently
         await userService.loadUserInfo();
-        const userInfo = userService.getUserInfo();
-        if (userService.isAuthenticated()) {
-            const email = userService.getAuthenticatedEmail();
-            const realUserId = userService.getAuthenticatedUserId();
-            spinner.succeed(`Logged in as: ${email} (User ID: ${realUserId})`);
-        }
-        else {
-            spinner.succeed(`Running in anonymous mode (Machine: ${userInfo.clientMachineId})`);
-        }
         // Handle force flag
         if (options.force) {
             spinner.start('Clearing existing data...');
@@ -55,6 +45,16 @@ exports.syncCommand = new commander_1.Command('sync')
         jsonlService.setUseIncrementalAggregation(!needsFullRecalc);
         // Get data path
         const dataPath = options.path || config_1.configManager.getClaudeCodeConfig().rawDataPath;
+        // Inform user about sync speed
+        if (needsFullRecalc) {
+            if (options.force) {
+                console.log(chalk_1.default.blue('ℹ️  Force sync requested. This will take longer as all data will be reprocessed.'));
+            }
+            else {
+                console.log(chalk_1.default.blue('ℹ️  First time sync detected. This initial sync will take longer, but future syncs will be blazingly fast!'));
+            }
+            console.log(chalk_1.default.gray('   Only new or modified files will be processed in subsequent syncs.\n'));
+        }
         // Start processing
         spinner.start('Processing Claude Code data...');
         const startTime = Date.now();
@@ -208,14 +208,14 @@ exports.syncCommand = new commander_1.Command('sync')
     }
 });
 async function getUserAggregatedStats(userService) {
-    const userId = userService.getUserId();
+    const userId = userService.getAnonymousId();
     const user = await database_1.prisma.user.findUnique({
         where: { id: userId }
     });
     return user;
 }
 async function getUserStatsByModel(userService) {
-    const userId = userService.getUserId();
+    const userId = userService.getAnonymousId();
     // Get aggregated stats by model from messages
     const modelStats = await database_1.prisma.message.groupBy({
         by: ['model'],

@@ -47,7 +47,7 @@ class JSONLService {
             newProjects: [],
             newSessions: [],
             newMessages: 0,
-            totalCostAdded: 0
+            totalCostAdded: 0,
         };
         // Global message tracking across all sessions
         this.globalMessageIds = new Set();
@@ -62,7 +62,7 @@ class JSONLService {
                 throw new Error(`Projects path is not a directory: ${projectsPath}`);
             }
             const projectDirs = await fs_1.default.promises.readdir(projectsPath);
-            const validProjects = projectDirs.filter(dir => !dir.startsWith("."));
+            const validProjects = projectDirs.filter((dir) => !dir.startsWith("."));
             // Count total files first for progress tracking
             let totalFiles = 0;
             for (const projectDir of validProjects) {
@@ -70,7 +70,7 @@ class JSONLService {
                 const stats = await fs_1.default.promises.stat(projectPath);
                 if (stats.isDirectory()) {
                     const files = await fs_1.default.promises.readdir(projectPath);
-                    totalFiles += files.filter(f => f.endsWith(".jsonl")).length;
+                    totalFiles += files.filter((f) => f.endsWith(".jsonl")).length;
                 }
             }
             let processedProjects = 0;
@@ -88,21 +88,22 @@ class JSONLService {
                             processedFiles,
                             currentFile: "",
                             messagesInCurrentFile: 0,
-                            processedMessagesInCurrentFile: 0
+                            processedMessagesInCurrentFile: 0,
                         });
                     }
                     const projectResult = await this.processProjectDirectory(projectPath, totalFiles, processedFiles, validProjects.length, processedProjects);
                     result.sessionsProcessed += projectResult.sessionsProcessed;
                     result.messagesProcessed += projectResult.messagesProcessed;
                     result.errors.push(...projectResult.errors);
-                    if (projectResult.messagesProcessed > 0 || projectResult.sessionsProcessed > 0) {
+                    if (projectResult.messagesProcessed > 0 ||
+                        projectResult.sessionsProcessed > 0) {
                         result.projectsProcessed++;
                     }
                     // Merge token usage by model
                     this.mergeTokenUsage(result.tokenUsageByModel, projectResult.tokenUsageByModel);
                     // Update processed files count
                     const files = await fs_1.default.promises.readdir(projectPath);
-                    processedFiles += files.filter(f => f.endsWith(".jsonl")).length;
+                    processedFiles += files.filter((f) => f.endsWith(".jsonl")).length;
                     processedProjects++;
                 }
             }
@@ -113,9 +114,9 @@ class JSONLService {
         return result;
     }
     async ensureUserAndMachine() {
-        const userId = this.userService.getUserId();
+        const userId = this.userService.getAnonymousId();
         const machineId = this.userService.getClientMachineId();
-        const userEmail = this.userService.getAuthenticatedEmail();
+        const userEmail = null; // Anonymous users don't have email
         // Ensure user exists
         await database_1.prisma.user.upsert({
             where: { id: userId },
@@ -156,7 +157,9 @@ class JSONLService {
         let fileIndex = 0;
         for (const file of jsonlFiles) {
             const filePath = path_1.default.join(projectPath, file);
-            if (this.progressCallback && totalFiles !== undefined && currentFileOffset !== undefined) {
+            if (this.progressCallback &&
+                totalFiles !== undefined &&
+                currentFileOffset !== undefined) {
                 this.progressCallback({
                     totalProjects: totalProjects || 1,
                     processedProjects: currentProjectIndex || 0,
@@ -165,7 +168,7 @@ class JSONLService {
                     processedFiles: currentFileOffset + fileIndex,
                     currentFile: file,
                     messagesInCurrentFile: 0,
-                    processedMessagesInCurrentFile: 0
+                    processedMessagesInCurrentFile: 0,
                 });
             }
             const fileResult = await this.processJSONLFile(filePath, project.id, projectName);
@@ -179,7 +182,7 @@ class JSONLService {
         return result;
     }
     async ensureProject(projectName) {
-        const userId = this.userService.getUserId();
+        const userId = this.userService.getAnonymousId();
         const machineId = this.userService.getClientMachineId();
         const projectId = crypto_1.default
             .createHash("sha256")
@@ -207,7 +210,10 @@ class JSONLService {
             });
             // Update user's project count (only if using incremental aggregation)
             if (this.useIncrementalAggregation) {
-                await this.incrementalAggregation.onProjectCreated({ userId, clientMachineId: machineId });
+                await this.incrementalAggregation.onProjectCreated({
+                    userId,
+                    clientMachineId: machineId,
+                });
                 this.incrementalChanges.newProjects.push(projectName);
             }
             return project;
@@ -334,7 +340,7 @@ class JSONLService {
                 create: {
                     filePath,
                     projectId,
-                    userId: this.userService.getUserId(),
+                    userId: this.userService.getAnonymousId(),
                     fileSize: stats.size,
                     lastModified: stats.mtime,
                     lastProcessedLine: lineNumber,
@@ -374,7 +380,7 @@ class JSONLService {
     async processMessage(entry, projectId, clientMachineId, tokenUsageByModel) {
         if (!entry.message || !entry.sessionId || !entry.uuid)
             return;
-        const userId = this.userService.getUserId();
+        const userId = this.userService.getAnonymousId();
         const messageId = entry.message.id || entry.uuid;
         // Skip if message already exists by uuid
         const existingMessage = await database_1.prisma.message.findUnique({

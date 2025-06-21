@@ -34,7 +34,10 @@ describe('Sync Command BDD Tests', () => {
   beforeEach(async () => {
     await resetTestDatabase();
     createTestConfig();
-    createTestUserInfo();
+    // Create anonymous user info for sync tests
+    createTestUserInfo({
+      auth: undefined  // No auth for sync tests
+    });
     
     // Set up environment
     process.env.NODE_ENV = 'test';

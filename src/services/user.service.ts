@@ -117,6 +117,12 @@ export class UserService {
     return userInfo.auth?.userId || userInfo.anonymousId;
   }
 
+  getAnonymousId(): string {
+    const userInfo = this.getUserInfo();
+    // Always return anonymous ID regardless of authentication status
+    return userInfo.anonymousId;
+  }
+
   getClientMachineId(): string {
     return this.getUserInfo().clientMachineId;
   }

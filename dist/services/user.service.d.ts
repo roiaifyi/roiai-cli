@@ -8,6 +8,7 @@ export declare class UserService {
     private ensureUserExists;
     getUserInfo(): UserInfo;
     getUserId(): string;
+    getAnonymousId(): string;
     getClientMachineId(): string;
     isAuthenticated(): boolean;
     getAuthenticatedUserId(): string | null;
