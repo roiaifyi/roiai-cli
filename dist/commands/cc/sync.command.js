@@ -159,7 +159,16 @@ exports.syncCommand = new commander_1.Command('sync')
             console.log(`   📁 Projects: ${chalk_1.default.cyan(userStats.totalProjects)}`);
             console.log(`   💬 Sessions: ${chalk_1.default.cyan(userStats.totalSessions)}`);
             console.log(`   📝 Messages: ${chalk_1.default.cyan(userStats.totalMessages)}`);
-            console.log(`   🔤 Input tokens: ${chalk_1.default.cyan(userStats.totalInputTokens.toLocaleString())}`);
+            // Show human vs agentic breakdown
+            const messageBreakdown = await getMessageBreakdown(userService);
+            if (messageBreakdown) {
+                console.log(`\n   ${chalk_1.default.bold('💬 Message Breakdown:')}`);
+                console.log(`     👤 Human input: ${chalk_1.default.green(messageBreakdown.humanInput)} (${messageBreakdown.humanPercentage}%)`);
+                console.log(`     🤖 Assistant responses: ${chalk_1.default.blue(messageBreakdown.assistant)}`);
+                console.log(`     ⚙️  Agentic operations: ${chalk_1.default.yellow(messageBreakdown.agentic)} (tool calls, system messages)`);
+                console.log(`     📊 Total: ${chalk_1.default.cyan(messageBreakdown.total)} messages`);
+            }
+            console.log(`\n   🔤 Input tokens: ${chalk_1.default.cyan(userStats.totalInputTokens.toLocaleString())}`);
             console.log(`   💭 Output tokens: ${chalk_1.default.cyan(userStats.totalOutputTokens.toLocaleString())}`);
             console.log(`   💾 Cache creation tokens: ${chalk_1.default.cyan(userStats.totalCacheCreationTokens.toLocaleString())}`);
             console.log(`   ⚡ Cache read tokens: ${chalk_1.default.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
@@ -252,5 +261,42 @@ async function getUserStatsByModel(userService) {
     }))
         .sort((a, b) => b.cost - a.cost); // Sort by cost descending
     return result;
+}
+async function getMessageBreakdown(userService) {
+    const userId = userService.getAnonymousId();
+    // Get message breakdown by role and human input classification
+    const breakdown = await database_1.prisma.message.groupBy({
+        by: ['role', 'isHumanInput'],
+        where: {
+            userId: userId
+        },
+        _count: {
+            id: true
+        }
+    });
+    let humanInput = 0;
+    let assistant = 0;
+    let agentic = 0;
+    breakdown.forEach(item => {
+        const count = item._count.id;
+        if (item.role === 'user' && item.isHumanInput) {
+            humanInput += count;
+        }
+        else if (item.role === 'assistant') {
+            assistant += count;
+        }
+        else if (item.role === 'user' && !item.isHumanInput) {
+            agentic += count;
+        }
+    });
+    const total = humanInput + assistant + agentic;
+    const humanPercentage = total > 0 ? ((humanInput / total) * 100).toFixed(1) : '0';
+    return {
+        humanInput,
+        assistant,
+        agentic,
+        total,
+        humanPercentage
+    };
 }
 //# sourceMappingURL=sync.command.js.map

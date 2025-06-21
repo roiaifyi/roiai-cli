@@ -261,7 +261,9 @@ export class JSONLService {
         if (line.trim()) {
           try {
             const entry: JSONLEntry = JSON.parse(line);
-            if (entry.uuid && entry.sessionId) {
+            
+            // Only process entries that are actual messages, not summaries or other metadata
+            if (entry.uuid && entry.sessionId && entry.message && entry.message.role) {
               messages.push(entry);
               uniqueSessions.add(entry.sessionId);
             }
@@ -283,7 +285,7 @@ export class JSONLService {
 
       // Process messages in batch
       for (const entry of messages) {
-        if (!entry.message || !entry.uuid) continue;
+        if (!entry.message || !entry.uuid || !entry.message.role) continue;
 
         const messageId = entry.message.id || entry.uuid;
         
@@ -323,6 +325,9 @@ export class JSONLService {
         const cacheCreationTokens = entry.message.usage?.cache_creation_input_tokens || 0;
         const cacheReadTokens = entry.message.usage?.cache_read_input_tokens || 0;
 
+        // Determine if this is real human input or agentic system message
+        const isHumanInput = this.isHumanInput(entry);
+
         // Add to batch
         const batchMessage: BatchMessage = {
           id: entry.uuid,
@@ -333,7 +338,7 @@ export class JSONLService {
           userId,
           clientMachineId: machineId,
           timestamp: entry.timestamp ? new Date(entry.timestamp) : null,
-          role: entry.message.role || entry.type || "unknown",
+          role: entry.message.role,
           model: entry.message.model || null,
           type: entry.message.type || null,
           inputTokens: BigInt(inputTokens),
@@ -346,6 +351,7 @@ export class JSONLService {
           pricePerCacheReadToken,
           cacheDurationMinutes: 5,
           messageCost,
+          isHumanInput,
         };
 
         this.batchProcessor.addMessage(batchMessage);
@@ -460,5 +466,65 @@ export class JSONLService {
         target.set(model, { ...usage });
       }
     });
+  }
+
+  /**
+   * Determine if a message entry represents actual human input vs agentic system messages
+   */
+  private isHumanInput(entry: JSONLEntry): boolean {
+    if (!entry.message || entry.message.role !== "user") {
+      return false; // Only user messages can be human input
+    }
+
+    // Check for tool result content
+    if (entry.message.content && Array.isArray(entry.message.content)) {
+      const hasToolResults = entry.message.content.some((content: any) => 
+        content.type === "tool_result" || content.tool_use_id
+      );
+      if (hasToolResults) {
+        return false; // Tool results are agentic
+      }
+    }
+
+    // Check for system continuation messages (very long messages starting with specific patterns)
+    const textContent = this.extractTextContent(entry);
+    if (textContent) {
+      // System continuation messages are typically very long and start with specific patterns
+      if (textContent.length > 1000 && 
+          (textContent.startsWith("This session is being continued") ||
+           textContent.startsWith("Analysis:") ||
+           textContent.includes("Recent commits:") ||
+           textContent.includes("Summary:"))) {
+        return false; // System continuation messages are agentic
+      }
+
+      // Tool operation messages typically start with action descriptions
+      if (textContent.startsWith("I see the issue") ||
+          textContent.startsWith("Now let me") ||
+          textContent.startsWith("Let me") ||
+          textContent.startsWith("Great!") ||
+          textContent.startsWith("Perfect!") ||
+          textContent.startsWith("Excellent!")) {
+        return false; // These are Claude's internal reasoning
+      }
+    }
+
+    // Everything else is likely human input
+    return true;
+  }
+
+  /**
+   * Extract text content from message content array
+   */
+  private extractTextContent(entry: JSONLEntry): string | null {
+    if (!entry.message || !entry.message.content || !Array.isArray(entry.message.content)) {
+      return null;
+    }
+
+    const textContent = entry.message.content.find((content: any) => 
+      content.type === "text"
+    );
+
+    return textContent?.text || null;
   }
 }

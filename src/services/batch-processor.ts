@@ -24,6 +24,7 @@ export interface BatchMessage {
   pricePerCacheReadToken: Prisma.Decimal | null;
   cacheDurationMinutes: number;
   messageCost: Prisma.Decimal;
+  isHumanInput: boolean;
 }
 
 export class BatchProcessor {

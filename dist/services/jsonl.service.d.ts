@@ -39,5 +39,13 @@ export declare class JSONLService {
     private calculateFileChecksum;
     private updateTokenUsage;
     private mergeTokenUsage;
+    /**
+     * Determine if a message entry represents actual human input vs agentic system messages
+     */
+    private isHumanInput;
+    /**
+     * Extract text content from message content array
+     */
+    private extractTextContent;
 }
 //# sourceMappingURL=jsonl.service.d.ts.map
