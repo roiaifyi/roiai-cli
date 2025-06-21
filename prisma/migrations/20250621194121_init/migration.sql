@@ -95,6 +95,7 @@ CREATE TABLE "messages" (
     "price_per_cache_read_token" DECIMAL,
     "cache_duration_minutes" INTEGER,
     "message_cost" DECIMAL NOT NULL DEFAULT 0,
+    "writer" TEXT NOT NULL DEFAULT 'agent',
     CONSTRAINT "messages_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "sessions" ("session_id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "messages_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects" ("project_id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE RESTRICT ON UPDATE CASCADE,

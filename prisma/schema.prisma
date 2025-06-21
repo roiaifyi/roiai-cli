@@ -10,6 +10,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum MessageWriter {
+  human
+  agent  
+  assistant
+}
+
 model User {
   id                      String    @id @map("user_id")
   email                   String?
@@ -127,7 +133,7 @@ model Message {
   pricePerCacheReadToken  Decimal?  @map("price_per_cache_read_token")
   cacheDurationMinutes    Int?      @map("cache_duration_minutes")
   messageCost             Decimal   @default(0) @map("message_cost")
-  isHumanInput            Boolean   @default(false) @map("is_human_input")
+  writer                  MessageWriter @default(agent) @map("writer")
   
   session                 Session   @relation(fields: [sessionId], references: [id])
   project                 Project   @relation(fields: [projectId], references: [id])

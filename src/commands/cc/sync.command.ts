@@ -188,13 +188,13 @@ export const syncCommand = new Command('sync')
         console.log(`   💬 Sessions: ${chalk.cyan(userStats.totalSessions)}`);
         console.log(`   📝 Messages: ${chalk.cyan(userStats.totalMessages)}`);
         
-        // Show human vs agentic breakdown
+        // Show message breakdown by writer
         const messageBreakdown = await getMessageBreakdown(userService);
         if (messageBreakdown) {
           console.log(`\n   ${chalk.bold('💬 Message Breakdown:')}`);
-          console.log(`     👤 Human input: ${chalk.green(messageBreakdown.humanInput)} (${messageBreakdown.humanPercentage}%)`);
-          console.log(`     🤖 Assistant responses: ${chalk.blue(messageBreakdown.assistant)}`);
-          console.log(`     ⚙️  Agentic operations: ${chalk.yellow(messageBreakdown.agentic)} (tool calls, system messages)`);
+          console.log(`     👤 Human: ${chalk.green(messageBreakdown.human)} (${messageBreakdown.humanPercentage}%)`);
+          console.log(`     🤖 Assistant: ${chalk.blue(messageBreakdown.assistant)}`);
+          console.log(`     ⚙️  Agent: ${chalk.yellow(messageBreakdown.agent)} (tool calls, system messages)`);
           console.log(`     📊 Total: ${chalk.cyan(messageBreakdown.total)} messages`);
         }
         
@@ -309,9 +309,9 @@ async function getUserStatsByModel(userService: UserService) {
 async function getMessageBreakdown(userService: UserService) {
   const userId = userService.getAnonymousId();
   
-  // Get message breakdown by role and human input classification
+  // Get message breakdown by writer type
   const breakdown = await prisma.message.groupBy({
-    by: ['role', 'isHumanInput'],
+    by: ['writer'],
     where: {
       userId: userId
     },
@@ -320,28 +320,32 @@ async function getMessageBreakdown(userService: UserService) {
     }
   });
   
-  let humanInput = 0;
+  let human = 0;
+  let agent = 0;
   let assistant = 0;
-  let agentic = 0;
   
   breakdown.forEach(item => {
     const count = item._count.id;
-    if (item.role === 'user' && item.isHumanInput) {
-      humanInput += count;
-    } else if (item.role === 'assistant') {
-      assistant += count;
-    } else if (item.role === 'user' && !item.isHumanInput) {
-      agentic += count;
+    switch (item.writer) {
+      case 'human':
+        human += count;
+        break;
+      case 'agent':
+        agent += count;
+        break;
+      case 'assistant':
+        assistant += count;
+        break;
     }
   });
   
-  const total = humanInput + assistant + agentic;
-  const humanPercentage = total > 0 ? ((humanInput / total) * 100).toFixed(1) : '0';
+  const total = human + agent + assistant;
+  const humanPercentage = total > 0 ? ((human / total) * 100).toFixed(1) : '0';
   
   return {
-    humanInput,
+    human,
+    agent,
     assistant,
-    agentic,
     total,
     humanPercentage
   };

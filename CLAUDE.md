@@ -72,5 +72,5 @@ There is no linting or formatting configuration at the project level. When makin
 19. **Legacy Code Removal**: Removed all backward compatibility code for legacy user formats since we're in development mode
 20. **Anonymous-First Sync**: Sync operations always use anonymous user ID for local storage, while push operations map to authenticated users
 21. **First-Time Sync UX**: Added informative messages about sync performance for first-time and force sync operations
-22. **Human vs Agentic Message Classification**: Added `isHumanInput` field to distinguish real user input from Claude Code's internal operations (tool calls, system messages), with enhanced sync display showing breakdown percentages
+22. **Writer Enum Refactoring**: Replaced `isHumanInput` boolean with `writer` enum (human, agent, assistant) for better message classification, consolidated migrations, and improved sync display with clearer categorization
 23. **Incremental Sync Reliability**: Fixed file change detection using both modification time and file size, ensured aggregates recalculate in incremental mode, and improved project counting accuracy

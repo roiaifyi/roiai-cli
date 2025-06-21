@@ -40,9 +40,9 @@ export declare class JSONLService {
     private updateTokenUsage;
     private mergeTokenUsage;
     /**
-     * Determine if a message entry represents actual human input vs agentic system messages
+     * Determine the writer type based on message role and content
      */
-    private isHumanInput;
+    private determineWriter;
     /**
      * Extract text content from message content array
      */

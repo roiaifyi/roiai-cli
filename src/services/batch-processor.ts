@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, MessageWriter } from '@prisma/client';
 import { prisma } from '../database';
 import { logger } from '../utils/logger';
 
@@ -24,7 +24,7 @@ export interface BatchMessage {
   pricePerCacheReadToken: Prisma.Decimal | null;
   cacheDurationMinutes: number;
   messageCost: Prisma.Decimal;
-  isHumanInput: boolean;
+  writer: MessageWriter;
 }
 
 export class BatchProcessor {

@@ -1,6 +1,6 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { BatchProcessor, BatchMessage } from '../../src/services/batch-processor';
-import { Prisma } from '@prisma/client';
+import { Prisma, MessageWriter } from '@prisma/client';
 
 // Mock Prisma
 jest.mock('../../src/database', () => ({
@@ -94,7 +94,8 @@ describe('BatchProcessor', () => {
         pricePerCacheWriteToken: null,
         pricePerCacheReadToken: null,
         cacheDurationMinutes: 5,
-        messageCost: new Prisma.Decimal(0.5)
+        messageCost: new Prisma.Decimal(0.5),
+        writer: MessageWriter.human
       };
 
       const message2: BatchMessage = {
@@ -150,7 +151,8 @@ describe('BatchProcessor', () => {
         pricePerCacheWriteToken: null,
         pricePerCacheReadToken: null,
         cacheDurationMinutes: 5,
-        messageCost: new Prisma.Decimal(0)
+        messageCost: new Prisma.Decimal(0),
+        writer: MessageWriter.agent
       };
 
       batchProcessor.addMessage(existingMessage);

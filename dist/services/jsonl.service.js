@@ -11,6 +11,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("../database");
 const batch_processor_1 = require("./batch-processor");
 const library_1 = require("@prisma/client/runtime/library");
+const client_1 = require("@prisma/client");
 const logger_1 = require("../utils/logger");
 class JSONLService {
     pricingService;
@@ -271,8 +272,8 @@ class JSONLService {
                 const outputTokens = entry.message.usage?.output_tokens || 0;
                 const cacheCreationTokens = entry.message.usage?.cache_creation_input_tokens || 0;
                 const cacheReadTokens = entry.message.usage?.cache_read_input_tokens || 0;
-                // Determine if this is real human input or agentic system message
-                const isHumanInput = this.isHumanInput(entry);
+                // Determine the writer type based on message content and role
+                const writer = this.determineWriter(entry);
                 // Add to batch
                 const batchMessage = {
                     id: entry.uuid,
@@ -296,7 +297,7 @@ class JSONLService {
                     pricePerCacheReadToken,
                     cacheDurationMinutes: 5,
                     messageCost,
-                    isHumanInput,
+                    writer,
                 };
                 this.batchProcessor.addMessage(batchMessage);
                 result.messagesProcessed++;
@@ -387,42 +388,52 @@ class JSONLService {
         });
     }
     /**
-     * Determine if a message entry represents actual human input vs agentic system messages
+     * Determine the writer type based on message role and content
      */
-    isHumanInput(entry) {
-        if (!entry.message || entry.message.role !== "user") {
-            return false; // Only user messages can be human input
+    determineWriter(entry) {
+        if (!entry.message) {
+            return client_1.MessageWriter.agent;
         }
-        // Check for tool result content
-        if (entry.message.content && Array.isArray(entry.message.content)) {
-            const hasToolResults = entry.message.content.some((content) => content.type === "tool_result" || content.tool_use_id);
-            if (hasToolResults) {
-                return false; // Tool results are agentic
-            }
+        const role = entry.message.role;
+        // Assistant messages are always from the assistant
+        if (role === "assistant") {
+            return client_1.MessageWriter.assistant;
         }
-        // Check for system continuation messages (very long messages starting with specific patterns)
-        const textContent = this.extractTextContent(entry);
-        if (textContent) {
-            // System continuation messages are typically very long and start with specific patterns
-            if (textContent.length > 1000 &&
-                (textContent.startsWith("This session is being continued") ||
-                    textContent.startsWith("Analysis:") ||
-                    textContent.includes("Recent commits:") ||
-                    textContent.includes("Summary:"))) {
-                return false; // System continuation messages are agentic
+        // For user messages, determine if it's human or agent
+        if (role === "user") {
+            // Check for tool result content (agent)
+            if (entry.message.content && Array.isArray(entry.message.content)) {
+                const hasToolResults = entry.message.content.some((content) => content.type === "tool_result" || content.tool_use_id);
+                if (hasToolResults) {
+                    return client_1.MessageWriter.agent; // Tool results are agentic
+                }
             }
-            // Tool operation messages typically start with action descriptions
-            if (textContent.startsWith("I see the issue") ||
-                textContent.startsWith("Now let me") ||
-                textContent.startsWith("Let me") ||
-                textContent.startsWith("Great!") ||
-                textContent.startsWith("Perfect!") ||
-                textContent.startsWith("Excellent!")) {
-                return false; // These are Claude's internal reasoning
+            // Check for system continuation messages (agent)
+            const textContent = this.extractTextContent(entry);
+            if (textContent) {
+                // System continuation messages are typically very long and start with specific patterns
+                if (textContent.length > 1000 &&
+                    (textContent.startsWith("This session is being continued") ||
+                        textContent.startsWith("Analysis:") ||
+                        textContent.includes("Recent commits:") ||
+                        textContent.includes("Summary:"))) {
+                    return client_1.MessageWriter.agent; // System continuation messages are agentic
+                }
+                // Tool operation messages typically start with action descriptions
+                if (textContent.startsWith("I see the issue") ||
+                    textContent.startsWith("Now let me") ||
+                    textContent.startsWith("Let me") ||
+                    textContent.startsWith("Great!") ||
+                    textContent.startsWith("Perfect!") ||
+                    textContent.startsWith("Excellent!")) {
+                    return client_1.MessageWriter.agent; // These are Claude's internal reasoning
+                }
             }
+            // Everything else is likely human input
+            return client_1.MessageWriter.human;
         }
-        // Everything else is likely human input
-        return true;
+        // Default to agent for any other role
+        return client_1.MessageWriter.agent;
     }
     /**
      * Extract text content from message content array
