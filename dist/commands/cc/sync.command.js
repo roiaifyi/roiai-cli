@@ -77,6 +77,9 @@ exports.syncCommand = new commander_1.Command('sync')
         const result = await jsonlService.processDirectory(dataPath);
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         spinner.succeed(`Sync completed in ${duration}s`);
+        // Check if any new data was processed
+        const changes = jsonlService.getIncrementalChanges();
+        const hasNewData = changes.newMessages > 0 || changes.newProjects.length > 0 || changes.newSessions.length > 0;
         if (needsFullRecalc) {
             // Full recalculation needed for initial sync or force flag
             spinner.start('Recalculating aggregates...');
@@ -84,10 +87,13 @@ exports.syncCommand = new commander_1.Command('sync')
             await aggregationService.recalculateAllAggregates();
             spinner.succeed('Aggregates recalculated');
         }
-        else {
-            console.log(chalk_1.default.gray('  Using incremental aggregation (already initialized)'));
-            // Show incremental changes if any
-            const changes = jsonlService.getIncrementalChanges();
+        else if (hasNewData) {
+            // Recalculate aggregates for incremental changes
+            spinner.start('Updating aggregates...');
+            const aggregationService = new aggregation_service_1.AggregationService(database_1.prisma);
+            await aggregationService.recalculateAllAggregates();
+            spinner.succeed('Aggregates updated');
+            // Show incremental changes
             if (changes.newMessages > 0 || changes.newProjects.length > 0 || changes.newSessions.length > 0) {
                 console.log('\n' + chalk_1.default.bold('🔄 Incremental Changes:'));
                 if (changes.newProjects.length > 0) {
@@ -104,9 +110,10 @@ exports.syncCommand = new commander_1.Command('sync')
                     console.log(`   ${chalk_1.default.green('+')} Cost added: ${chalk_1.default.bold.green('$' + changes.totalCostAdded.toFixed(4))}`);
                 }
             }
-            else {
-                console.log(chalk_1.default.gray('  No new data found'));
-            }
+        }
+        else {
+            console.log(chalk_1.default.gray('  Using incremental aggregation (already initialized)'));
+            console.log(chalk_1.default.gray('  No new data found'));
         }
         // Show results
         console.log('\n' + chalk_1.default.bold('📊 Sync Results:'));

@@ -73,3 +73,4 @@ There is no linting or formatting configuration at the project level. When makin
 20. **Anonymous-First Sync**: Sync operations always use anonymous user ID for local storage, while push operations map to authenticated users
 21. **First-Time Sync UX**: Added informative messages about sync performance for first-time and force sync operations
 22. **Human vs Agentic Message Classification**: Added `isHumanInput` field to distinguish real user input from Claude Code's internal operations (tool calls, system messages), with enhanced sync display showing breakdown percentages
+23. **Incremental Sync Reliability**: Fixed file change detection using both modification time and file size, ensured aggregates recalculate in incremental mode, and improved project counting accuracy

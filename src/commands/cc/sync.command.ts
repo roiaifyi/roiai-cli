@@ -85,38 +85,46 @@ export const syncCommand = new Command('sync')
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       spinner.succeed(`Sync completed in ${duration}s`);
 
+      // Check if any new data was processed
+      const changes = jsonlService.getIncrementalChanges();
+      const hasNewData = changes.newMessages > 0 || changes.newProjects.length > 0 || changes.newSessions.length > 0;
+      
       if (needsFullRecalc) {
         // Full recalculation needed for initial sync or force flag
         spinner.start('Recalculating aggregates...');
         const aggregationService = new AggregationService(prisma);
         await aggregationService.recalculateAllAggregates();
         spinner.succeed('Aggregates recalculated');
+      } else if (hasNewData) {
+        // Recalculate aggregates for incremental changes
+        spinner.start('Updating aggregates...');
+        const aggregationService = new AggregationService(prisma);
+        await aggregationService.recalculateAllAggregates();
+        spinner.succeed('Aggregates updated');
+        
+        // Show incremental changes
+        if (changes.newMessages > 0 || changes.newProjects.length > 0 || changes.newSessions.length > 0) {
+        console.log('\n' + chalk.bold('🔄 Incremental Changes:'));
+        
+        if (changes.newProjects.length > 0) {
+          console.log(`   ${chalk.green('+')} New projects: ${chalk.cyan(changes.newProjects.join(', '))}`);
+        }
+        
+        if (changes.newSessions.length > 0) {
+          console.log(`   ${chalk.green('+')} New sessions: ${chalk.cyan(changes.newSessions.length)} session(s)`);
+          if (changes.newSessions.length <= 5) {
+            console.log(`     ${chalk.gray(changes.newSessions.map(s => s.substring(0, 8) + '...').join(', '))}`);
+          }
+        }
+        
+        if (changes.newMessages > 0) {
+          console.log(`   ${chalk.green('+')} New messages: ${chalk.cyan(changes.newMessages)}`);
+          console.log(`   ${chalk.green('+')} Cost added: ${chalk.bold.green('$' + changes.totalCostAdded.toFixed(4))}`);
+        }
+        }
       } else {
         console.log(chalk.gray('  Using incremental aggregation (already initialized)'));
-        
-        // Show incremental changes if any
-        const changes = jsonlService.getIncrementalChanges();
-        if (changes.newMessages > 0 || changes.newProjects.length > 0 || changes.newSessions.length > 0) {
-          console.log('\n' + chalk.bold('🔄 Incremental Changes:'));
-          
-          if (changes.newProjects.length > 0) {
-            console.log(`   ${chalk.green('+')} New projects: ${chalk.cyan(changes.newProjects.join(', '))}`);
-          }
-          
-          if (changes.newSessions.length > 0) {
-            console.log(`   ${chalk.green('+')} New sessions: ${chalk.cyan(changes.newSessions.length)} session(s)`);
-            if (changes.newSessions.length <= 5) {
-              console.log(`     ${chalk.gray(changes.newSessions.map(s => s.substring(0, 8) + '...').join(', '))}`);
-            }
-          }
-          
-          if (changes.newMessages > 0) {
-            console.log(`   ${chalk.green('+')} New messages: ${chalk.cyan(changes.newMessages)}`);
-            console.log(`   ${chalk.green('+')} Cost added: ${chalk.bold.green('$' + changes.totalCostAdded.toFixed(4))}`);
-          }
-        } else {
-          console.log(chalk.gray('  No new data found'));
-        }
+        console.log(chalk.gray('  No new data found'));
       }
 
       // Show results

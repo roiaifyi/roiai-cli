@@ -80,8 +80,10 @@ export class JSONLService {
           validProjects.length
         );
 
-        // Merge results
-        result.projectsProcessed++;
+        // Merge results - only count as processed if there was actual work done
+        if (projectResult.sessionsProcessed > 0 || projectResult.messagesProcessed > 0 || projectResult.errors.length > 0) {
+          result.projectsProcessed++;
+        }
         result.sessionsProcessed += projectResult.sessionsProcessed;
         result.messagesProcessed += projectResult.messagesProcessed;
         result.errors.push(...projectResult.errors);
@@ -193,6 +195,18 @@ export class JSONLService {
       .digest("hex")
       .substring(0, 16);
 
+    // Check if project already exists
+    const existingProject = await prisma.project.findUnique({
+      where: {
+        projectName_clientMachineId: {
+          projectName,
+          clientMachineId: machineId,
+        },
+      },
+    });
+
+    const isNewProject = !existingProject;
+
     const project = await prisma.project.upsert({
       where: {
         projectName_clientMachineId: {
@@ -209,7 +223,8 @@ export class JSONLService {
       update: {},
     });
 
-    if (!this.incrementalChanges.newProjects.includes(projectName)) {
+    // Only track as new if it was actually created
+    if (isNewProject && !this.incrementalChanges.newProjects.includes(projectName)) {
       this.incrementalChanges.newProjects.push(projectName);
     }
 
@@ -234,14 +249,28 @@ export class JSONLService {
       const fileStatus = await this.checkFileStatus(filePath);
       const stats = await fs.promises.stat(filePath);
 
-      // Skip if file hasn't changed
+      // Skip if file hasn't changed - check both modification time AND file size
+      const sizeChanged = fileStatus?.fileSize ? BigInt(stats.size) !== fileStatus.fileSize : true;
+      const timeChanged = fileStatus?.lastModified ? stats.mtime > fileStatus.lastModified : true;
+      
       if (
         fileStatus &&
         fileStatus.lastModified &&
-        stats.mtime <= fileStatus.lastModified &&
-        fileStatus.checksum
+        fileStatus.checksum &&
+        !timeChanged &&
+        !sizeChanged
       ) {
+        logger.debug(`Skipping ${path.basename(filePath)}: no changes detected`);
         return result;
+      }
+      
+      // Log why we're processing this file
+      if (fileStatus) {
+        if (sizeChanged) {
+          logger.debug(`Processing ${path.basename(filePath)}: file size changed from ${fileStatus.fileSize} to ${stats.size}`);
+        } else if (timeChanged) {
+          logger.debug(`Processing ${path.basename(filePath)}: file time changed`);
+        }
       }
 
       const userId = this.userService.getAnonymousId();
