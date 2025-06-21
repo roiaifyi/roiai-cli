@@ -171,8 +171,8 @@ exports.syncCommand = new commander_1.Command('sync')
             if (messageBreakdown) {
                 console.log(`\n   ${chalk_1.default.bold('💬 Message Breakdown:')}`);
                 console.log(`     👤 Human: ${chalk_1.default.green(messageBreakdown.human)} (${messageBreakdown.humanPercentage}%)`);
-                console.log(`     🤖 Assistant: ${chalk_1.default.blue(messageBreakdown.assistant)}`);
-                console.log(`     ⚙️  Agent: ${chalk_1.default.yellow(messageBreakdown.agent)} (tool calls, system messages)`);
+                console.log(`     ⚙️  Agent: ${chalk_1.default.yellow(messageBreakdown.agent)} (${messageBreakdown.agentPercentage}%)`);
+                console.log(`     🤖 Assistant: ${chalk_1.default.blue(messageBreakdown.assistant)} (${messageBreakdown.assistantPercentage}%)`);
                 console.log(`     📊 Total: ${chalk_1.default.cyan(messageBreakdown.total)} messages`);
             }
             console.log(`\n   🔤 Input tokens: ${chalk_1.default.cyan(userStats.totalInputTokens.toLocaleString())}`);
@@ -300,12 +300,16 @@ async function getMessageBreakdown(userService) {
     });
     const total = human + agent + assistant;
     const humanPercentage = total > 0 ? ((human / total) * 100).toFixed(1) : '0';
+    const agentPercentage = total > 0 ? ((agent / total) * 100).toFixed(1) : '0';
+    const assistantPercentage = total > 0 ? ((assistant / total) * 100).toFixed(1) : '0';
     return {
         human,
         agent,
         assistant,
         total,
-        humanPercentage
+        humanPercentage,
+        agentPercentage,
+        assistantPercentage
     };
 }
 //# sourceMappingURL=sync.command.js.map

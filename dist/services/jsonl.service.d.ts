@@ -43,9 +43,5 @@ export declare class JSONLService {
      * Determine the writer type based on message role and content
      */
     private determineWriter;
-    /**
-     * Extract text content from message content array
-     */
-    private extractTextContent;
 }
 //# sourceMappingURL=jsonl.service.d.ts.map

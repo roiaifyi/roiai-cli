@@ -193,8 +193,8 @@ export const syncCommand = new Command('sync')
         if (messageBreakdown) {
           console.log(`\n   ${chalk.bold('💬 Message Breakdown:')}`);
           console.log(`     👤 Human: ${chalk.green(messageBreakdown.human)} (${messageBreakdown.humanPercentage}%)`);
-          console.log(`     🤖 Assistant: ${chalk.blue(messageBreakdown.assistant)}`);
-          console.log(`     ⚙️  Agent: ${chalk.yellow(messageBreakdown.agent)} (tool calls, system messages)`);
+          console.log(`     ⚙️  Agent: ${chalk.yellow(messageBreakdown.agent)} (${messageBreakdown.agentPercentage}%)`);
+          console.log(`     🤖 Assistant: ${chalk.blue(messageBreakdown.assistant)} (${messageBreakdown.assistantPercentage}%)`);
           console.log(`     📊 Total: ${chalk.cyan(messageBreakdown.total)} messages`);
         }
         
@@ -341,12 +341,16 @@ async function getMessageBreakdown(userService: UserService) {
   
   const total = human + agent + assistant;
   const humanPercentage = total > 0 ? ((human / total) * 100).toFixed(1) : '0';
+  const agentPercentage = total > 0 ? ((agent / total) * 100).toFixed(1) : '0';
+  const assistantPercentage = total > 0 ? ((assistant / total) * 100).toFixed(1) : '0';
   
   return {
     human,
     agent,
     assistant,
     total,
-    humanPercentage
+    humanPercentage,
+    agentPercentage,
+    assistantPercentage
   };
 }

@@ -513,61 +513,22 @@ export class JSONLService {
       return MessageWriter.assistant;
     }
 
-    // For user messages, determine if it's human or agent
+    // For user messages, check for tool_use_id to distinguish agent vs human
     if (role === "user") {
-      // Check for tool result content (agent)
       if (entry.message.content && Array.isArray(entry.message.content)) {
-        const hasToolResults = entry.message.content.some((content: any) => 
-          content.type === "tool_result" || content.tool_use_id
+        const hasToolUseId = entry.message.content.some((content: any) => 
+          content.tool_use_id
         );
-        if (hasToolResults) {
+        if (hasToolUseId) {
           return MessageWriter.agent; // Tool results are agentic
         }
       }
-
-      // Check for system continuation messages (agent)
-      const textContent = this.extractTextContent(entry);
-      if (textContent) {
-        // System continuation messages are typically very long and start with specific patterns
-        if (textContent.length > 1000 && 
-            (textContent.startsWith("This session is being continued") ||
-             textContent.startsWith("Analysis:") ||
-             textContent.includes("Recent commits:") ||
-             textContent.includes("Summary:"))) {
-          return MessageWriter.agent; // System continuation messages are agentic
-        }
-
-        // Tool operation messages typically start with action descriptions
-        if (textContent.startsWith("I see the issue") ||
-            textContent.startsWith("Now let me") ||
-            textContent.startsWith("Let me") ||
-            textContent.startsWith("Great!") ||
-            textContent.startsWith("Perfect!") ||
-            textContent.startsWith("Excellent!")) {
-          return MessageWriter.agent; // These are Claude's internal reasoning
-        }
-      }
-
-      // Everything else is likely human input
+      
+      // Everything else is human input
       return MessageWriter.human;
     }
 
     // Default to agent for any other role
     return MessageWriter.agent;
-  }
-
-  /**
-   * Extract text content from message content array
-   */
-  private extractTextContent(entry: JSONLEntry): string | null {
-    if (!entry.message || !entry.message.content || !Array.isArray(entry.message.content)) {
-      return null;
-    }
-
-    const textContent = entry.message.content.find((content: any) => 
-      content.type === "text"
-    );
-
-    return textContent?.text || null;
   }
 }
