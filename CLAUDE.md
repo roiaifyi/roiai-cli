@@ -75,3 +75,4 @@ There is no linting or formatting configuration at the project level. When makin
 22. **Writer Enum Refactoring**: Replaced `isHumanInput` boolean with `writer` enum (human, agent, assistant) for better message classification, consolidated migrations, and improved sync display with clearer categorization
 23. **Incremental Sync Reliability**: Fixed file change detection using both modification time and file size, ensured aggregates recalculate in incremental mode, and improved project counting accuracy
 24. **Simplified Writer Classification**: Removed complex pattern matching in favor of simple `tool_use_id` detection for agent messages, enhanced message breakdown to show percentages for all types in Human → Agent → Assistant order
+25. **Push Service Refactoring**: Use authenticated user ID directly instead of transformation, simplifying the code and removing unnecessary UUID transformations for user IDs

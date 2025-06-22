@@ -112,17 +112,16 @@ export class PushService {
     }
 
     for (const msg of messages) {
-      // Transform all IDs using UUID v5 with user namespace
-      const transformedUserId = this.transformIdForUser(msg.userId, authenticatedUserId);
+      // Use authenticated user ID directly, transform other IDs
       const transformedMachineId = this.transformIdForUser(msg.clientMachineId, authenticatedUserId);
       const transformedProjectId = this.transformIdForUser(msg.projectId, authenticatedUserId);
       const transformedSessionId = this.transformIdForUser(msg.sessionId, authenticatedUserId);
       const transformedMessageId = this.transformIdForUser(msg.id, authenticatedUserId);
       
       // Add user entity
-      if (!entities.users.has(transformedUserId)) {
-        entities.users.set(transformedUserId, {
-          id: transformedUserId,
+      if (!entities.users.has(authenticatedUserId)) {
+        entities.users.set(authenticatedUserId, {
+          id: authenticatedUserId,
           email: msg.session?.project?.user?.email,
           username: msg.session?.project?.user?.username
         });
@@ -132,7 +131,7 @@ export class PushService {
       if (!entities.machines.has(transformedMachineId)) {
         entities.machines.set(transformedMachineId, {
           id: transformedMachineId,
-          userId: transformedUserId,
+          userId: authenticatedUserId,
           machineName: msg.session?.project?.machine?.machineName,
           localMachineId: msg.clientMachineId
         } as any);
@@ -143,7 +142,7 @@ export class PushService {
         entities.projects.set(transformedProjectId, {
           id: transformedProjectId,
           projectName: msg.session?.project?.projectName || '',
-          userId: transformedUserId,
+          userId: authenticatedUserId,
           clientMachineId: transformedMachineId
         });
       }
@@ -153,7 +152,7 @@ export class PushService {
         entities.sessions.set(transformedSessionId, {
           id: transformedSessionId,
           projectId: transformedProjectId,
-          userId: transformedUserId,
+          userId: authenticatedUserId,
           clientMachineId: transformedMachineId
         });
       }
@@ -164,7 +163,7 @@ export class PushService {
         originalMessageId: msg.messageId,
         sessionId: transformedSessionId,
         projectId: transformedProjectId,
-        userId: transformedUserId,
+        userId: authenticatedUserId,
         role: msg.role,
         model: msg.model || undefined,
         inputTokens: Number(msg.inputTokens),
@@ -341,7 +340,7 @@ export class PushService {
 
   private transformIdForUser(localId: string, userNamespace: string): string {
     // Use UUID v5 to deterministically generate unique IDs per user
-    // This prevents collisions when multiple users share a machine
+    // This ensures machine/project/session/message IDs are unique per authenticated user
     try {
       // Use a fixed namespace UUID and combine with user ID to create namespace
       const NAMESPACE_UUID = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // Standard UUID namespace
