@@ -56,7 +56,7 @@ The main configuration file controls all aspects of the CLI. Create this file by
     "baseUrl": "https://api.example.com",                // Base API URL
     "endpoints": {
       "login": "/api/v1/cli/login",                       // Login endpoint path
-      "push": "/api/v1/data/upsync"                       // Push endpoint path
+      "push": "/api/v1/cli/upsync"                       // Push endpoint path
     }
   },
   "push": {

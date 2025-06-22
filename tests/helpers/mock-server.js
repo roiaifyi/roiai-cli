@@ -45,7 +45,7 @@ app.post('/api/v1/cli/login', (req, res) => {
 });
 
 // Mock push endpoint matching the spec
-app.post('/api/v1/data/upsync', (req, res) => {
+app.post('/api/v1/cli/upsync', (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Unauthorized' });

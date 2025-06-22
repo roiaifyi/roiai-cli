@@ -243,7 +243,7 @@ Shows:
     "baseUrl": "https://api.roiai.com",
     "endpoints": {
       "login": "/api/v1/cli/login",
-      "push": "/api/v1/data/upsync"
+      "push": "/api/v1/cli/upsync"
     }
   },
   "push": {

@@ -88,7 +88,7 @@ describe('PushService Integration Tests', () => {
     
     // Override the apiClient to use the correct test endpoint
     const { createApiClient } = require('../../src/generated/api-client');
-    const testEndpoint = `http://127.0.0.1:${testPort}/api/v1`;
+    const testEndpoint = `http://127.0.0.1:${testPort}`;
     pushService['apiClient'] = createApiClient({
       baseUrl: testEndpoint,
       headers: {

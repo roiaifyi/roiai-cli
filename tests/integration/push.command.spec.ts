@@ -30,10 +30,10 @@ describe('Push Command Integration Tests', () => {
         batchSize: 100
       },
       api: {
-        baseUrl: `http://127.0.0.1:${testPort}/api/v1`,
+        baseUrl: `http://127.0.0.1:${testPort}`,
         endpoints: {
           login: '/api/v1/cli/login',
-          push: '/api/v1/data/upsync'
+          push: '/api/v1/cli/upsync'
         }
       },
       push: {

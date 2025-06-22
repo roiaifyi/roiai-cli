@@ -10,7 +10,7 @@ export function createApiClient(config: {
     status: number;
     data: components['schemas']['PushResponse'] | components['schemas']['ValidationError'] | components['schemas']['Error'];
   }> {
-    const response = await fetch(`${config.baseUrl}/data/upsync`, {
+    const response = await fetch(`${config.baseUrl}/api/v1/cli/upsync`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

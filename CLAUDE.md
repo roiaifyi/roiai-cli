@@ -56,13 +56,13 @@ There is no linting or formatting configuration at the project level. When makin
 3. **File Processing**: The `FileStatus` model tracks which JSONL files have been processed to enable incremental updates
 4. **Future Services**: Architecture supports adding GPT and Cursor tracking, but only Claude Code is implemented
 5. **Push Command**: The push functionality to remote servers is now implemented with authentication and retry logic
-6. **API Integration**: Updated to match roiai-web platform spec - login endpoint `/api/v1/cli/login`, push endpoint `/api/v1/data/upsync`, Bearer auth
+6. **API Integration**: Updated to match roiai-web platform spec - login endpoint `/api/v1/cli/login`, push endpoint `/api/v1/cli/upsync`, Bearer auth
 7. **App Data Directory**: All app data (user info, machine info) is stored in `~/.roiai-cli/` by default, configurable via `app.dataDir`
 8. **Machine ID**: Persistent machine identification using MAC address + OS info, stored in `machine_info.json`
 9. **Push Request Format**: Updated to new API spec with messages array and metadata containing entities and batch_info with message counts
 10. **Code Quality**: Refactored to eliminate code duplication and unused dependencies, with shared utilities for common operations
 11. **Configuration**: Extended configuration options for timeouts, display formatting, and file processing settings
-12. **API Modernization**: Removed legacy endpoint compatibility, all configurations now use latest `/api/v1/data/upsync` and `/api/v1/cli/login` paths
+12. **API Modernization**: Removed legacy endpoint compatibility, all configurations now use latest `/api/v1/cli/upsync` and `/api/v1/cli/login` paths
 13. **API Configuration**: Refactored to separate api.baseUrl from endpoint paths for better environment support and configuration flexibility
 14. **Enhanced Sync Display**: Added detailed model breakdown with token usage and cost analysis in sync command, featuring emoji UI and smart filtering
 15. **API Endpoint Correction**: Fixed all API endpoints to include `/api` prefix to match web server routes, removed redundant `api_secret` field
@@ -82,3 +82,4 @@ There is no linting or formatting configuration at the project level. When makin
 29. **Message-SyncStatus Relation**: Made syncStatus required for all messages with cascade delete, simplified message creation with nested sync status, improved data integrity
 30. **Login Sync Reset**: Modified login to reset ALL message sync statuses (not just synced ones) to enable proper user switching and re-upload capability
 31. **Incremental Cost Display**: Added cost tracking before and after sync operations to display incremental cost changes during sync command execution
+32. **API Endpoint Update**: Updated push endpoint from `/api/v1/data/upsync` to `/api/v1/cli/upsync` to match the latest OpenAPI specification
