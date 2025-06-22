@@ -76,3 +76,4 @@ There is no linting or formatting configuration at the project level. When makin
 23. **Incremental Sync Reliability**: Fixed file change detection using both modification time and file size, ensured aggregates recalculate in incremental mode, and improved project counting accuracy
 24. **Simplified Writer Classification**: Removed complex pattern matching in favor of simple `tool_use_id` detection for agent messages, enhanced message breakdown to show percentages for all types in Human → Agent → Assistant order
 25. **Push Service Refactoring**: Use authenticated user ID directly instead of transformation, simplifying the code and removing unnecessary UUID transformations for user IDs
+26. **Pricing Fields Non-Nullable**: Changed pricing fields in push message entities to use 0 instead of null for consistency and type safety
