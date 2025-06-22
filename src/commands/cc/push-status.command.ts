@@ -5,6 +5,7 @@ import { UserService } from '../../services/user.service';
 import { configManager } from '../../config';
 import { EndpointResolver } from '../../utils/endpoint-resolver';
 import Table from 'cli-table3';
+import { logger } from '../../utils/logger';
 
 export function createPushStatusCommand() {
   return new Command('push-status')
@@ -174,7 +175,7 @@ export function createPushStatusCommand() {
         }
         
       } catch (error) {
-        console.error(chalk.red('Failed to get push status:'), error instanceof Error ? error.message : 'Unknown error');
+        logger.error(chalk.red('Failed to get push status:'), error instanceof Error ? error.message : 'Unknown error');
         process.exit(1);
       } finally {
         await prisma.$disconnect();

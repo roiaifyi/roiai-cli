@@ -1,5 +1,6 @@
 import { Ora } from 'ora';
 import { COMMAND_STRINGS } from './constants';
+import { logger } from './logger';
 
 export class ErrorHandler {
   static handleCommandError(error: unknown, spinner?: Ora, exitCode: number = 1): never {
@@ -8,7 +9,7 @@ export class ErrorHandler {
     if (spinner) {
       spinner.fail(`${COMMAND_STRINGS.MESSAGES.OPERATION_FAILED}: ${message}`);
     } else {
-      console.error(`${COMMAND_STRINGS.MESSAGES.OPERATION_FAILED}: ${message}`);
+      logger.error(`${COMMAND_STRINGS.MESSAGES.OPERATION_FAILED}: ${message}`);
     }
     
     process.exit(exitCode);
@@ -16,7 +17,7 @@ export class ErrorHandler {
 
   static handleAsyncError(error: unknown, context: string = 'Operation'): never {
     const message = error instanceof Error ? error.message : COMMAND_STRINGS.MESSAGES.UNKNOWN_ERROR;
-    console.error(`${context} failed: ${message}`);
+    logger.error(`${context} failed: ${message}`);
     process.exit(1);
   }
 

@@ -287,8 +287,8 @@ describe('Push Command Integration Tests', () => {
       const output = runCli('cc push -v');
 
       // Verify output
-      expect(output).toContain('Found 15 unsynced messages');
-      expect(output).toContain('Successfully pushed: 15');
+      expect(output).toContain('Found 15 messages to push');
+      expect(output).toContain('Summary: 15 pushed');
 
       // Verify sync status updated
       const syncedCount = await prisma.messageSyncStatus.count({
@@ -333,8 +333,7 @@ describe('Push Command Integration Tests', () => {
       setMockServerMode('total');
       const output = runCli('cc push');
 
-      expect(output).toContain('Batch 1 failed');
-      expect(output).toContain('Failed to push: 5');
+      expect(output).toContain('failed, 5 remaining');
     });
 
     it('should respect retry limits', async () => {
@@ -352,7 +351,7 @@ describe('Push Command Integration Tests', () => {
       const output = runCli('cc push --force');
 
       expect(output).toContain('Reset retry count for 5 messages');
-      expect(output).toContain('Successfully pushed: 5');
+      expect(output).toContain('Summary: 5 pushed');
 
       // Verify retry counts were reset and messages were synced
       const messages = await prisma.messageSyncStatus.findMany();

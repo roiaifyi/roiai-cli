@@ -23,6 +23,7 @@ export interface Config {
             login: string;
             push: string;
         };
+        uuidNamespace?: string;
     };
     push: {
         apiToken?: string;
@@ -48,6 +49,25 @@ export interface Config {
     };
     logging: {
         level: string;
+    };
+    processing?: {
+        batchSizes?: {
+            default?: number;
+            transaction?: number;
+            session?: number;
+        };
+        timeouts?: {
+            transaction?: number;
+        };
+    };
+    machine?: {
+        networkInterfacePriority?: string[];
+        virtualInterfacePrefixes?: string[];
+        machineIdLength?: number;
+        machineInfoVersion?: number;
+    };
+    pricing?: {
+        syntheticModels?: string[];
     };
 }
 declare class ConfigManager {
@@ -83,6 +103,7 @@ declare class ConfigManager {
             login: string;
             push: string;
         };
+        uuidNamespace?: string;
     };
 }
 export declare const configManager: ConfigManager;

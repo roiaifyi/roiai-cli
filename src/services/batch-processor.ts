@@ -1,6 +1,7 @@
 import { Prisma, MessageWriter } from '@prisma/client';
 import { prisma } from '../database';
 import { logger } from '../utils/logger';
+import { configManager } from '../config';
 
 export interface BatchMessage {
   id: string;
@@ -30,12 +31,11 @@ export interface BatchMessage {
 export class BatchProcessor {
   private messageBuffer: BatchMessage[] = [];
   private existingMessageIds: Set<string> = new Set();
-  private readonly batchSize: number = 1000;
+  private readonly batchSize: number;
 
   constructor(batchSize?: number) {
-    if (batchSize) {
-      this.batchSize = batchSize;
-    }
+    const config = configManager.get();
+    this.batchSize = batchSize || config.processing?.batchSizes?.default || 1000;
   }
 
   /**
@@ -82,7 +82,8 @@ export class BatchProcessor {
     
     try {
       // Process messages in smaller chunks to reduce transaction contention
-      const CHUNK_SIZE = 100;
+      const config = configManager.get();
+      const CHUNK_SIZE = config.processing?.batchSizes?.transaction || 100;
       
       for (let i = 0; i < this.messageBuffer.length; i += CHUNK_SIZE) {
         const messageChunk = this.messageBuffer.slice(i, i + CHUNK_SIZE);

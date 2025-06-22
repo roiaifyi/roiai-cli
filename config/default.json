@@ -16,12 +16,23 @@
     "cacheDurationDefault": 5,
     "batchSize": 1000
   },
+  "processing": {
+    "batchSizes": {
+      "default": 1000,
+      "transaction": 100,
+      "session": 10
+    },
+    "timeouts": {
+      "transaction": 30000
+    }
+  },
   "api": {
     "baseUrl": "https://api.roiai.com",
     "endpoints": {
       "login": "/api/v1/cli/login",
       "push": "/api/v1/cli/upsync"
-    }
+    },
+    "uuidNamespace": "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
   },
   "push": {
     "batchSize": 1000,
@@ -46,5 +57,19 @@
   },
   "logging": {
     "level": "info"
+  },
+  "machine": {
+    "networkInterfacePriority": ["en", "eth", "wlan", "wl", "wifi"],
+    "virtualInterfacePrefixes": ["vnic", "vmnet", "vboxnet", "virbr", "br-", "docker", "lo", "utun", "awdl", "llw", "bridge"],
+    "machineIdLength": 16,
+    "machineInfoVersion": 2
+  },
+  "pricing": {
+    "syntheticModels": [
+      "claude-3-5-sonnet-20241022:reasoning",
+      "o1",
+      "o1-mini",
+      "o1-preview"
+    ]
   }
 }
