@@ -65,21 +65,20 @@ export function createPushCommand() {
           return;
         }
 
-        // Display initial statistics with nice formatting
-        console.log(chalk.bold('\n📊 Push Queue Status:'));
-        console.log(`  ${chalk.gray('━'.repeat(40))}`);
-        console.log(`  📦 Total messages: ${chalk.bold(stats.total.toLocaleString())}`);
-        console.log(`  ✅ Already synced: ${chalk.bold.green(stats.synced.toLocaleString())}`);
-        console.log(`  📤 Ready to push: ${chalk.bold.yellow(stats.unsynced.toLocaleString())}`);
+        // Display initial statistics in a compact format
+        spinner.succeed(
+          `Found ${chalk.bold.yellow(stats.unsynced.toLocaleString())} messages to push ` +
+          `(${chalk.green(stats.synced.toLocaleString())} already synced, ` +
+          `${chalk.bold(stats.total.toLocaleString())} total)`
+        );
         
         if (stats.retryDistribution.length > 0 && options.verbose) {
-          console.log(chalk.dim('\n  Retry distribution:'));
+          console.log(chalk.dim('\nRetry distribution:'));
           stats.retryDistribution.forEach(r => {
             const icon = r.retryCount === 0 ? '🆕' : r.retryCount >= pushConfig.maxRetries ? '⚠️' : '🔄';
-            console.log(`    ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk.bold(r.count.toLocaleString())} messages`);
+            console.log(`  ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk.bold(r.count.toLocaleString())} messages`);
           });
         }
-        console.log(`  ${chalk.gray('━'.repeat(40))}\n`);
 
         // Handle force option
         if (options.force) {
@@ -117,12 +116,14 @@ export function createPushCommand() {
         const processedMessages = new Set<string>();
         const totalBatches = Math.ceil(eligibleCount / batchSize);
 
+        console.log(''); // Add empty line for progress display
+        spinner.start('Starting push...');
+
         while (true) {
           batchNumber++;
           
           // Periodically check authentication during long push sessions (every 10 batches)
           if (batchNumber > 1 && batchNumber % 10 === 1) {
-            spinner.start('Re-verifying authentication...');
             const authRecheck = await pushService.checkAuthentication();
             
             if (!authRecheck.valid) {
@@ -131,10 +132,6 @@ export function createPushCommand() {
               console.log(chalk.yellow('Your API token may have expired. Please run \'roiai-cli cc login\' to refresh your credentials.'));
               process.exit(1);
             }
-            
-            if (options.verbose) {
-              spinner.info('Authentication still valid');
-            }
           }
           
           // Calculate progress
@@ -142,13 +139,15 @@ export function createPushCommand() {
           const progressPercent = eligibleCount > 0 ? Math.round((processedCount / eligibleCount) * 100) : 0;
           const progressBar = '█'.repeat(Math.floor(progressPercent / 2)) + '░'.repeat(50 - Math.floor(progressPercent / 2));
           
-          spinner.start(`[${progressBar}] ${progressPercent}% - Processing batch ${batchNumber}/${totalBatches}...`);
+          spinner.text = `[${progressBar}] ${progressPercent}% - Batch ${batchNumber}/${totalBatches} (${totalPushed} pushed, ${totalFailed} failed)`;
           
           // Select batch
           const messages = await pushService.selectUnpushedBatchWithEntities(batchSize);
           
           if (messages.length === 0) {
-            spinner.stop();
+            // Final progress update before stopping
+            const finalProgressBar = '█'.repeat(50);
+            spinner.succeed(`[${finalProgressBar}] 100% - Completed all ${totalBatches} batches`);
             break;
           }
 
@@ -175,17 +174,7 @@ export function createPushCommand() {
             totalPushed += succeeded;
             totalFailed += failed;
             
-            // Update progress for success message
-            const newProcessedCount = processedMessages.size;
-            const newProgressPercent = eligibleCount > 0 ? Math.round((newProcessedCount / eligibleCount) * 100) : 0;
-            const newProgressBar = '█'.repeat(Math.floor(newProgressPercent / 2)) + '░'.repeat(50 - Math.floor(newProgressPercent / 2));
-            
-            spinner.succeed(
-              `[${newProgressBar}] ${newProgressPercent}% - Batch ${batchNumber}/${totalBatches}: ` +
-              `${chalk.green(persisted)} persisted, ` +
-              `${chalk.yellow(deduplicated)} deduplicated, ` +
-              `${chalk.red(failed)} failed`
-            );
+            // Don't print success line, progress will be updated in next iteration
             
             if (options.verbose) {
               console.log(`  Sync ID: ${response.syncId}`);
@@ -212,7 +201,12 @@ export function createPushCommand() {
             const errorProgressBar = '█'.repeat(Math.floor(errorProgressPercent / 2)) + '░'.repeat(50 - Math.floor(errorProgressPercent / 2));
             
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            spinner.fail(`[${errorProgressBar}] ${errorProgressPercent}% - Batch ${batchNumber}/${totalBatches} failed: ${errorMessage}`);
+            // Update spinner text to show error but continue
+            if (!options.verbose) {
+              spinner.text = `[${errorProgressBar}] ${errorProgressPercent}% - Batch ${batchNumber}/${totalBatches}: ${chalk.red('failed')} - ${errorMessage}`;
+            } else {
+              spinner.fail(`[${errorProgressBar}] ${errorProgressPercent}% - Batch ${batchNumber}/${totalBatches} failed: ${errorMessage}`);
+            }
             
             // Check if this is an authentication error
             if (error instanceof Error && (
@@ -238,22 +232,15 @@ export function createPushCommand() {
           }
         }
 
-        // Final summary
+        // Final summary in a compact format
         const finalStats = await pushService.getPushStatistics();
         
-        console.log(chalk.bold('\n📊 Push Summary:'));
-        console.log(`  ${chalk.gray('━'.repeat(40))}`);
-        console.log(`  📬 Started with: ${chalk.bold(stats.unsynced.toLocaleString())} messages`);
-        console.log(`  ✅ Successfully pushed: ${chalk.bold.green(totalPushed.toLocaleString())}`);
-        console.log(`  ❌ Failed to push: ${chalk.bold.red(totalFailed.toLocaleString())}`);
-        console.log(`  📋 Remaining unsynced: ${chalk.bold.yellow(finalStats.unsynced.toLocaleString())}`);
-        console.log(`  ${chalk.gray('━'.repeat(40))}`);
-        
-        // Show completion percentage
-        if (eligibleCount > 0) {
-          const completionPercent = Math.round((totalPushed / eligibleCount) * 100);
-          console.log(`\n  ${chalk.bold('Completion:')} ${completionPercent}% of eligible messages pushed`);
-        }
+        console.log(
+          `\n${chalk.bold('Summary:')} ` +
+          `${chalk.green(totalPushed.toLocaleString())} pushed, ` +
+          `${chalk.red(totalFailed.toLocaleString())} failed, ` +
+          `${chalk.yellow(finalStats.unsynced.toLocaleString())} remaining`
+        );
         
         if (finalStats.unsynced > 0) {
           const eligibleRemaining = await pushService.countEligibleMessages();

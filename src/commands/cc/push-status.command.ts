@@ -149,6 +149,7 @@ export function createPushStatusCommand() {
         
         // Configuration status
         const userService = new UserService();
+        await userService.loadUserInfo();
         const isAuthenticated = userService.isAuthenticated();
         
         console.log(chalk.bold('\n⚙️  Configuration\n'));
