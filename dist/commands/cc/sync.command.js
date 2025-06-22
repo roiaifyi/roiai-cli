@@ -31,6 +31,9 @@ exports.syncCommand = new commander_1.Command('sync')
         await pricingService.loadPricingData();
         // Load user info silently
         await userService.loadUserInfo();
+        // Get initial cost before sync
+        const userStatsBeforeSync = await getUserAggregatedStats(userService);
+        const costBeforeSync = userStatsBeforeSync ? Number(userStatsBeforeSync.totalCost) : 0;
         // Handle force flag
         if (options.force) {
             spinner.start('Clearing existing data...');
@@ -107,7 +110,6 @@ exports.syncCommand = new commander_1.Command('sync')
                 }
                 if (changes.newMessages > 0) {
                     console.log(`   ${chalk_1.default.green('+')} New messages: ${chalk_1.default.cyan(changes.newMessages)}`);
-                    console.log(`   ${chalk_1.default.green('+')} Cost added: ${chalk_1.default.bold.green('$' + changes.totalCostAdded.toFixed(4))}`);
                 }
             }
         }
@@ -199,10 +201,16 @@ exports.syncCommand = new commander_1.Command('sync')
                     console.log(`        🎯 Total: ${chalk_1.default.yellow.bold(totalTokens.toLocaleString())} tokens`);
                     console.log(`        💰 Cost: ${chalk_1.default.bold.green('$' + modelStats.cost.toFixed(4))}`);
                 }
-                console.log(); // Add spacing before total cost
             }
-            console.log(chalk_1.default.gray('   ' + '─'.repeat(40)));
-            console.log(`   ${chalk_1.default.bold('💵 Total Cost:')} ${chalk_1.default.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
+            // Show total cost as the bottom line
+            console.log('\n' + chalk_1.default.gray('═'.repeat(50)));
+            // Show incremental cost change
+            const costAfterSync = Number(userStats.totalCost);
+            const incrementalCost = costAfterSync - costBeforeSync;
+            if (incrementalCost > 0) {
+                console.log(`${chalk_1.default.bold('📈 Cost Added:')} ${chalk_1.default.bold.yellow('+$' + incrementalCost.toFixed(4))}`);
+            }
+            console.log(`${chalk_1.default.bold('💵 Total Cost:')} ${chalk_1.default.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
         }
         // Check for pending sync items
         const pendingSync = await database_1.prisma.messageSyncStatus.count({

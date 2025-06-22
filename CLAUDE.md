@@ -81,3 +81,4 @@ There is no linting or formatting configuration at the project level. When makin
 28. **OpenAPI Type Integration**: Integrated auto-generated types from web server OpenAPI spec, removed manual type definitions, ensuring type safety and API contract compliance
 29. **Message-SyncStatus Relation**: Made syncStatus required for all messages with cascade delete, simplified message creation with nested sync status, improved data integrity
 30. **Login Sync Reset**: Modified login to reset ALL message sync statuses (not just synced ones) to enable proper user switching and re-upload capability
+31. **Incremental Cost Display**: Added cost tracking before and after sync operations to display incremental cost changes during sync command execution

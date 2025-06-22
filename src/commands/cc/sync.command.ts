@@ -30,6 +30,10 @@ export const syncCommand = new Command('sync')
       // Load user info silently
       await userService.loadUserInfo();
 
+      // Get initial cost before sync
+      const userStatsBeforeSync = await getUserAggregatedStats(userService);
+      const costBeforeSync = userStatsBeforeSync ? Number(userStatsBeforeSync.totalCost) : 0;
+
       // Handle force flag
       if (options.force) {
         spinner.start('Clearing existing data...');
@@ -119,7 +123,6 @@ export const syncCommand = new Command('sync')
         
         if (changes.newMessages > 0) {
           console.log(`   ${chalk.green('+')} New messages: ${chalk.cyan(changes.newMessages)}`);
-          console.log(`   ${chalk.green('+')} Cost added: ${chalk.bold.green('$' + changes.totalCostAdded.toFixed(4))}`);
         }
         }
       } else {
@@ -226,11 +229,19 @@ export const syncCommand = new Command('sync')
             console.log(`        🎯 Total: ${chalk.yellow.bold(totalTokens.toLocaleString())} tokens`);
             console.log(`        💰 Cost: ${chalk.bold.green('$' + modelStats.cost.toFixed(4))}`);
           }
-          console.log(); // Add spacing before total cost
         }
 
-        console.log(chalk.gray('   ' + '─'.repeat(40)));
-        console.log(`   ${chalk.bold('💵 Total Cost:')} ${chalk.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
+        // Show total cost as the bottom line
+        console.log('\n' + chalk.gray('═'.repeat(50)));
+        
+        // Show incremental cost change
+        const costAfterSync = Number(userStats.totalCost);
+        const incrementalCost = costAfterSync - costBeforeSync;
+        if (incrementalCost > 0) {
+          console.log(`${chalk.bold('📈 Cost Added:')} ${chalk.bold.yellow('+$' + incrementalCost.toFixed(4))}`);
+        }
+        
+        console.log(`${chalk.bold('💵 Total Cost:')} ${chalk.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
       }
 
       // Check for pending sync items
