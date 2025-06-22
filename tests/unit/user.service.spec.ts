@@ -153,6 +153,24 @@ describe('UserService', () => {
       );
     });
 
+    it('should reset all message sync statuses on login', async () => {
+      const { prisma } = require('../../src/database');
+      mockFs.mkdir.mockResolvedValue(undefined);
+      mockFs.writeFile.mockResolvedValue(undefined);
+      
+      await userService.login('user-123', 'test@example.com', 'token-123');
+      
+      // Verify that updateMany was called to reset all sync statuses
+      expect(prisma.messageSyncStatus.updateMany).toHaveBeenCalledWith({
+        where: {}, // Should update all records
+        data: {
+          syncedAt: null,
+          retryCount: 0,
+          syncResponse: null
+        }
+      });
+    });
+
     it('should remove auth data on logout', async () => {
       // First login
       mockFs.mkdir.mockResolvedValue(undefined);

@@ -169,12 +169,10 @@ export class UserService {
     
     await FileSystemUtils.writeJsonFile(userInfoPath, storedUserInfo);
 
-    // Reset sync status for all messages (silently) when a user logs in
-    // This ensures that when switching users, messages can be re-uploaded
+    // Reset sync status for ALL messages when a user logs in
+    // This ensures that when switching users, all messages can be re-uploaded
     await prisma.messageSyncStatus.updateMany({
-      where: {
-        syncedAt: { not: null }
-      },
+      where: {}, // Update all records
       data: {
         syncedAt: null,
         retryCount: 0,

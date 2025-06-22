@@ -78,5 +78,6 @@ There is no linting or formatting configuration at the project level. When makin
 25. **Push Service Refactoring**: Use authenticated user ID directly instead of transformation, simplifying the code and removing unnecessary UUID transformations for user IDs
 26. **Pricing Fields Non-Nullable**: Changed pricing fields in push message entities to use 0 instead of null for consistency and type safety
 27. **Push Service Optimization**: Combined selectUnpushedBatch and loadMessagesWithEntities into single query, optimized processPushResponse to use bulk updateMany operations instead of individual upserts for better performance
-27. **OpenAPI Type Integration**: Integrated auto-generated types from web server OpenAPI spec, removed manual type definitions, ensuring type safety and API contract compliance
-28. **Message-SyncStatus Relation**: Made syncStatus required for all messages with cascade delete, simplified message creation with nested sync status, improved data integrity
+28. **OpenAPI Type Integration**: Integrated auto-generated types from web server OpenAPI spec, removed manual type definitions, ensuring type safety and API contract compliance
+29. **Message-SyncStatus Relation**: Made syncStatus required for all messages with cascade delete, simplified message creation with nested sync status, improved data integrity
+30. **Login Sync Reset**: Modified login to reset ALL message sync statuses (not just synced ones) to enable proper user switching and re-upload capability
