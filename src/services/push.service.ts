@@ -60,10 +60,12 @@ export class PushService {
       
       if (response.ok && response.status === 200) {
         const data = response.data as any;
+        // Handle wrapped response format from server
+        const actualData = data.data || data;
         return {
-          valid: data.authenticated,
-          user: data.user,
-          machine: data.machine
+          valid: actualData.authenticated,
+          user: actualData.user,
+          machine: actualData.machine
         };
       } else {
         const errorData = response.data as any;
@@ -124,6 +126,7 @@ export class PushService {
       throw new Error("Cannot push without authentication");
     }
 
+
     for (const msg of messages) {
       // Use authenticated user ID directly, transform other IDs
       const transformedMachineId = this.transformIdForUser(
@@ -159,7 +162,7 @@ export class PushService {
           id: transformedProjectId,
           projectName: msg.session?.project?.projectName || "",
           userId: authenticatedUserId,
-          clientMachineId: transformedMachineId,
+          machineId: transformedMachineId,
         });
       }
 
@@ -169,7 +172,7 @@ export class PushService {
           id: transformedSessionId,
           projectId: transformedProjectId,
           userId: authenticatedUserId,
-          clientMachineId: transformedMachineId,
+          machineId: transformedMachineId,
         });
       }
 
@@ -215,7 +218,7 @@ export class PushService {
       });
     }
 
-    return {
+    const result = {
       messages: messageEntities,
       entities: {
         machines: Object.fromEntries(entities.machines),
@@ -223,6 +226,9 @@ export class PushService {
         sessions: Object.fromEntries(entities.sessions),
       },
     };
+    
+    
+    return result;
   }
 
   async executePush(request: PushRequest): Promise<PushResponse> {
@@ -233,9 +239,14 @@ export class PushService {
         const errorData = response.data as any;
         
         // Handle structured error response
-        const errorMessage = errorData?.success === false && errorData?.error 
+        let errorMessage = errorData?.success === false && errorData?.error 
           ? `${errorData.error.message} (${errorData.error.code})`
           : errorData?.message || "Unknown error";
+        
+        // If validation error, include details
+        if (errorData?.error?.details) {
+          errorMessage += ` - ${JSON.stringify(errorData.error.details)}`;
+        }
         
         // Check for authentication failures
         if (response.status === 401) {

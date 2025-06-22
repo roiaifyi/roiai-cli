@@ -363,7 +363,7 @@ export interface components {
              * @description Machine ID where project is located
              * @example machine_123
              */
-            clientMachineId: string;
+            machineId: string;
         };
         SessionEntity: {
             /**
@@ -385,7 +385,7 @@ export interface components {
              * @description Machine ID where session occurred
              * @example machine_123
              */
-            clientMachineId: string;
+            machineId: string;
         };
         MessageEntity: {
             /**

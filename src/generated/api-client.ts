@@ -10,7 +10,9 @@ export function createApiClient(config: {
     status: number;
     data: components['schemas']['PushResponse'] | components['schemas']['ErrorResponse'];
   }> {
-    const response = await fetch(`${config.baseUrl}/api/v1/cli/upsync`, {
+    const url = `${config.baseUrl}/api/v1/cli/upsync`;
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -33,7 +35,9 @@ export function createApiClient(config: {
     status: number;
     data: components['schemas']['HealthCheckResponse'] | components['schemas']['ErrorResponse'];
   }> {
-    const response = await fetch(`${config.baseUrl}/api/v1/cli/health`, {
+    const url = `${config.baseUrl}/api/v1/cli/health`;
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         ...config.headers,
