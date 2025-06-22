@@ -57,6 +57,7 @@ export function createPushCommand() {
         const batchSize = options.batchSize || pushConfig.batchSize;
         
         // Get initial statistics
+        spinner.start('Analyzing push queue...');
         let stats = await pushService.getPushStatistics();
         
         if (stats.unsynced === 0) {
@@ -64,14 +65,21 @@ export function createPushCommand() {
           return;
         }
 
-        spinner.info(`Found ${chalk.yellow(stats.unsynced)} unsynced messages`);
+        // Display initial statistics with nice formatting
+        console.log(chalk.bold('\n📊 Push Queue Status:'));
+        console.log(`  ${chalk.gray('━'.repeat(40))}`);
+        console.log(`  📦 Total messages: ${chalk.bold(stats.total.toLocaleString())}`);
+        console.log(`  ✅ Already synced: ${chalk.bold.green(stats.synced.toLocaleString())}`);
+        console.log(`  📤 Ready to push: ${chalk.bold.yellow(stats.unsynced.toLocaleString())}`);
         
-        if (stats.retryDistribution.length > 0) {
-          console.log('\nRetry distribution:');
+        if (stats.retryDistribution.length > 0 && options.verbose) {
+          console.log(chalk.dim('\n  Retry distribution:'));
           stats.retryDistribution.forEach(r => {
-            console.log(`  ${r.retryCount} retries: ${r.count} messages`);
+            const icon = r.retryCount === 0 ? '🆕' : r.retryCount >= pushConfig.maxRetries ? '⚠️' : '🔄';
+            console.log(`    ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk.bold(r.count.toLocaleString())} messages`);
           });
         }
+        console.log(`  ${chalk.gray('━'.repeat(40))}\n`);
 
         // Handle force option
         if (options.force) {
@@ -104,8 +112,10 @@ export function createPushCommand() {
 
         // Main push loop
         let totalPushed = 0;
+        let totalFailed = 0;
         let batchNumber = 0;
         const processedMessages = new Set<string>();
+        const totalBatches = Math.ceil(eligibleCount / batchSize);
 
         while (true) {
           batchNumber++;
@@ -127,7 +137,12 @@ export function createPushCommand() {
             }
           }
           
-          spinner.start(`Processing batch ${batchNumber}...`);
+          // Calculate progress
+          const processedCount = processedMessages.size;
+          const progressPercent = eligibleCount > 0 ? Math.round((processedCount / eligibleCount) * 100) : 0;
+          const progressBar = '█'.repeat(Math.floor(progressPercent / 2)) + '░'.repeat(50 - Math.floor(progressPercent / 2));
+          
+          spinner.start(`[${progressBar}] ${progressPercent}% - Processing batch ${batchNumber}/${totalBatches}...`);
           
           // Select batch
           const messages = await pushService.selectUnpushedBatchWithEntities(batchSize);
@@ -138,8 +153,7 @@ export function createPushCommand() {
           }
 
           const messageIds = messages.map(msg => msg.messageId);
-          spinner.text = `Processing batch ${batchNumber} (${messages.length} messages)...`;
-
+          
           // Track processed messages to avoid double counting
           messageIds.forEach(id => processedMessages.add(id));
 
@@ -159,9 +173,15 @@ export function createPushCommand() {
             const succeeded = persisted + deduplicated;
             
             totalPushed += succeeded;
+            totalFailed += failed;
+            
+            // Update progress for success message
+            const newProcessedCount = processedMessages.size;
+            const newProgressPercent = eligibleCount > 0 ? Math.round((newProcessedCount / eligibleCount) * 100) : 0;
+            const newProgressBar = '█'.repeat(Math.floor(newProgressPercent / 2)) + '░'.repeat(50 - Math.floor(newProgressPercent / 2));
             
             spinner.succeed(
-              `Batch ${batchNumber}: ` +
+              `[${newProgressBar}] ${newProgressPercent}% - Batch ${batchNumber}/${totalBatches}: ` +
               `${chalk.green(persisted)} persisted, ` +
               `${chalk.yellow(deduplicated)} deduplicated, ` +
               `${chalk.red(failed)} failed`
@@ -184,8 +204,15 @@ export function createPushCommand() {
             }
 
           } catch (error) {
+            totalFailed += messages.length;
+            
+            // Update progress for error message
+            const errorProcessedCount = processedMessages.size;
+            const errorProgressPercent = eligibleCount > 0 ? Math.round((errorProcessedCount / eligibleCount) * 100) : 0;
+            const errorProgressBar = '█'.repeat(Math.floor(errorProgressPercent / 2)) + '░'.repeat(50 - Math.floor(errorProgressPercent / 2));
+            
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            spinner.fail(`Batch ${batchNumber} failed: ${errorMessage}`);
+            spinner.fail(`[${errorProgressBar}] ${errorProgressPercent}% - Batch ${batchNumber}/${totalBatches} failed: ${errorMessage}`);
             
             // Check if this is an authentication error
             if (error instanceof Error && (
@@ -213,13 +240,20 @@ export function createPushCommand() {
 
         // Final summary
         const finalStats = await pushService.getPushStatistics();
-        const failedToPush = processedMessages.size - totalPushed;
         
         console.log(chalk.bold('\n📊 Push Summary:'));
-        console.log(`  Started with: ${stats.unsynced} messages`);
-        console.log(`  Successfully pushed: ${chalk.green(totalPushed)}`);
-        console.log(`  Failed to push: ${chalk.red(failedToPush)}`);
-        console.log(`  Remaining unsynced: ${chalk.yellow(finalStats.unsynced)}`);
+        console.log(`  ${chalk.gray('━'.repeat(40))}`);
+        console.log(`  📬 Started with: ${chalk.bold(stats.unsynced.toLocaleString())} messages`);
+        console.log(`  ✅ Successfully pushed: ${chalk.bold.green(totalPushed.toLocaleString())}`);
+        console.log(`  ❌ Failed to push: ${chalk.bold.red(totalFailed.toLocaleString())}`);
+        console.log(`  📋 Remaining unsynced: ${chalk.bold.yellow(finalStats.unsynced.toLocaleString())}`);
+        console.log(`  ${chalk.gray('━'.repeat(40))}`);
+        
+        // Show completion percentage
+        if (eligibleCount > 0) {
+          const completionPercent = Math.round((totalPushed / eligibleCount) * 100);
+          console.log(`\n  ${chalk.bold('Completion:')} ${completionPercent}% of eligible messages pushed`);
+        }
         
         if (finalStats.unsynced > 0) {
           const eligibleRemaining = await pushService.countEligibleMessages();
