@@ -72,7 +72,7 @@ app.get('/api/v1/cli/health', (req, res) => {
   
   // Check for valid token
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123') {
+  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123' && token !== 'existing-token') {
     return res.status(401).json({ 
       success: false,
       error: {
@@ -112,7 +112,7 @@ app.post('/api/v1/cli/logout', (req, res) => {
   
   // Check for valid token
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123') {
+  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123' && token !== 'existing-token') {
     return res.status(401).json({ 
       success: false,
       error: {
@@ -159,7 +159,7 @@ app.post('/api/v1/cli/upsync', (req, res) => {
   
   // Check for valid token
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123') {
+  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123' && token !== 'existing-token') {
     return res.status(401).json({ 
       success: false,
       error: {

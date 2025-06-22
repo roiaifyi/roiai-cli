@@ -40,7 +40,6 @@ npm run prisma:studio      # Open GUI to view/edit database
 
 # Run the CLI (after building)
 node dist/index.js cc sync
-node dist/index.js cc watch
 ```
 
 ## Testing & Quality

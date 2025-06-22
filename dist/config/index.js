@@ -50,9 +50,6 @@ class ConfigManager {
     getPushConfig() {
         return this.config.push;
     }
-    getWatchConfig() {
-        return this.config.watch;
-    }
     getApiConfig() {
         return this.config.api;
     }

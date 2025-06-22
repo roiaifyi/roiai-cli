@@ -62,21 +62,7 @@ roiai-cli cc sync --force
 roiai-cli cc sync --path /path/to/claude_raw_data
 ```
 
-### Watch for Changes
-
-Watch the Claude Code data directory and auto-sync changes:
-
-```bash
-roiai-cli cc watch
-
-# Use custom path
-roiai-cli cc watch --path /path/to/claude_raw_data
-
-# Set polling interval (milliseconds)
-roiai-cli cc watch --interval 10000
-```
-
-### Push to Remote (Coming Soon)
+### Push to Remote
 
 Push local database to remote server:
 

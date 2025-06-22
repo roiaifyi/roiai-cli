@@ -8,6 +8,8 @@ import { UserService } from '../../services/user.service';
 import { MachineService } from '../../services/machine.service';
 import { configManager } from '../../config';
 import { EndpointResolver } from '../../utils/endpoint-resolver';
+import { createApiClient } from '../../generated/api-client';
+import { COMMAND_STRINGS } from '../../utils/constants';
 
 export function createLoginCommand(): Command {
   const command = new Command('login');
@@ -24,11 +26,13 @@ export function createLoginCommand(): Command {
         const userService = new UserService();
         await userService.loadUserInfo();
         
-        // Check if already logged in
+        // Store current credentials if already logged in (for potential logout)
+        let oldApiToken: string | null = null;
+        let oldEmail: string | null = null;
         if (userService.isAuthenticated()) {
-          const email = userService.getAuthenticatedEmail();
-          spinner.warn(`Already logged in as ${email}. Use 'roiai-cli cc logout' to switch accounts.`);
-          return;
+          oldApiToken = userService.getApiToken();
+          oldEmail = userService.getAuthenticatedEmail();
+          spinner.text = `Currently logged in as ${oldEmail}. Proceeding with new login...`;
         }
         
         spinner.stop();
@@ -120,10 +124,42 @@ export function createLoginCommand(): Command {
             throw new Error('Invalid server response format');
           }
           
-          // Save authentication info
+          // If there was a previous login, revoke the old API key
+          if (oldApiToken) {
+            try {
+              spinner.text = 'Revoking previous API key...';
+              
+              const apiConfig = configManager.getApiConfig();
+              const apiClient = createApiClient({
+                baseUrl: apiConfig.baseUrl,
+                headers: {
+                  Authorization: `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${oldApiToken}`,
+                },
+              });
+              
+              const logoutResponse = await apiClient.logout();
+              
+              if (!logoutResponse.ok) {
+                // Log warning but don't fail the login
+                console.log(chalk.yellow(`\nWarning: Could not revoke previous API key for ${oldEmail}`));
+              }
+            } catch (error) {
+              // Silently handle logout errors - don't interrupt the login flow
+              console.log(chalk.yellow(`\nWarning: Could not revoke previous API key: ${error instanceof Error ? error.message : 'Unknown error'}`));
+            }
+            
+            // Clear local credentials before saving new ones
+            await userService.logout();
+          }
+          
+          // Save new authentication info
           await userService.login(user.id, user.email, api_key, user.username);
           
-          spinner.succeed(`Successfully logged in as ${user.email}`);
+          if (oldEmail && oldEmail !== user.email) {
+            spinner.succeed(`Successfully switched from ${oldEmail} to ${user.email}`);
+          } else {
+            spinner.succeed(`Successfully logged in as ${user.email}`);
+          }
           console.log(chalk.dim('\nYou can now use \'roiai-cli cc push\' to sync your usage data.'));
           
         } catch (error) {

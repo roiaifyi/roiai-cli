@@ -82,7 +82,6 @@ describe('UserService', () => {
         }
       },
       push: {} as any,
-      watch: {} as any,
       logging: { level: 'info' }
     });
   });

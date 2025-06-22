@@ -31,12 +31,6 @@ export interface Config {
         maxRetries: number;
         timeout: number;
     };
-    watch: {
-        pollInterval: number;
-        stabilityThreshold: number;
-        progressUpdateInterval: number;
-        ignored: string[];
-    };
     network?: {
         authTimeout: number;
     };
@@ -90,12 +84,6 @@ declare class ConfigManager {
         batchSize: number;
         maxRetries: number;
         timeout: number;
-    };
-    getWatchConfig(): {
-        pollInterval: number;
-        stabilityThreshold: number;
-        progressUpdateInterval: number;
-        ignored: string[];
     };
     getApiConfig(): {
         baseUrl: string;

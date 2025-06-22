@@ -204,7 +204,7 @@ describe('Login Command Integration', () => {
     }
   });
   
-  it('should not login if already authenticated', () => {
+  it('should allow re-login and revoke old API key', () => {
     // Create existing user info with auth
     // Create machine info first
     const testMachineInfoPath = path.join(TEST_DATA_DIR, 'machine_info.json');
@@ -270,6 +270,6 @@ describe('Login Command Integration', () => {
       { env, encoding: 'utf8', shell: '/bin/bash' }
     );
     
-    expect(output).toContain('Already logged in as existing@example.com');
+    expect(output).toContain('Successfully switched from existing@example.com to test@example.com');
   });
 });

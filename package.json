@@ -74,7 +74,6 @@
     "@prisma/client": "^6.10.0",
     "axios": "^1.10.0",
     "chalk": "^4.1.2",
-    "chokidar": "^4.0.3",
     "cli-table3": "^0.6.5",
     "commander": "^14.0.0",
     "config": "^4.0.0",

@@ -39,12 +39,6 @@
     "maxRetries": 5,
     "timeout": 30000
   },
-  "watch": {
-    "pollInterval": 5000,
-    "stabilityThreshold": 2000,
-    "progressUpdateInterval": 100,
-    "ignored": ["**/node_modules/**", "**/.git/**"]
-  },
   "network": {
     "authTimeout": 5000
   },
