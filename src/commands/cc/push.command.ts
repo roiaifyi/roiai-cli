@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { PushService } from '../../services/push.service';
 import { UserService } from '../../services/user.service';
 import { configManager } from '../../config';
-import { PushOptions } from '../../models/types';
+import { PushOptions } from '../../models/push.types';
 
 export function createPushCommand() {
   return new Command('push')
@@ -121,30 +121,39 @@ export function createPushCommand() {
 
           try {
             // Execute push
-            const response = await pushService.executePush(request) as any;
+            const response = await pushService.executePush(request);
             
             // Process response
             await pushService.processPushResponse(response, messageIds);
             
-            // Handle the new response format from spec
-            if (!response.success) {
-              throw new Error(response.error?.message || 'Push failed');
-            }
+            const persisted = response.results.persisted.count;
+            const deduplicated = response.results.deduplicated.count;
+            const failed = response.results.failed.count;
+            const succeeded = persisted + deduplicated;
             
-            const { data } = response;
-            const processed = data.processed || 0;
-            const failed = data.failed || 0;
-            
-            totalPushed += processed;
+            totalPushed += succeeded;
             
             spinner.succeed(
               `Batch ${batchNumber}: ` +
-              `${chalk.green(processed)} processed, ` +
+              `${chalk.green(persisted)} persisted, ` +
+              `${chalk.yellow(deduplicated)} deduplicated, ` +
               `${chalk.red(failed)} failed`
             );
             
-            if (options.verbose && data.uploadId) {
-              console.log(`  Upload ID: ${data.uploadId}`);
+            if (options.verbose) {
+              console.log(`  Sync ID: ${response.syncId}`);
+              console.log(`  Processing time: ${response.summary.processingTimeMs}ms`);
+              
+              // Show failed message details if any
+              if (response.results.failed.details.length > 0) {
+                console.log(chalk.red('\n  Failed messages:'));
+                for (const failure of response.results.failed.details.slice(0, 5)) {
+                  console.log(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
+                }
+                if (response.results.failed.details.length > 5) {
+                  console.log(`    ... and ${response.results.failed.details.length - 5} more`);
+                }
+              }
             }
 
           } catch (error) {

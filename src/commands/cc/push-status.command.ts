@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { PrismaClient } from '@prisma/client';
-import { PushService } from '../../services/push.service';
+import { UserService } from '../../services/user.service';
 import { configManager } from '../../config';
 import { EndpointResolver } from '../../utils/endpoint-resolver';
 import Table from 'cli-table3';
@@ -15,10 +15,34 @@ export function createPushStatusCommand() {
       
       try {
         const pushConfig = configManager.getPushConfig();
-        const pushService = new PushService(prisma, pushConfig);
         
-        // Get statistics
-        const stats = await pushService.getPushStatistics();
+        // Get statistics directly without requiring authentication
+        const [total, synced, unsynced, retryDistribution] = await Promise.all([
+          prisma.message.count(),
+          prisma.messageSyncStatus.count({
+            where: { syncedAt: { not: null } },
+          }),
+          prisma.message.count({
+            where: {
+              syncStatus: { syncedAt: null },
+            },
+          }),
+          prisma.messageSyncStatus.groupBy({
+            by: ["retryCount"],
+            where: { syncedAt: null },
+            _count: true,
+          }),
+        ]);
+
+        const stats = {
+          total,
+          synced,
+          unsynced,
+          retryDistribution: retryDistribution.map((r) => ({
+            retryCount: r.retryCount,
+            count: r._count,
+          })),
+        };
         
         console.log(chalk.bold('\n📊 Push Status\n'));
         
@@ -124,9 +148,12 @@ export function createPushStatusCommand() {
         }
         
         // Configuration status
+        const userService = new UserService();
+        const isAuthenticated = userService.isAuthenticated();
+        
         console.log(chalk.bold('\n⚙️  Configuration\n'));
         console.log(`Endpoint: ${EndpointResolver.getPushEndpoint()}`);
-        console.log(`API Token: ${pushConfig.apiToken ? chalk.green('Configured') : chalk.red('Not configured')}`);
+        console.log(`Authentication: ${isAuthenticated ? chalk.green('Logged in') : chalk.red('Not logged in')}`);
         console.log(`Batch Size: ${pushConfig.batchSize}`);
         console.log(`Max Retries: ${pushConfig.maxRetries}`);
         console.log(`Timeout: ${pushConfig.timeout}ms`);
@@ -134,14 +161,14 @@ export function createPushStatusCommand() {
         // Next steps
         if (stats.unsynced > 0) {
           console.log(chalk.bold('\n💡 Next Steps\n'));
-          if (!pushConfig.apiToken) {
-            console.log(chalk.yellow('1. Configure your API token in config/local.json'));
+          if (!isAuthenticated) {
+            console.log(chalk.yellow('1. Login with: roiai login'));
           }
-          console.log(`${!pushConfig.apiToken ? '2' : '1'}. Run ${chalk.cyan('roiai cc push')} to sync ${stats.unsynced} messages`);
+          console.log(`${!isAuthenticated ? '2' : '1'}. Run ${chalk.cyan('roiai cc push')} to sync ${stats.unsynced} messages`);
           
           const needsForce = stats.retryDistribution.some(r => r.retryCount >= pushConfig.maxRetries);
           if (needsForce) {
-            console.log(`${!pushConfig.apiToken ? '3' : '2'}. Use ${chalk.cyan('roiai cc push --force')} to retry failed messages`);
+            console.log(`${!isAuthenticated ? '3' : '2'}. Use ${chalk.cyan('roiai cc push --force')} to retry failed messages`);
           }
         }
         

@@ -22,7 +22,6 @@ describe('PushService Integration Tests', () => {
   };
 
   const pushConfig: PushConfig = {
-    apiToken: 'test-auth-token',
     batchSize: 10,
     maxRetries: 3,
     timeout: 5000
@@ -87,15 +86,13 @@ describe('PushService Integration Tests', () => {
     // Create push service with custom endpoint
     pushService = new PushService(prisma, pushConfig, userService);
     
-    // Override the httpClient to use the correct test endpoint
-    const axios = require('axios');
-    const testEndpoint = `http://127.0.0.1:${testPort}/api/v1/data/upsync`;
-    pushService['httpClient'] = axios.create({
-      baseURL: testEndpoint,
-      timeout: pushConfig.timeout,
+    // Override the apiClient to use the correct test endpoint
+    const { createApiClient } = require('../../src/generated/api-client');
+    const testEndpoint = `http://127.0.0.1:${testPort}/api/v1`;
+    pushService['apiClient'] = createApiClient({
+      baseUrl: testEndpoint,
       headers: {
         'Authorization': 'Bearer test-auth-token',
-        'Content-Type': 'application/json'
       }
     });
   });
@@ -175,17 +172,16 @@ describe('PushService Integration Tests', () => {
           outputTokens: 200n,
           cacheCreationTokens: 0n,
           cacheReadTokens: 0n,
-          messageCost: 0.003
+          messageCost: 0.003,
+          writer: i % 2 === 0 ? 'human' : 'assistant',
+          syncStatus: {
+            create: {
+              retryCount
+            }
+          }
         }
       });
       messages.push(message);
-
-      await prisma.messageSyncStatus.create({
-        data: {
-          messageId: message.messageId,
-          retryCount
-        }
-      });
     }
 
     return { user, machine, project, session, messages };
@@ -234,14 +230,12 @@ describe('PushService Integration Tests', () => {
       const request = pushService.buildPushRequest(messages);
       
       try {
-        const response = await pushService.executePush(request) as any;
+        const response = await pushService.executePush(request);
         await pushService.processPushResponse(response, messageIds);
         
         // Handle new response format
-        if (response.success && response.data) {
-          successCount = response.data.processed;
-          failureCount = response.data.failed;
-        }
+        successCount = response.results.persisted.count + response.results.deduplicated.count;
+        failureCount = response.results.failed.count;
       } catch (error) {
         // Count as all failed if request fails
         failureCount = messageIds.length;
@@ -314,40 +308,12 @@ describe('PushService Integration Tests', () => {
       unauthUserService.getClientMachineId = () => 'test-machine';
       unauthUserService.isAuthenticated = () => false;
       unauthUserService.getAuthenticatedUserId = () => null;
-      unauthUserService.getApiToken = () => 'invalid-token';
+      unauthUserService.getApiToken = () => null;
       
-      const unauthService = new PushService(prisma, {
-        ...pushConfig,
-        apiToken: 'invalid-token' // Use invalid token instead of undefined
-      }, unauthUserService);
-      
-      // Override the httpClient to use the correct test endpoint (same as main service)
-      const axios = require('axios');
-      const testEndpoint = `http://127.0.0.1:${testPort}/api/v1/data/upsync`;
-      unauthService['httpClient'] = axios.create({
-        baseURL: testEndpoint,
-        timeout: pushConfig.timeout,
-        headers: {
-          'Authorization': 'Bearer invalid-token',
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      let errorOccurred = false;
-      let errorMessage = '';
-      
-      try {
-        const messageIds = await unauthService.selectUnpushedBatch(10);
-        const messages = await unauthService.loadMessagesWithEntities(messageIds);
-        unauthService.buildPushRequest(messages); // This should throw
-      } catch (error: any) {
-        errorOccurred = true;
-        errorMessage = error.message;
-      }
-      
-      expect(errorOccurred).toBe(true);
-      // The error message format changed with the new API spec
-      expect(errorMessage).toContain('Cannot push without authentication');
+      // This should throw because no authenticated user
+      expect(() => {
+        new PushService(prisma, pushConfig, unauthUserService);
+      }).toThrow('No API token available');
     });
   });
 

@@ -18,8 +18,8 @@ describe('Push Command Integration Tests', () => {
   };
 
   // Helper to run CLI commands with test config
-  const runCli = (command: string, config?: any) => {
-    const testConfig = config || {
+  const runCli = (command: string) => {
+    const testConfig = {
       database: { path: TEST_DB_PATH },
       user: { infoPath: path.join(TEST_DATA_DIR, 'user_info.json') },
       claudeCode: {
@@ -30,7 +30,11 @@ describe('Push Command Integration Tests', () => {
         batchSize: 100
       },
       api: {
-        baseUrl: `http://127.0.0.1:${testPort}`
+        baseUrl: `http://127.0.0.1:${testPort}/api/v1`,
+        endpoints: {
+          login: '/api/v1/cli/login',
+          push: '/api/v1/data/upsync'
+        }
       },
       push: {
         batchSize: 10,
@@ -210,17 +214,16 @@ describe('Push Command Integration Tests', () => {
           outputTokens: 200n,
           cacheCreationTokens: 0n,
           cacheReadTokens: 0n,
-          messageCost: 0.003
+          messageCost: 0.003,
+          writer: 'human',
+          syncStatus: {
+            create: {
+              retryCount
+            }
+          }
         }
       });
       messages.push(message);
-
-      await prisma.messageSyncStatus.create({
-        data: {
-          messageId: message.messageId,
-          retryCount
-        }
-      });
     }
 
     return { user, machine, project, session, messages };

@@ -327,7 +327,7 @@ describe('DatabaseService BDD Tests', () => {
         const results = await dbService.createMessagesBatch(messages);
         
         // Assert
-        expect(results.count).toBe(10);
+        expect(results).toBe(10);
         
         // Verify all messages were created
         const messageCount = await prisma.message.count({

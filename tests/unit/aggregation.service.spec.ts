@@ -57,7 +57,7 @@ describe('AggregationService BDD Tests', () => {
       ]
     });
     
-    // Create messages with various token usage patterns
+    // Create messages with various token usage patterns and their sync status
     const messages = [
       // Session 1 - Project Alpha, User 1
       {
@@ -128,7 +128,17 @@ describe('AggregationService BDD Tests', () => {
       }
     ];
     
-    await prisma.message.createMany({ data: messages });
+    // Create messages with their sync status
+    for (const message of messages) {
+      await prisma.message.create({
+        data: {
+          ...message,
+          syncStatus: {
+            create: {}
+          }
+        }
+      });
+    }
   }
   
   describe('Given I have usage data across multiple projects and users', () => {

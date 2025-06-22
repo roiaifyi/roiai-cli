@@ -1,8 +1,8 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import { PushService } from '../../src/services/push.service';
 import { PrismaClient } from '@prisma/client';
-import { PushConfig, PushRequest, PushResponse } from '../../src/models/types';
-import axios from 'axios';
+import { PushConfig, PushRequest, PushResponse } from '../../src/models/push.types';
+import { createApiClient } from '../../src/generated/api-client';
 
 // Mock Prisma
 jest.mock('@prisma/client', () => ({
@@ -27,17 +27,17 @@ jest.mock('@prisma/client', () => ({
   }))
 }));
 
-// Mock axios
-jest.mock('axios');
+// Mock API client
+jest.mock('../../src/generated/api-client');
+jest.mock('../../src/config');
 
 describe('PushService', () => {
   let pushService: PushService;
   let mockPrisma: any;
-  let mockAxiosInstance: any;
+  let mockApiClient: any;
   let mockUserService: any;
 
   const mockConfig: PushConfig = {
-    apiToken: 'test-token',
     batchSize: 100,
     maxRetries: 3,
     timeout: 5000
@@ -45,11 +45,21 @@ describe('PushService', () => {
 
   beforeEach(() => {
     mockPrisma = new PrismaClient();
-    mockAxiosInstance = {
-      post: jest.fn(),
-      defaults: { baseURL: 'http://test.com' }
+    
+    // Mock API client
+    mockApiClient = {
+      upsyncData: jest.fn()
     };
-    (axios.create as jest.MockedFunction<typeof axios.create>).mockReturnValue(mockAxiosInstance as any);
+    (createApiClient as jest.MockedFunction<typeof createApiClient>).mockReturnValue(mockApiClient);
+    
+    // Mock config manager
+    const { configManager } = require('../../src/config');
+    configManager.getApiConfig = jest.fn().mockReturnValue({
+      baseUrl: 'http://test.com',
+      endpoints: {
+        push: '/api/v1/data/upsync'
+      }
+    });
     
     // Create mock UserService
     mockUserService = {
@@ -79,15 +89,10 @@ describe('PushService', () => {
 
       expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
         where: {
-          OR: [
-            { syncStatus: null },
-            {
-              syncStatus: {
-                syncedAt: null,
-                retryCount: { lt: mockConfig.maxRetries }
-              }
-            }
-          ]
+          syncStatus: {
+            syncedAt: null,
+            retryCount: { lt: mockConfig.maxRetries }
+          }
         },
         orderBy: { timestamp: 'asc' },
         take: 100,
@@ -203,29 +208,22 @@ describe('PushService', () => {
 
       const request = pushService.buildPushRequest(messages) as any;
 
-      // Check new format has messages array and metadata
+      // Check new format has messages array and entities
       expect(request.messages).toBeDefined();
       expect(request.messages).toHaveLength(2);
-      expect(request.metadata).toBeDefined();
+      expect(request.entities).toBeDefined();
       
       // Check first message - IDs should be transformed
       expect(request.messages[0].id).toBeDefined();
-      expect(request.messages[0].originalMessageId).toBe('id1');
+      expect(request.messages[0].messageId).toBe('id1');
       expect(request.messages[0].model).toBe('claude-3');
       expect(request.messages[0].inputTokens).toBe(100);
       expect(request.messages[0].outputTokens).toBe(200);
       
-      // Check metadata
-      expect(request.metadata.batch_info.total_messages).toBe(2);
-      expect(request.metadata.batch_info.message_counts.by_model['claude-3']).toBe(2);
-      expect(request.metadata.batch_info.message_counts.by_role['user']).toBe(1);
-      expect(request.metadata.batch_info.message_counts.by_role['assistant']).toBe(1);
-      
       // Check entities - should have transformed IDs
-      expect(Object.keys(request.metadata.entities.users)).toHaveLength(1);
-      expect(Object.keys(request.metadata.entities.machines)).toHaveLength(1);
-      expect(Object.keys(request.metadata.entities.projects)).toHaveLength(1);
-      expect(Object.keys(request.metadata.entities.sessions)).toHaveLength(1);
+      expect(Object.keys(request.entities.machines)).toHaveLength(1);
+      expect(Object.keys(request.entities.projects)).toHaveLength(1);
+      expect(Object.keys(request.entities.sessions)).toHaveLength(1);
     });
 
     it('should handle missing optional fields', () => {
@@ -254,7 +252,6 @@ describe('PushService', () => {
       expect(request.messages).toBeDefined();
       expect(request.messages[0].model).toBeUndefined();
       expect(request.messages[0].timestamp).toBeUndefined();
-      expect(request.metadata.batch_info.message_counts.by_model['unknown']).toBe(1);
     });
   });
 
@@ -262,28 +259,15 @@ describe('PushService', () => {
     it('should successfully push data', async () => {
       const mockRequest: PushRequest = {
         messages: [],
-        metadata: {
-          entities: {
-            users: {},
-            machines: {},
-            projects: {},
-            sessions: {}
-          },
-          batch_info: {
-            batch_id: 'batch1',
-            timestamp: '2024-01-01T00:00:00Z',
-            client_version: '1.0.0',
-            total_messages: 0,
-            message_counts: {
-              by_model: {},
-              by_role: {}
-            }
-          }
+        entities: {
+          machines: {},
+          projects: {},
+          sessions: {}
         }
       };
 
       const mockResponse: PushResponse = {
-        batchId: 'batch1',
+        syncId: 'sync_123',
         results: {
           persisted: { count: 2, messageIds: ['msg1', 'msg2'] },
           deduplicated: { count: 1, messageIds: ['msg3'] },
@@ -293,30 +277,30 @@ describe('PushService', () => {
           totalMessages: 3,
           messagesSucceeded: 3,
           messagesFailed: 0,
-          entitiesCreated: { users: 1, machines: 1, projects: 1, sessions: 1 },
-          aggregatesUpdated: true,
           processingTimeMs: 150
         }
       };
 
-      mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
+      mockApiClient.upsyncData.mockResolvedValue({ 
+        ok: true,
+        status: 200,
+        data: mockResponse 
+      });
 
       const result = await pushService.executePush(mockRequest);
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('', mockRequest);
+      expect(mockApiClient.upsyncData).toHaveBeenCalledWith(mockRequest);
       expect(result).toEqual(mockResponse);
     });
 
     it('should handle server errors', async () => {
       const mockRequest: PushRequest = {} as any;
 
-      const error = new Error('Request failed');
-      (error as any).isAxiosError = true;
-      (error as any).response = {
+      mockApiClient.upsyncData.mockResolvedValue({
+        ok: false,
         status: 400,
         data: { message: 'Invalid request' }
-      };
-      mockAxiosInstance.post.mockRejectedValue(error);
+      });
 
       await expect(pushService.executePush(mockRequest)).rejects.toThrow('Push failed: 400 - Invalid request');
     });
@@ -324,23 +308,40 @@ describe('PushService', () => {
     it('should handle network errors', async () => {
       const mockRequest: PushRequest = {} as any;
 
-      const error = new Error('Network timeout');
-      (error as any).isAxiosError = true;
-      (error as any).request = {};
-      mockAxiosInstance.post.mockRejectedValue(error);
+      const error = new Error('Failed to fetch');
+      mockApiClient.upsyncData.mockRejectedValue(error);
 
-      await expect(pushService.executePush(mockRequest)).rejects.toThrow('Network error: Network timeout');
+      await expect(pushService.executePush(mockRequest)).rejects.toThrow('Network error: Failed to fetch');
     });
   });
 
   describe('processPushResponse', () => {
     it('should update sync status based on response', async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          processed: 3,
-          failed: 1,
-          uploadId: 'upload_123'
+      const mockResponse: PushResponse = {
+        syncId: 'sync_123',
+        results: {
+          persisted: {
+            count: 2,
+            messageIds: ['msg1', 'msg2']
+          },
+          deduplicated: {
+            count: 1,
+            messageIds: ['msg3']
+          },
+          failed: {
+            count: 1,
+            details: [{
+              messageId: 'msg4',
+              error: 'Validation failed',
+              code: 'SYNC_001'
+            }]
+          }
+        },
+        summary: {
+          totalMessages: 4,
+          messagesSucceeded: 3,
+          messagesFailed: 1,
+          processingTimeMs: 100
         }
       };
 
@@ -389,12 +390,12 @@ describe('PushService', () => {
         where: { messageId: 'msg3' },
         update: {
           syncedAt: expect.any(Date),
-          syncResponse: 'persisted'
+          syncResponse: 'deduplicated'
         },
         create: {
           messageId: 'msg3',
           syncedAt: expect.any(Date),
-          syncResponse: 'persisted'
+          syncResponse: 'deduplicated'
         }
       });
 
@@ -403,12 +404,12 @@ describe('PushService', () => {
         where: { messageId: 'msg4' },
         update: {
           retryCount: { increment: 1 },
-          syncResponse: 'failed'
+          syncResponse: 'failed: SYNC_001 - Validation failed'
         },
         create: {
           messageId: 'msg4',
           retryCount: 1,
-          syncResponse: 'failed'
+          syncResponse: 'failed: SYNC_001 - Validation failed'
         }
       });
     });

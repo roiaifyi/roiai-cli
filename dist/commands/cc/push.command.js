@@ -105,19 +105,28 @@ function createPushCommand() {
                     const response = await pushService.executePush(request);
                     // Process response
                     await pushService.processPushResponse(response, messageIds);
-                    // Handle the new response format from spec
-                    if (!response.success) {
-                        throw new Error(response.error?.message || 'Push failed');
-                    }
-                    const { data } = response;
-                    const processed = data.processed || 0;
-                    const failed = data.failed || 0;
-                    totalPushed += processed;
+                    const persisted = response.results.persisted.count;
+                    const deduplicated = response.results.deduplicated.count;
+                    const failed = response.results.failed.count;
+                    const succeeded = persisted + deduplicated;
+                    totalPushed += succeeded;
                     spinner.succeed(`Batch ${batchNumber}: ` +
-                        `${chalk_1.default.green(processed)} processed, ` +
+                        `${chalk_1.default.green(persisted)} persisted, ` +
+                        `${chalk_1.default.yellow(deduplicated)} deduplicated, ` +
                         `${chalk_1.default.red(failed)} failed`);
-                    if (options.verbose && data.uploadId) {
-                        console.log(`  Upload ID: ${data.uploadId}`);
+                    if (options.verbose) {
+                        console.log(`  Sync ID: ${response.syncId}`);
+                        console.log(`  Processing time: ${response.summary.processingTimeMs}ms`);
+                        // Show failed message details if any
+                        if (response.results.failed.details.length > 0) {
+                            console.log(chalk_1.default.red('\n  Failed messages:'));
+                            for (const failure of response.results.failed.details.slice(0, 5)) {
+                                console.log(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
+                            }
+                            if (response.results.failed.details.length > 5) {
+                                console.log(`    ... and ${response.results.failed.details.length - 5} more`);
+                            }
+                        }
                     }
                 }
                 catch (error) {

@@ -113,14 +113,30 @@ describe('BatchProcessor', () => {
       batchProcessor.addMessage(message2);
       expect(batchProcessor.shouldFlush()).toBe(true);
 
+      // Mock message.create to work as expected
+      mockPrisma.message.create.mockResolvedValue({});
+      
       // Flush
       const count = await batchProcessor.flush();
       expect(count).toBe(2);
-      expect(mockPrisma.message.createMany).toHaveBeenCalledWith({
-        data: [message1, message2]
+      
+      // Verify that message.create was called for each message with nested sync status
+      expect(mockPrisma.message.create).toHaveBeenCalledTimes(2);
+      expect(mockPrisma.message.create).toHaveBeenCalledWith({
+        data: {
+          ...message1,
+          syncStatus: {
+            create: {}
+          }
+        }
       });
-      expect(mockPrisma.messageSyncStatus.createMany).toHaveBeenCalledWith({
-        data: [{ messageId: 'new-msg1' }, { messageId: 'new-msg2' }]
+      expect(mockPrisma.message.create).toHaveBeenCalledWith({
+        data: {
+          ...message2,
+          syncStatus: {
+            create: {}
+          }
+        }
       });
     });
 

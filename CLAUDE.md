@@ -77,3 +77,5 @@ There is no linting or formatting configuration at the project level. When makin
 24. **Simplified Writer Classification**: Removed complex pattern matching in favor of simple `tool_use_id` detection for agent messages, enhanced message breakdown to show percentages for all types in Human → Agent → Assistant order
 25. **Push Service Refactoring**: Use authenticated user ID directly instead of transformation, simplifying the code and removing unnecessary UUID transformations for user IDs
 26. **Pricing Fields Non-Nullable**: Changed pricing fields in push message entities to use 0 instead of null for consistency and type safety
+27. **OpenAPI Type Integration**: Integrated auto-generated types from web server OpenAPI spec, removed manual type definitions, ensuring type safety and API contract compliance
+28. **Message-SyncStatus Relation**: Made syncStatus required for all messages with cascade delete, simplified message creation with nested sync status, improved data integrity

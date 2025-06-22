@@ -93,7 +93,10 @@ export class DatabaseService {
         cacheReadTokens: messageData.cacheReadTokens,
         timestamp: messageData.timestamp,
         messageCost: messageData.messageCost,
-        requestId: messageData.requestId
+        requestId: messageData.requestId,
+        syncStatus: {
+          create: {}
+        }
       }
     });
   }
@@ -114,8 +117,20 @@ export class DatabaseService {
     timestamp?: Date;
     messageCost: Prisma.Decimal;
   }>) {
-    return await this.prisma.message.createMany({
-      data: messages
+    // Note: createMany doesn't support nested creates, so we need to use transactions
+    return await this.prisma.$transaction(async (tx) => {
+      // Create all messages with their sync status in a single transaction
+      for (const message of messages) {
+        await tx.message.create({
+          data: {
+            ...message,
+            syncStatus: {
+              create: {}
+            }
+          }
+        });
+      }
+      return messages.length;
     });
   }
   

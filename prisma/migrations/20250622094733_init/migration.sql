@@ -125,7 +125,7 @@ CREATE TABLE "message_sync_status" (
     "retry_count" INTEGER NOT NULL DEFAULT 0,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
-    CONSTRAINT "message_sync_status_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "messages" ("message_id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "message_sync_status_message_id_fkey" FOREIGN KEY ("message_id") REFERENCES "messages" ("message_id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateIndex

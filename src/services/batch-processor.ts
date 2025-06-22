@@ -29,7 +29,6 @@ export interface BatchMessage {
 
 export class BatchProcessor {
   private messageBuffer: BatchMessage[] = [];
-  private syncStatusBuffer: { messageId: string }[] = [];
   private existingMessageIds: Set<string> = new Set();
   private readonly batchSize: number = 1000;
 
@@ -66,7 +65,6 @@ export class BatchProcessor {
   addMessage(message: BatchMessage): void {
     if (!this.messageExists(message.messageId)) {
       this.messageBuffer.push(message);
-      this.syncStatusBuffer.push({ messageId: message.messageId });
       this.existingMessageIds.add(message.messageId); // Prevent duplicates in current batch
     }
   }
@@ -88,44 +86,22 @@ export class BatchProcessor {
       
       for (let i = 0; i < this.messageBuffer.length; i += CHUNK_SIZE) {
         const messageChunk = this.messageBuffer.slice(i, i + CHUNK_SIZE);
-        const syncStatusChunk = this.syncStatusBuffer.slice(i, i + CHUNK_SIZE);
         
         try {
           await prisma.$transaction(async (tx) => {
-            // Insert messages chunk
-            await tx.message.createMany({
-              data: messageChunk
-            });
-            
-            // Verify messages were inserted and create sync statuses
-            const messageIds = messageChunk.map(m => m.messageId);
-            const insertedMessages = await tx.message.findMany({
-              where: { messageId: { in: messageIds } },
-              select: { messageId: true }
-            });
-            
-            const insertedMessageIds = new Set(insertedMessages.map(m => m.messageId));
-            
-            // Get existing sync statuses to avoid duplicates
-            const existingSyncStatuses = await tx.messageSyncStatus.findMany({
-              where: { messageId: { in: messageIds } },
-              select: { messageId: true }
-            });
-            
-            const existingSyncMessageIds = new Set(existingSyncStatuses.map(s => s.messageId));
-            
-            // Create sync statuses only for messages that exist and don't have sync status
-            const validSyncStatuses = syncStatusChunk.filter(s => 
-              insertedMessageIds.has(s.messageId) && !existingSyncMessageIds.has(s.messageId)
-            );
-            
-            if (validSyncStatuses.length > 0) {
-              await tx.messageSyncStatus.createMany({
-                data: validSyncStatuses
+            // Insert messages with sync status using nested create
+            for (const message of messageChunk) {
+              await tx.message.create({
+                data: {
+                  ...message,
+                  syncStatus: {
+                    create: {}
+                  }
+                }
               });
             }
             
-            successfullyInserted += insertedMessageIds.size;
+            successfullyInserted += messageChunk.length;
           }, {
             timeout: 30000 // 30 second timeout
           });
@@ -133,10 +109,7 @@ export class BatchProcessor {
           logger.debug(`Chunk ${i}-${i + CHUNK_SIZE} failed, processing individually: ${chunkError.code}`);
           
           // If chunk fails, process messages individually to maximize success
-          for (let j = 0; j < messageChunk.length; j++) {
-            const message = messageChunk[j];
-            const syncStatus = syncStatusChunk[j];
-            
+          for (const message of messageChunk) {
             try {
               await prisma.$transaction(async (tx) => {
                 // Check if message already exists
@@ -145,19 +118,16 @@ export class BatchProcessor {
                 });
                 
                 if (!existing) {
-                  await tx.message.create({ data: message });
+                  await tx.message.create({ 
+                    data: {
+                      ...message,
+                      syncStatus: {
+                        create: {}
+                      }
+                    }
+                  });
+                  successfullyInserted++;
                 }
-                
-                // Check if sync status already exists
-                const existingSync = await tx.messageSyncStatus.findUnique({
-                  where: { messageId: syncStatus.messageId }
-                });
-                
-                if (!existingSync) {
-                  await tx.messageSyncStatus.create({ data: syncStatus });
-                }
-                
-                successfullyInserted++;
               });
             } catch (individualError: any) {
               // Log but don't fail the entire batch
@@ -174,7 +144,6 @@ export class BatchProcessor {
     } finally {
       // Always clear buffers to prevent stuck state
       this.messageBuffer = [];
-      this.syncStatusBuffer = [];
     }
     
     return successfullyInserted;

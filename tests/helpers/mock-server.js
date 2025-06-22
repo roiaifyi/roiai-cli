@@ -81,11 +81,31 @@ app.post('/api/v1/data/upsync', (req, res) => {
   
   // Check if we should simulate failures
   if (control.failureMode === 'total') {
-    return res.status(500).json({ 
-      success: false,
-      error: {
-        code: 'SERVER_ERROR',
-        message: 'Internal server error'
+    return res.status(500).json({
+      syncId: `sync_${Date.now()}`,
+      results: {
+        persisted: {
+          count: 0,
+          messageIds: []
+        },
+        deduplicated: {
+          count: 0,
+          messageIds: []
+        },
+        failed: {
+          count: recordCount,
+          details: request.messages.map(m => ({
+            messageId: m.messageId,
+            error: 'Internal server error',
+            code: 'SYNC_002'
+          }))
+        }
+      },
+      summary: {
+        totalMessages: recordCount,
+        messagesSucceeded: 0,
+        messagesFailed: recordCount,
+        processingTimeMs: 50
       }
     });
   }
@@ -93,24 +113,59 @@ app.post('/api/v1/data/upsync', (req, res) => {
   if (control.failureMode === 'partial') {
     // Simulate partial failure
     const halfCount = Math.floor(recordCount / 2);
+    const failedMessages = request.messages.slice(halfCount);
     
     return res.json({
-      success: true,
-      data: {
-        processed: halfCount,
-        failed: recordCount - halfCount,
-        uploadId: `upload_${Date.now()}`
+      syncId: `sync_${Date.now()}`,
+      results: {
+        persisted: {
+          count: halfCount,
+          messageIds: request.messages.slice(0, halfCount).map(m => m.messageId)
+        },
+        deduplicated: {
+          count: 0,
+          messageIds: []
+        },
+        failed: {
+          count: recordCount - halfCount,
+          details: failedMessages.map(m => ({
+            messageId: m.messageId,
+            error: 'Simulated failure',
+            code: 'SYNC_002'
+          }))
+        }
+      },
+      summary: {
+        totalMessages: recordCount,
+        messagesSucceeded: halfCount,
+        messagesFailed: recordCount - halfCount,
+        processingTimeMs: 50
       }
     });
   }
   
   // Default success response
   res.json({
-    success: true,
-    data: {
-      processed: recordCount,
-      failed: 0,
-      uploadId: `upload_${Date.now()}`
+    syncId: `sync_${Date.now()}`,
+    results: {
+      persisted: {
+        count: recordCount,
+        messageIds: request.messages.map(m => m.messageId)
+      },
+      deduplicated: {
+        count: 0,
+        messageIds: []
+      },
+      failed: {
+        count: 0,
+        details: []
+      }
+    },
+    summary: {
+      totalMessages: recordCount,
+      messagesSucceeded: recordCount,
+      messagesFailed: 0,
+      processingTimeMs: 50
     }
   });
 });

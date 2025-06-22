@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import axios, { AxiosInstance } from "axios";
 import { v5 as uuidv5 } from "uuid";
 import crypto from "crypto";
 import {
@@ -9,67 +8,57 @@ import {
   EntityMaps,
   MessageEntity,
 } from "../models/push.types";
+import { createApiClient } from "../generated/api-client";
 import { UserService } from "./user.service";
-import { version } from "../../package.json";
 import { COMMAND_STRINGS } from "../utils/constants";
-import { EndpointResolver } from "../utils/endpoint-resolver";
+import { configManager } from "../config";
 
 export class PushService {
   private prisma: PrismaClient;
-  private httpClient: AxiosInstance;
+  private apiClient: ReturnType<typeof createApiClient>;
   private config: PushConfig;
   private authenticatedUserId: string | null = null;
 
   constructor(
     prisma: PrismaClient,
     config: PushConfig,
-    userService?: UserService
+    userService: UserService
   ) {
     this.prisma = prisma;
     this.config = config;
 
-    if (userService) {
-      this.authenticatedUserId = userService.getAuthenticatedUserId();
-      const apiToken = userService.getApiToken();
-
-      // Get push endpoint
-      const endpoint = EndpointResolver.getPushEndpoint();
-
-      this.httpClient = axios.create({
-        baseURL: endpoint,
-        timeout: config.timeout,
-        headers: {
-          Authorization: `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${apiToken}`,
-          "Content-Type": "application/json",
-        },
-      });
-    } else {
-      // For testing or backward compatibility
-      const endpoint = EndpointResolver.getPushEndpoint();
-      this.httpClient = axios.create({
-        baseURL: endpoint,
-        timeout: config.timeout,
-        headers: {
-          Authorization: `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${config.apiToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+    const apiConfig = configManager.getApiConfig();
+    
+    if (!userService) {
+      throw new Error('PushService requires UserService for authentication');
     }
+    
+    const apiToken = userService.getApiToken();
+    if (!apiToken) {
+      throw new Error('No API token available. Please login first.');
+    }
+    
+    this.authenticatedUserId = userService.getAuthenticatedUserId();
+    if (!this.authenticatedUserId) {
+      throw new Error('No authenticated user ID available');
+    }
+
+    this.apiClient = createApiClient({
+      baseUrl: apiConfig.baseUrl,
+      headers: {
+        Authorization: `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${apiToken}`,
+      },
+    });
   }
 
   async selectUnpushedBatch(batchSize: number): Promise<string[]> {
-    // Find messages without sync status or with failed sync
+    // Find messages with sync status that haven't been synced yet
     const messages = await this.prisma.message.findMany({
       where: {
-        OR: [
-          { syncStatus: null },
-          {
-            syncStatus: {
-              syncedAt: null,
-              retryCount: { lt: this.config.maxRetries },
-            },
-          },
-        ],
+        syncStatus: {
+          syncedAt: null,
+          retryCount: { lt: this.config.maxRetries },
+        },
       },
       orderBy: { timestamp: "asc" },
       take: batchSize,
@@ -99,15 +88,12 @@ export class PushService {
 
   buildPushRequest(messages: any[]): PushRequest {
     const entities: EntityMaps = {
-      users: new Map(),
       machines: new Map(),
       projects: new Map(),
       sessions: new Map(),
     };
 
     const messageEntities: MessageEntity[] = [];
-    const modelCounts: Record<string, number> = {};
-    const roleCounts: Record<string, number> = {};
 
     // Get authenticated user ID for namespace
     const authenticatedUserId = this.authenticatedUserId;
@@ -134,23 +120,14 @@ export class PushService {
         authenticatedUserId
       );
 
-      // Add user entity
-      if (!entities.users.has(authenticatedUserId)) {
-        entities.users.set(authenticatedUserId, {
-          id: authenticatedUserId,
-          email: msg.session?.project?.user?.email,
-          username: msg.session?.project?.user?.username,
-        });
-      }
-
       // Add machine entity with both transformed and local IDs
       if (!entities.machines.has(transformedMachineId)) {
         entities.machines.set(transformedMachineId, {
           id: transformedMachineId,
           userId: authenticatedUserId,
-          machineName: msg.session?.project?.machine?.machineName,
+          machineName: msg.session?.project?.machine?.machineName || "",
           localMachineId: msg.clientMachineId,
-        } as any);
+        });
       }
 
       // Add project entity
@@ -176,7 +153,7 @@ export class PushService {
       // Build message entity with transformed IDs
       messageEntities.push({
         id: transformedMessageId,
-        originalMessageId: msg.messageId,
+        messageId: msg.messageId,
         sessionId: transformedSessionId,
         projectId: transformedProjectId,
         userId: authenticatedUserId,
@@ -193,58 +170,39 @@ export class PushService {
         pricePerCacheReadToken: msg.pricePerCacheReadToken ? Number(msg.pricePerCacheReadToken) : 0,
         cacheDurationMinutes: msg.cacheDurationMinutes || 0,
         writer: msg.writer,
+        machineId: transformedMachineId,
         timestamp: msg.timestamp?.toISOString(),
-      } as any);
-
-      // Track counts
-      const model = msg.model || "unknown";
-      modelCounts[model] = (modelCounts[model] || 0) + 1;
-      roleCounts[msg.role] = (roleCounts[msg.role] || 0) + 1;
+      });
     }
 
     return {
       messages: messageEntities,
-      metadata: {
-        entities: {
-          users: Object.fromEntries(entities.users),
-          machines: Object.fromEntries(entities.machines),
-          projects: Object.fromEntries(entities.projects),
-          sessions: Object.fromEntries(entities.sessions),
-        },
-        batch_info: {
-          batch_id: `batch_${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          client_version: version,
-          total_messages: messageEntities.length,
-          message_counts: {
-            by_model: modelCounts,
-            by_role: roleCounts,
-          },
-        },
+      entities: {
+        machines: Object.fromEntries(entities.machines),
+        projects: Object.fromEntries(entities.projects),
+        sessions: Object.fromEntries(entities.sessions),
       },
-    } as any;
+    };
   }
 
   async executePush(request: PushRequest): Promise<PushResponse> {
     try {
-      const response = await this.httpClient.post("", request);
-      return response.data;
+      const response = await this.apiClient.upsyncData(request);
+      if (!response.ok) {
+        // Handle error responses
+        const errorData = response.data as any;
+        throw new Error(
+          `Push failed: ${response.status} - ${
+            errorData?.message || "Unknown error"
+          }`
+        );
+      }
+      return response.data as PushResponse;
     } catch (error) {
-      if ((error as any).isAxiosError) {
-        const axiosError = error as any;
-        if (axiosError.response) {
-          // Server responded with error
-          throw new Error(
-            `Push failed: ${axiosError.response.status} - ${
-              axiosError.response.data?.message || "Unknown error"
-            }`
-          );
-        } else if (axiosError.request) {
-          // Network error - add more debug info
-          const baseURL = this.httpClient?.defaults?.baseURL || "unknown";
-          throw new Error(
-            `Network error: ${axiosError.message} (baseURL: ${baseURL}, code: ${axiosError.code})`
-          );
+      if (error instanceof Error) {
+        // Re-throw with more context if needed
+        if (error.message.includes('fetch')) {
+          throw new Error(`Network error: ${error.message}`);
         }
       }
       throw error;
@@ -252,35 +210,25 @@ export class PushService {
   }
 
   async processPushResponse(
-    response: any,
+    response: PushResponse,
     messageIds: string[]
   ): Promise<void> {
     const now = new Date();
 
-    // Handle the spec response format
-    if (!response.success) {
-      throw new Error(response.error?.message || "Push failed");
-    }
-
-    const { data } = response;
-    const processed = data.processed || 0;
-    const failed = data.failed || 0;
-
     // Update sync status records in a transaction
     await this.prisma.$transaction(async (tx) => {
-      if (processed > 0) {
-        // Mark successful messages as synced
-        const successCount = Math.min(processed, messageIds.length);
-        for (let i = 0; i < successCount; i++) {
-          // Create or update sync status
+      // Process persisted messages
+      for (const messageId of response.results.persisted.messageIds) {
+        const originalMessageId = messageIds.find(id => id === messageId);
+        if (originalMessageId) {
           await tx.messageSyncStatus.upsert({
-            where: { messageId: messageIds[i] },
+            where: { messageId: originalMessageId },
             update: {
               syncedAt: now,
               syncResponse: "persisted",
             },
             create: {
-              messageId: messageIds[i],
+              messageId: originalMessageId,
               syncedAt: now,
               syncResponse: "persisted",
             },
@@ -288,20 +236,39 @@ export class PushService {
         }
       }
 
-      if (failed > 0) {
-        // Mark remaining messages as failed
-        const startIndex = processed;
-        for (let i = startIndex; i < messageIds.length; i++) {
+      // Process deduplicated messages (treat as successful)
+      for (const messageId of response.results.deduplicated.messageIds) {
+        const originalMessageId = messageIds.find(id => id === messageId);
+        if (originalMessageId) {
           await tx.messageSyncStatus.upsert({
-            where: { messageId: messageIds[i] },
+            where: { messageId: originalMessageId },
             update: {
-              retryCount: { increment: 1 },
-              syncResponse: "failed",
+              syncedAt: now,
+              syncResponse: "deduplicated",
             },
             create: {
-              messageId: messageIds[i],
+              messageId: originalMessageId,
+              syncedAt: now,
+              syncResponse: "deduplicated",
+            },
+          });
+        }
+      }
+
+      // Process failed messages
+      for (const failure of response.results.failed.details) {
+        const originalMessageId = messageIds.find(id => id === failure.messageId);
+        if (originalMessageId) {
+          await tx.messageSyncStatus.upsert({
+            where: { messageId: originalMessageId },
+            update: {
+              retryCount: { increment: 1 },
+              syncResponse: `failed: ${failure.code} - ${failure.error}`,
+            },
+            create: {
+              messageId: originalMessageId,
               retryCount: 1,
-              syncResponse: "failed",
+              syncResponse: `failed: ${failure.code} - ${failure.error}`,
             },
           });
         }
@@ -351,18 +318,13 @@ export class PushService {
   }
 
   async countEligibleMessages(): Promise<number> {
-    // Count messages that either have no sync status or have sync status with retries < max
+    // Count messages that have sync status with retries < max and not synced
     const count = await this.prisma.message.count({
       where: {
-        OR: [
-          { syncStatus: null },
-          {
-            syncStatus: {
-              syncedAt: null,
-              retryCount: { lt: this.config.maxRetries },
-            },
-          },
-        ],
+        syncStatus: {
+          syncedAt: null,
+          retryCount: { lt: this.config.maxRetries },
+        },
       },
     });
 
@@ -403,7 +365,7 @@ export class PushService {
       }),
       this.prisma.message.count({
         where: {
-          OR: [{ syncStatus: null }, { syncStatus: { syncedAt: null } }],
+          syncStatus: { syncedAt: null },
         },
       }),
       this.prisma.messageSyncStatus.groupBy({
