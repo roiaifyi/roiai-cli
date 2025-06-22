@@ -44,11 +44,30 @@ app.post('/api/v1/cli/login', (req, res) => {
   }
 });
 
-// Mock push endpoint matching the spec
-app.post('/api/v1/cli/upsync', (req, res) => {
+// Mock health check endpoint
+app.get('/api/v1/cli/health', (req, res) => {
+  const control = getControlSettings();
+  
+  // Check for auth failure mode
+  if (control.failureMode === 'auth_fail') {
+    return res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'AUTH_004',
+        message: 'Invalid API key'
+      }
+    });
+  }
+  
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'AUTH_004',
+        message: 'Unauthorized'
+      }
+    });
   }
   
   // Check for valid token
@@ -57,14 +76,101 @@ app.post('/api/v1/cli/upsync', (req, res) => {
     return res.status(401).json({ 
       success: false,
       error: {
-        code: 'UNAUTHORIZED',
+        code: 'AUTH_004',
+        message: 'Invalid API key'
+      }
+    });
+  }
+  
+  // Return successful health check
+  res.json({
+    authenticated: true,
+    user: {
+      id: 'test-user-123',
+      email: 'test@example.com',
+      username: 'testuser'
+    },
+    machine: {
+      id: 'test-machine-123',
+      name: 'Test Machine'
+    }
+  });
+});
+
+// Mock logout endpoint
+app.post('/api/v1/cli/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'AUTH_004',
+        message: 'Unauthorized'
+      }
+    });
+  }
+  
+  // Check for valid token
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123') {
+    return res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'AUTH_004',
+        message: 'Invalid API key'
+      }
+    });
+  }
+  
+  // Return successful logout
+  res.json({
+    success: true,
+    data: {
+      message: 'Successfully logged out'
+    }
+  });
+});
+
+// Mock push endpoint matching the spec
+app.post('/api/v1/cli/upsync', (req, res) => {
+  const control = getControlSettings();
+  
+  // Check for auth failure during push mode
+  if (control.failureMode === 'auth_fail_during_push') {
+    return res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'AUTH_004',
+        message: 'Authentication failed'
+      }
+    });
+  }
+  
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'AUTH_004',
+        message: 'Unauthorized'
+      }
+    });
+  }
+  
+  // Check for valid token
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  if (token !== 'test-auth-token' && token !== 'roiai_auth-token-123') {
+    return res.status(401).json({ 
+      success: false,
+      error: {
+        code: 'AUTH_004',
         message: 'Invalid API key'
       }
     });
   }
 
   const request = req.body;
-  const control = getControlSettings();
+  // Note: control is already defined above for auth_fail_during_push check
   
   // Validate request has messages array
   if (!request.messages || !Array.isArray(request.messages)) {
@@ -82,30 +188,10 @@ app.post('/api/v1/cli/upsync', (req, res) => {
   // Check if we should simulate failures
   if (control.failureMode === 'total') {
     return res.status(500).json({
-      syncId: `sync_${Date.now()}`,
-      results: {
-        persisted: {
-          count: 0,
-          messageIds: []
-        },
-        deduplicated: {
-          count: 0,
-          messageIds: []
-        },
-        failed: {
-          count: recordCount,
-          details: request.messages.map(m => ({
-            messageId: m.messageId,
-            error: 'Internal server error',
-            code: 'SYNC_002'
-          }))
-        }
-      },
-      summary: {
-        totalMessages: recordCount,
-        messagesSucceeded: 0,
-        messagesFailed: recordCount,
-        processingTimeMs: 50
+      success: false,
+      error: {
+        code: 'SYNC_002',
+        message: 'Database connection failed'
       }
     });
   }

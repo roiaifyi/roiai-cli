@@ -12,7 +12,7 @@ describe('Push Command Integration Tests', () => {
   const cliPath = path.join(__dirname, '../../dist/index.js');
   
   // Helper to set mock server behavior
-  const setMockServerMode = (mode: 'none' | 'total' | 'partial') => {
+  const setMockServerMode = (mode: 'none' | 'total' | 'partial' | 'auth_fail' | 'auth_fail_during_push') => {
     const controlPath = path.join(__dirname, '../helpers/mock-control.json');
     fs.writeFileSync(controlPath, JSON.stringify({ failureMode: mode }, null, 2));
   };
@@ -378,6 +378,35 @@ describe('Push Command Integration Tests', () => {
         where: { syncedAt: { not: null } }
       });
       expect(syncedCount).toBe(0);
+    });
+  });
+
+  describe('Authentication Failures', () => {
+    it('should fail fast on authentication check before pushing', async () => {
+      await createTestData(5);
+      
+      // Configure mock server to reject auth health check
+      setMockServerMode('auth_fail');
+
+      const output = runCli('cc push');
+
+      expect(output).toContain('Verifying authentication');
+      expect(output).toContain('Authentication failed');
+      expect(output).toContain('Please check your API token');
+      expect(output).not.toContain('Found 5 unsynced messages'); // Should fail before stats check
+    });
+
+    it('should handle authentication failures during push', async () => {
+      await createTestData(3);
+      
+      // Configure mock server to fail auth on upsync endpoint
+      setMockServerMode('auth_fail_during_push');
+
+      const output = runCli('cc push');
+
+      expect(output).toContain('Authentication failed during push');
+      expect(output).toContain('API token may have expired');
+      expect(output).toContain('roiai-cli cc login');
     });
   });
 

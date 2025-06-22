@@ -8,7 +8,7 @@ export function createApiClient(config: {
   async function upsyncData(body: components['schemas']['PushRequest']): Promise<{
     ok: boolean;
     status: number;
-    data: components['schemas']['PushResponse'] | components['schemas']['ValidationError'] | components['schemas']['Error'];
+    data: components['schemas']['PushResponse'] | components['schemas']['ErrorResponse'];
   }> {
     const response = await fetch(`${config.baseUrl}/api/v1/cli/upsync`, {
       method: 'POST',
@@ -19,7 +19,49 @@ export function createApiClient(config: {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json() as components['schemas']['PushResponse'] | components['schemas']['ValidationError'] | components['schemas']['Error'];
+    const data = await response.json() as components['schemas']['PushResponse'] | components['schemas']['ErrorResponse'];
+    
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+    };
+  }
+
+  async function healthCheck(): Promise<{
+    ok: boolean;
+    status: number;
+    data: components['schemas']['HealthCheckResponse'] | components['schemas']['ErrorResponse'];
+  }> {
+    const response = await fetch(`${config.baseUrl}/api/v1/cli/health`, {
+      method: 'GET',
+      headers: {
+        ...config.headers,
+      },
+    });
+
+    const data = await response.json() as components['schemas']['HealthCheckResponse'] | components['schemas']['ErrorResponse'];
+    
+    return {
+      ok: response.ok,
+      status: response.status,
+      data,
+    };
+  }
+
+  async function logout(): Promise<{
+    ok: boolean;
+    status: number;
+    data: components['schemas']['SuccessResponse'] | components['schemas']['ErrorResponse'];
+  }> {
+    const response = await fetch(`${config.baseUrl}/api/v1/cli/logout`, {
+      method: 'POST',
+      headers: {
+        ...config.headers,
+      },
+    });
+
+    const data = await response.json() as components['schemas']['SuccessResponse'] | components['schemas']['ErrorResponse'];
     
     return {
       ok: response.ok,
@@ -30,6 +72,8 @@ export function createApiClient(config: {
 
   return {
     upsyncData,
+    healthCheck,
+    logout,
   };
 }
 
@@ -48,3 +92,8 @@ export type SyncFailureDetail = components['schemas']['SyncFailureDetail'];
 export type SyncErrorCode = components['schemas']['SyncErrorCode'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type Error = components['schemas']['Error'];
+export type HealthCheckResponse = components['schemas']['HealthCheckResponse'];
+export type SuccessResponse = components['schemas']['SuccessResponse'];
+export type ErrorResponse = components['schemas']['ErrorResponse'];
+export type ApiError = components['schemas']['ApiError'];
+export type ErrorCode = components['schemas']['ErrorCode'];

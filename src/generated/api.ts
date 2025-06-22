@@ -126,6 +126,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cli/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * CLI health check
+         * @description Check if CLI credentials (API key) are valid before attempting to sync data.
+         *     Returns user and machine information if authenticated successfully.
+         *
+         */
+        get: operations["cliHealthCheck"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cli/upsync": {
         parameters: {
             query?: never;
@@ -201,6 +223,39 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        SuccessResponse: {
+            /**
+             * @description Indicates successful operation
+             * @enum {boolean}
+             */
+            success: true;
+            /** @description Response data payload */
+            data: {
+                [key: string]: unknown;
+            };
+        };
+        ErrorResponse: {
+            /**
+             * @description Indicates failed operation
+             * @enum {boolean}
+             */
+            success: false;
+            error: components["schemas"]["ApiError"];
+        };
+        ApiError: {
+            code: components["schemas"]["ErrorCode"];
+            /** @description Human-readable error message */
+            message: string;
+            /** @description Additional error details */
+            details?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * @description Standardized error codes
+         * @enum {string}
+         */
+        ErrorCode: "AUTH_001" | "AUTH_002" | "AUTH_003" | "AUTH_004" | "VAL_001" | "VAL_002" | "VAL_003" | "DB_001" | "DB_002" | "DB_003" | "RATE_001" | "SRV_001" | "SRV_002" | "SYNC_001" | "SYNC_002" | "SYNC_003" | "SYNC_004" | "SYNC_005" | "SYNC_006";
         Error: {
             /**
              * @description Error code
@@ -542,6 +597,44 @@ export interface components {
              */
             api_key: string;
         };
+        HealthCheckResponse: {
+            /**
+             * @description Whether the API key is valid
+             * @example true
+             */
+            authenticated: boolean;
+            user: {
+                /**
+                 * @description User ID
+                 * @example user_123
+                 */
+                id: string;
+                /**
+                 * Format: email
+                 * @description User email
+                 * @example user@example.com
+                 */
+                email: string;
+                /**
+                 * @description Username
+                 * @example johndoe
+                 */
+                username: string;
+            };
+            /** @description Machine information (only present if authenticated with API key) */
+            machine?: {
+                /**
+                 * @description Machine ID
+                 * @example machine_123
+                 */
+                id?: string;
+                /**
+                 * @description Machine name
+                 * @example John's MacBook Pro
+                 */
+                name?: string;
+            };
+        };
         ChangePasswordRequest: {
             /**
              * Format: password
@@ -613,12 +706,6 @@ export interface components {
              * @example Production Server Key
              */
             name?: string;
-        };
-        SuccessResponse: {
-            /** @example true */
-            success: boolean;
-            /** @example Operation completed successfully */
-            message: string;
         };
         PushRequest: {
             /** @description Array of messages to sync */
@@ -1000,6 +1087,39 @@ export interface operations {
                     /** @example {
                      *       "code": "INTERNAL_ERROR",
                      *       "message": "An unexpected error occurred"
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    cliHealthCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authentication valid */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthCheckResponse"];
+                };
+            };
+            /** @description Unauthorized - Invalid or missing API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "code": "AUTH_004",
+                     *       "message": "Unauthorized"
                      *     } */
                     "application/json": components["schemas"]["Error"];
                 };

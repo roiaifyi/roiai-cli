@@ -37,6 +37,18 @@ function createPushCommand() {
             }
             const pushConfig = config_1.configManager.getPushConfig();
             const pushService = new push_service_1.PushService(prisma, pushConfig, userService);
+            // Check authentication before proceeding
+            spinner.start('Verifying authentication...');
+            const authCheck = await pushService.checkAuthentication();
+            if (!authCheck.valid) {
+                spinner.fail(`Authentication failed: ${authCheck.error}`);
+                console.log(chalk_1.default.yellow('\nPlease check your API token and try again. You may need to run \'roiai-cli cc login\' to refresh your credentials.'));
+                process.exit(1);
+            }
+            spinner.succeed(`Authenticated as ${authCheck.user?.email || 'user'}`);
+            if (options.verbose && authCheck.machine) {
+                console.log(`  Machine: ${authCheck.machine.name || authCheck.machine.id}`);
+            }
             // Use config batch size if not specified in command line
             const batchSize = options.batchSize || pushConfig.batchSize;
             // Get initial statistics
@@ -83,6 +95,20 @@ function createPushCommand() {
             const processedMessages = new Set();
             while (true) {
                 batchNumber++;
+                // Periodically check authentication during long push sessions (every 10 batches)
+                if (batchNumber > 1 && batchNumber % 10 === 1) {
+                    spinner.start('Re-verifying authentication...');
+                    const authRecheck = await pushService.checkAuthentication();
+                    if (!authRecheck.valid) {
+                        spinner.fail(`Authentication lost: ${authRecheck.error}`);
+                        console.log(chalk_1.default.red('\n🚫 Authentication failed during push session!'));
+                        console.log(chalk_1.default.yellow('Your API token may have expired. Please run \'roiai-cli cc login\' to refresh your credentials.'));
+                        process.exit(1);
+                    }
+                    if (options.verbose) {
+                        spinner.info('Authentication still valid');
+                    }
+                }
                 spinner.start(`Processing batch ${batchNumber}...`);
                 // Select batch
                 const messages = await pushService.selectUnpushedBatchWithEntities(batchSize);
@@ -126,7 +152,18 @@ function createPushCommand() {
                     }
                 }
                 catch (error) {
-                    spinner.fail(`Batch ${batchNumber} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    spinner.fail(`Batch ${batchNumber} failed: ${errorMessage}`);
+                    // Check if this is an authentication error
+                    if (error instanceof Error && (error.message.includes('401') ||
+                        error.message.includes('Unauthorized') ||
+                        error.message.includes('Invalid API key') ||
+                        error.message.includes('Authentication failed'))) {
+                        console.log(chalk_1.default.red('\n🚫 Authentication failed during push!'));
+                        console.log(chalk_1.default.yellow('Your API token may have expired or been revoked.'));
+                        console.log(chalk_1.default.yellow('Please run \'roiai-cli cc login\' to refresh your credentials and try again.'));
+                        process.exit(1);
+                    }
                     // When the entire batch fails, we need to increment retry count to prevent infinite loops
                     await pushService.incrementRetryCountForBatch(messageIds);
                     // For network errors, we might want to stop processing

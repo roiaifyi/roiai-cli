@@ -83,3 +83,5 @@ There is no linting or formatting configuration at the project level. When makin
 30. **Login Sync Reset**: Modified login to reset ALL message sync statuses (not just synced ones) to enable proper user switching and re-upload capability
 31. **Incremental Cost Display**: Added cost tracking before and after sync operations to display incremental cost changes during sync command execution
 32. **API Endpoint Update**: Updated push endpoint from `/api/v1/data/upsync` to `/api/v1/cli/upsync` to match the latest OpenAPI specification
+33. **Push Authentication Validation**: Added health check endpoint integration with fail-fast authentication validation before and during push operations, including periodic re-authentication checks and comprehensive error handling
+34. **Logout API Integration**: Enhanced logout command to call server logout endpoint for proper API key revocation, with graceful fallback to local-only logout and user guidance for manual key deletion when server call fails

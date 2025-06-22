@@ -51,6 +51,39 @@ export class PushService {
     });
   }
 
+  /**
+   * Check authentication status with the server before pushing
+   */
+  async checkAuthentication(): Promise<{ valid: boolean; error?: string; user?: any; machine?: any }> {
+    try {
+      const response = await this.apiClient.healthCheck();
+      
+      if (response.ok && response.status === 200) {
+        const data = response.data as any;
+        return {
+          valid: data.authenticated,
+          user: data.user,
+          machine: data.machine
+        };
+      } else {
+        const errorData = response.data as any;
+        // Handle structured error response
+        const errorMessage = errorData?.success === false && errorData?.error 
+          ? `${errorData.error.message} (${errorData.error.code})`
+          : errorData?.message || `Authentication failed: ${response.status}`;
+        return {
+          valid: false,
+          error: errorMessage
+        };
+      }
+    } catch (error) {
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : 'Network error during authentication check'
+      };
+    }
+  }
+
   async selectUnpushedBatchWithEntities(batchSize: number): Promise<any[]> {
     return await this.prisma.message.findMany({
       where: {
@@ -198,11 +231,18 @@ export class PushService {
       if (!response.ok) {
         // Handle error responses
         const errorData = response.data as any;
-        throw new Error(
-          `Push failed: ${response.status} - ${
-            errorData?.message || "Unknown error"
-          }`
-        );
+        
+        // Handle structured error response
+        const errorMessage = errorData?.success === false && errorData?.error 
+          ? `${errorData.error.message} (${errorData.error.code})`
+          : errorData?.message || "Unknown error";
+        
+        // Check for authentication failures
+        if (response.status === 401) {
+          throw new Error(`Authentication failed: ${errorMessage}`);
+        }
+        
+        throw new Error(`Push failed: ${response.status} - ${errorMessage}`);
       }
       return response.data as PushResponse;
     } catch (error) {
@@ -210,6 +250,11 @@ export class PushService {
         // Re-throw with more context if needed
         if (error.message.includes("fetch")) {
           throw new Error(`Network error: ${error.message}`);
+        }
+        
+        // Pass through authentication errors
+        if (error.message.includes("Authentication failed")) {
+          throw error;
         }
       }
       throw error;
