@@ -28,19 +28,19 @@ export class PushService {
     this.config = config;
 
     const apiConfig = configManager.getApiConfig();
-    
+
     if (!userService) {
-      throw new Error('PushService requires UserService for authentication');
+      throw new Error("PushService requires UserService for authentication");
     }
-    
+
     const apiToken = userService.getApiToken();
     if (!apiToken) {
-      throw new Error('No API token available. Please login first.');
+      throw new Error("No API token available. Please login first.");
     }
-    
+
     this.authenticatedUserId = userService.getAuthenticatedUserId();
     if (!this.authenticatedUserId) {
-      throw new Error('No authenticated user ID available');
+      throw new Error("No authenticated user ID available");
     }
 
     this.apiClient = createApiClient({
@@ -51,9 +51,8 @@ export class PushService {
     });
   }
 
-  async selectUnpushedBatch(batchSize: number): Promise<string[]> {
-    // Find messages with sync status that haven't been synced yet
-    const messages = await this.prisma.message.findMany({
+  async selectUnpushedBatchWithEntities(batchSize: number): Promise<any[]> {
+    return await this.prisma.message.findMany({
       where: {
         syncStatus: {
           syncedAt: null,
@@ -62,15 +61,6 @@ export class PushService {
       },
       orderBy: { timestamp: "asc" },
       take: batchSize,
-      select: { messageId: true },
-    });
-
-    return messages.map((msg) => msg.messageId);
-  }
-
-  async loadMessagesWithEntities(messageIds: string[]): Promise<any[]> {
-    return await this.prisma.message.findMany({
-      where: { messageId: { in: messageIds } },
       include: {
         session: {
           include: {
@@ -152,26 +142,43 @@ export class PushService {
 
       // Build message entity with transformed IDs
       messageEntities.push({
+        // IDs (primary and foreign keys)
         id: transformedMessageId,
         messageId: msg.messageId,
         sessionId: transformedSessionId,
         projectId: transformedProjectId,
+        machineId: transformedMachineId,
         userId: authenticatedUserId,
+
+        // Message metadata
+        timestamp: msg.timestamp?.toISOString(),
         role: msg.role,
         model: msg.model || undefined,
+        writer: msg.writer,
+
+        // Token counts
         inputTokens: Number(msg.inputTokens),
         outputTokens: Number(msg.outputTokens),
         cacheCreationTokens: Number(msg.cacheCreationTokens),
         cacheReadTokens: Number(msg.cacheReadTokens),
-        messageCost: Number(msg.messageCost),
-        pricePerInputToken: msg.pricePerInputToken ? Number(msg.pricePerInputToken) : 0,
-        pricePerOutputToken: msg.pricePerOutputToken ? Number(msg.pricePerOutputToken) : 0,
-        pricePerCacheWriteToken: msg.pricePerCacheWriteToken ? Number(msg.pricePerCacheWriteToken) : 0,
-        pricePerCacheReadToken: msg.pricePerCacheReadToken ? Number(msg.pricePerCacheReadToken) : 0,
+
+        // Pricing information
+        pricePerInputToken: msg.pricePerInputToken
+          ? Number(msg.pricePerInputToken)
+          : 0,
+        pricePerOutputToken: msg.pricePerOutputToken
+          ? Number(msg.pricePerOutputToken)
+          : 0,
+        pricePerCacheWriteToken: msg.pricePerCacheWriteToken
+          ? Number(msg.pricePerCacheWriteToken)
+          : 0,
+        pricePerCacheReadToken: msg.pricePerCacheReadToken
+          ? Number(msg.pricePerCacheReadToken)
+          : 0,
         cacheDurationMinutes: msg.cacheDurationMinutes || 0,
-        writer: msg.writer,
-        machineId: transformedMachineId,
-        timestamp: msg.timestamp?.toISOString(),
+
+        // Cost total
+        messageCost: Number(msg.messageCost),
       });
     }
 
@@ -201,7 +208,7 @@ export class PushService {
     } catch (error) {
       if (error instanceof Error) {
         // Re-throw with more context if needed
-        if (error.message.includes('fetch')) {
+        if (error.message.includes("fetch")) {
           throw new Error(`Network error: ${error.message}`);
         }
       }
@@ -210,68 +217,67 @@ export class PushService {
   }
 
   async processPushResponse(
-    response: PushResponse,
-    messageIds: string[]
+    response: PushResponse
   ): Promise<void> {
     const now = new Date();
 
-    // Update sync status records in a transaction
+    // Update sync status records in a transaction using bulk operations
     await this.prisma.$transaction(async (tx) => {
-      // Process persisted messages
-      for (const messageId of response.results.persisted.messageIds) {
-        const originalMessageId = messageIds.find(id => id === messageId);
-        if (originalMessageId) {
-          await tx.messageSyncStatus.upsert({
-            where: { messageId: originalMessageId },
-            update: {
-              syncedAt: now,
-              syncResponse: "persisted",
-            },
-            create: {
-              messageId: originalMessageId,
-              syncedAt: now,
-              syncResponse: "persisted",
-            },
-          });
-        }
+      // Use response message IDs directly
+      const persistedIds = response.results.persisted.messageIds;
+      const deduplicatedIds = response.results.deduplicated.messageIds;
+
+      // Build failed messages map
+      const failedMap = new Map<string, { code: string; error: string }>();
+      response.results.failed.details.forEach((failure) => {
+        failedMap.set(failure.messageId, {
+          code: failure.code,
+          error: failure.error,
+        });
+      });
+
+      // Bulk update persisted messages
+      if (persistedIds.length > 0) {
+        await tx.messageSyncStatus.updateMany({
+          where: { messageId: { in: persistedIds } },
+          data: {
+            syncedAt: now,
+            syncResponse: "persisted",
+          },
+        });
       }
 
-      // Process deduplicated messages (treat as successful)
-      for (const messageId of response.results.deduplicated.messageIds) {
-        const originalMessageId = messageIds.find(id => id === messageId);
-        if (originalMessageId) {
-          await tx.messageSyncStatus.upsert({
-            where: { messageId: originalMessageId },
-            update: {
-              syncedAt: now,
-              syncResponse: "deduplicated",
-            },
-            create: {
-              messageId: originalMessageId,
-              syncedAt: now,
-              syncResponse: "deduplicated",
-            },
-          });
-        }
+      // Bulk update deduplicated messages
+      if (deduplicatedIds.length > 0) {
+        await tx.messageSyncStatus.updateMany({
+          where: { messageId: { in: deduplicatedIds } },
+          data: {
+            syncedAt: now,
+            syncResponse: "deduplicated",
+          },
+        });
       }
 
-      // Process failed messages
-      for (const failure of response.results.failed.details) {
-        const originalMessageId = messageIds.find(id => id === failure.messageId);
-        if (originalMessageId) {
-          await tx.messageSyncStatus.upsert({
-            where: { messageId: originalMessageId },
-            update: {
-              retryCount: { increment: 1 },
-              syncResponse: `failed: ${failure.code} - ${failure.error}`,
-            },
-            create: {
-              messageId: originalMessageId,
-              retryCount: 1,
-              syncResponse: `failed: ${failure.code} - ${failure.error}`,
-            },
-          });
+      // For failed messages, we need to increment retry count and set different error messages
+      // Since updateMany doesn't support different values per record, we'll batch by error message
+      const failedByError = new Map<string, string[]>();
+      for (const [messageId, failure] of failedMap) {
+        const errorMsg = `failed: ${failure.code} - ${failure.error}`;
+        if (!failedByError.has(errorMsg)) {
+          failedByError.set(errorMsg, []);
         }
+        failedByError.get(errorMsg)!.push(messageId);
+      }
+
+      // Update failed messages grouped by error message
+      for (const [errorMsg, msgIds] of failedByError) {
+        await tx.messageSyncStatus.updateMany({
+          where: { messageId: { in: msgIds } },
+          data: {
+            retryCount: { increment: 1 },
+            syncResponse: errorMsg,
+          },
+        });
       }
     });
   }

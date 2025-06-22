@@ -75,48 +75,27 @@ describe('PushService', () => {
     jest.clearAllMocks();
   });
 
-  describe('selectUnpushedBatch', () => {
-    it('should select unpushed messages with retry limit', async () => {
-      const mockMessages = [
-        { messageId: 'msg1' },
-        { messageId: 'msg2' },
-        { messageId: 'msg3' }
-      ];
-
-      mockPrisma.message.findMany.mockResolvedValue(mockMessages);
-
-      const result = await pushService.selectUnpushedBatch(100);
-
-      expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
-        where: {
-          syncStatus: {
-            syncedAt: null,
-            retryCount: { lt: mockConfig.maxRetries }
-          }
-        },
-        orderBy: { timestamp: 'asc' },
-        take: 100,
-        select: { messageId: true }
-      });
-
-      expect(result).toEqual(['msg1', 'msg2', 'msg3']);
-    });
-
-    it('should return empty array when no unpushed messages', async () => {
-      mockPrisma.message.findMany.mockResolvedValue([]);
-
-      const result = await pushService.selectUnpushedBatch(100);
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('loadMessagesWithEntities', () => {
-    it('should load messages with all related entities', async () => {
+  describe('selectUnpushedBatchWithEntities', () => {
+    it('should select unpushed messages with entities and retry limit', async () => {
       const mockMessages = [
         {
           id: 'msg1',
           messageId: 'id1',
+          userId: 'user1',
+          clientMachineId: 'machine1',
+          projectId: 'project1',
+          sessionId: 'session1',
+          session: {
+            project: {
+              projectName: 'Test Project',
+              user: { email: 'test@example.com' },
+              machine: { machineName: 'Test Machine' }
+            }
+          }
+        },
+        {
+          id: 'msg2',
+          messageId: 'id2',
           userId: 'user1',
           clientMachineId: 'machine1',
           projectId: 'project1',
@@ -133,10 +112,17 @@ describe('PushService', () => {
 
       mockPrisma.message.findMany.mockResolvedValue(mockMessages);
 
-      const result = await pushService.loadMessagesWithEntities(['msg1']);
+      const result = await pushService.selectUnpushedBatchWithEntities(100);
 
       expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
-        where: { messageId: { in: ['msg1'] } },
+        where: {
+          syncStatus: {
+            syncedAt: null,
+            retryCount: { lt: mockConfig.maxRetries }
+          }
+        },
+        orderBy: { timestamp: 'asc' },
+        take: 100,
         include: {
           session: {
             include: {
@@ -152,6 +138,14 @@ describe('PushService', () => {
       });
 
       expect(result).toEqual(mockMessages);
+    });
+
+    it('should return empty array when no unpushed messages', async () => {
+      mockPrisma.message.findMany.mockResolvedValue([]);
+
+      const result = await pushService.selectUnpushedBatchWithEntities(100);
+
+      expect(result).toEqual([]);
     });
   });
 
@@ -345,11 +339,9 @@ describe('PushService', () => {
         }
       };
 
-      const messageIds = ['msg1', 'msg2', 'msg3', 'msg4'];
-
       const mockTx = {
         messageSyncStatus: {
-          upsert: jest.fn()
+          updateMany: jest.fn()
         }
       };
 
@@ -357,59 +349,103 @@ describe('PushService', () => {
         return callback(mockTx);
       });
 
-      await pushService.processPushResponse(mockResponse, messageIds);
+      await pushService.processPushResponse(mockResponse);
 
-      // Check first 3 messages marked as synced
-      expect(mockTx.messageSyncStatus.upsert).toHaveBeenCalledWith({
-        where: { messageId: 'msg1' },
-        update: {
-          syncedAt: expect.any(Date),
-          syncResponse: 'persisted'
-        },
-        create: {
-          messageId: 'msg1',
+      // Check persisted messages bulk update
+      expect(mockTx.messageSyncStatus.updateMany).toHaveBeenCalledWith({
+        where: { messageId: { in: ['msg1', 'msg2'] } },
+        data: {
           syncedAt: expect.any(Date),
           syncResponse: 'persisted'
         }
       });
 
-      expect(mockTx.messageSyncStatus.upsert).toHaveBeenCalledWith({
-        where: { messageId: 'msg2' },
-        update: {
-          syncedAt: expect.any(Date),
-          syncResponse: 'persisted'
-        },
-        create: {
-          messageId: 'msg2',
-          syncedAt: expect.any(Date),
-          syncResponse: 'persisted'
-        }
-      });
-
-      expect(mockTx.messageSyncStatus.upsert).toHaveBeenCalledWith({
-        where: { messageId: 'msg3' },
-        update: {
-          syncedAt: expect.any(Date),
-          syncResponse: 'deduplicated'
-        },
-        create: {
-          messageId: 'msg3',
+      // Check deduplicated messages bulk update
+      expect(mockTx.messageSyncStatus.updateMany).toHaveBeenCalledWith({
+        where: { messageId: { in: ['msg3'] } },
+        data: {
           syncedAt: expect.any(Date),
           syncResponse: 'deduplicated'
         }
       });
 
-      // Check last message marked as failed
-      expect(mockTx.messageSyncStatus.upsert).toHaveBeenCalledWith({
-        where: { messageId: 'msg4' },
-        update: {
+      // Check failed messages bulk update
+      expect(mockTx.messageSyncStatus.updateMany).toHaveBeenCalledWith({
+        where: { messageId: { in: ['msg4'] } },
+        data: {
           retryCount: { increment: 1 },
           syncResponse: 'failed: SYNC_001 - Validation failed'
+        }
+      });
+    });
+
+    it('should handle multiple failed messages with different errors', async () => {
+      const mockResponse: PushResponse = {
+        syncId: 'sync_456',
+        results: {
+          persisted: {
+            count: 0,
+            messageIds: []
+          },
+          deduplicated: {
+            count: 0,
+            messageIds: []
+          },
+          failed: {
+            count: 3,
+            details: [
+              {
+                messageId: 'msg1',
+                error: 'Validation failed',
+                code: 'SYNC_001'
+              },
+              {
+                messageId: 'msg2',
+                error: 'Validation failed',
+                code: 'SYNC_001'
+              },
+              {
+                messageId: 'msg3',
+                error: 'Network timeout',
+                code: 'SYNC_002'
+              }
+            ]
+          }
         },
-        create: {
-          messageId: 'msg4',
-          retryCount: 1,
+        summary: {
+          totalMessages: 3,
+          messagesSucceeded: 0,
+          messagesFailed: 3,
+          processingTimeMs: 50
+        }
+      };
+
+      const mockTx = {
+        messageSyncStatus: {
+          updateMany: jest.fn()
+        }
+      };
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        return callback(mockTx);
+      });
+
+      await pushService.processPushResponse(mockResponse);
+
+      // Check that messages are grouped by error message
+      expect(mockTx.messageSyncStatus.updateMany).toHaveBeenCalledWith({
+        where: { messageId: { in: ['msg1', 'msg2'] } },
+        data: {
+          retryCount: { increment: 1 },
           syncResponse: 'failed: SYNC_001 - Validation failed'
+        }
+      });
+
+      expect(mockTx.messageSyncStatus.updateMany).toHaveBeenCalledWith({
+        where: { messageId: { in: ['msg3'] } },
+        data: {
+          retryCount: { increment: 1 },
+          syncResponse: 'failed: SYNC_002 - Network timeout'
         }
       });
     });

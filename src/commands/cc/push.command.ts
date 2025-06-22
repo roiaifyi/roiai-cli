@@ -97,34 +97,28 @@ export function createPushCommand() {
           spinner.start(`Processing batch ${batchNumber}...`);
           
           // Select batch
-          const messageIds = await pushService.selectUnpushedBatch(batchSize);
+          const messages = await pushService.selectUnpushedBatchWithEntities(batchSize);
           
-          if (messageIds.length === 0) {
+          if (messages.length === 0) {
             spinner.stop();
             break;
           }
 
-          spinner.text = `Processing batch ${batchNumber} (${messageIds.length} messages)...`;
+          const messageIds = messages.map(msg => msg.messageId);
+          spinner.text = `Processing batch ${batchNumber} (${messages.length} messages)...`;
 
           // Track processed messages to avoid double counting
           messageIds.forEach(id => processedMessages.add(id));
 
-          // Load messages with entities
-          const messages = await pushService.loadMessagesWithEntities(messageIds);
-          
           // Build request
           const request = pushService.buildPushRequest(messages);
-          
-          if (messages.length !== messageIds.length) {
-            console.error(chalk.red(`  WARNING: Selected ${messageIds.length} messages but loaded ${messages.length}`));
-          }
 
           try {
             // Execute push
             const response = await pushService.executePush(request);
             
             // Process response
-            await pushService.processPushResponse(response, messageIds);
+            await pushService.processPushResponse(response);
             
             const persisted = response.results.persisted.count;
             const deduplicated = response.results.deduplicated.count;

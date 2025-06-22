@@ -196,16 +196,15 @@ describe('PushService Integration Tests', () => {
       let batchCount = 0;
       
       while (true) {
-        const messageIds = await pushService.selectUnpushedBatch(10);
-        if (messageIds.length === 0) break;
+        const messages = await pushService.selectUnpushedBatchWithEntities(10);
+        if (messages.length === 0) break;
         
         batchCount++;
-        const messages = await pushService.loadMessagesWithEntities(messageIds);
         const request = pushService.buildPushRequest(messages);
         const response = await pushService.executePush(request);
-        await pushService.processPushResponse(response, messageIds);
+        await pushService.processPushResponse(response);
         
-        totalPushed += messageIds.length;
+        totalPushed += messages.length;
       }
       
       expect(batchCount).toBe(2); // 15 messages with batch size 10
@@ -225,20 +224,19 @@ describe('PushService Integration Tests', () => {
       let successCount = 0;
       let failureCount = 0;
       
-      const messageIds = await pushService.selectUnpushedBatch(10);
-      const messages = await pushService.loadMessagesWithEntities(messageIds);
+      const messages = await pushService.selectUnpushedBatchWithEntities(10);
       const request = pushService.buildPushRequest(messages);
       
       try {
         const response = await pushService.executePush(request);
-        await pushService.processPushResponse(response, messageIds);
+        await pushService.processPushResponse(response);
         
         // Handle new response format
         successCount = response.results.persisted.count + response.results.deduplicated.count;
         failureCount = response.results.failed.count;
       } catch (error) {
         // Count as all failed if request fails
-        failureCount = messageIds.length;
+        failureCount = messages.length;
       }
       
       expect(successCount).toBeGreaterThan(0);
@@ -261,8 +259,8 @@ describe('PushService Integration Tests', () => {
       const eligibleCount = await pushService.countEligibleMessages();
       expect(eligibleCount).toBe(0);
       
-      const messageIds = await pushService.selectUnpushedBatch(10);
-      expect(messageIds.length).toBe(0);
+      const messages = await pushService.selectUnpushedBatchWithEntities(10);
+      expect(messages.length).toBe(0);
     });
 
     it('should handle network errors', async () => {
@@ -272,8 +270,8 @@ describe('PushService Integration Tests', () => {
       let errorOccurred = false;
       let errorMessage = '';
       
-      const messageIds = await pushService.selectUnpushedBatch(10);
-      const messages = await pushService.loadMessagesWithEntities(messageIds);
+      const messages = await pushService.selectUnpushedBatchWithEntities(10);
+      const messageIds = messages.map(msg => msg.messageId);
       const request = pushService.buildPushRequest(messages);
       
       try {
