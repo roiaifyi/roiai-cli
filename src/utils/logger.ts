@@ -34,7 +34,14 @@ class Logger {
 
   error(...args: any[]): void {
     if (this.level <= LogLevel.ERROR) {
-      console.error(chalk.red('[ERROR]'), ...args);
+      // Filter out error stack traces unless in debug mode
+      const filteredArgs = args.map(arg => {
+        if (arg instanceof Error && this.level > LogLevel.DEBUG) {
+          return arg.message;
+        }
+        return arg;
+      });
+      console.error(chalk.red('[ERROR]'), ...filteredArgs);
     }
   }
 

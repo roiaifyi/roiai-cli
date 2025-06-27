@@ -390,8 +390,9 @@ describe('Push Command Integration Tests', () => {
       const output = runCli('cc push');
 
       expect(output).toContain('Verifying authentication');
-      expect(output).toContain('Authentication failed');
-      expect(output).toContain('Please check your API token');
+      expect(output).toContain('Authentication check failed');
+      expect(output).toContain('Authentication Error Details');
+      expect(output).toContain('Invalid or expired API token');
       expect(output).not.toContain('Found 5 unsynced messages'); // Should fail before stats check
     });
 

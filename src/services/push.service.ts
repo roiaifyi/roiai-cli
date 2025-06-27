@@ -12,12 +12,15 @@ import { createApiClient } from "../generated/api-client";
 import { UserService } from "./user.service";
 import { COMMAND_STRINGS } from "../utils/constants";
 import { configManager } from "../config";
+import { NetworkErrorHandler } from "../utils/network-error-handler";
+import { logger } from "../utils/logger";
 
 export class PushService {
   private prisma: PrismaClient;
   private apiClient: ReturnType<typeof createApiClient>;
   private config: PushConfig;
   private authenticatedUserId: string | null = null;
+  private logger = logger;
 
   constructor(
     prisma: PrismaClient,
@@ -56,32 +59,63 @@ export class PushService {
    */
   async checkAuthentication(): Promise<{ valid: boolean; error?: string; user?: any; machine?: any }> {
     try {
+      this.logger.debug('Checking authentication with server...');
+      const startTime = Date.now();
+      
       const response = await this.apiClient.healthCheck();
+      const responseTime = Date.now() - startTime;
+      
+      this.logger.debug(`Health check completed in ${responseTime}ms`);
       
       if (response.ok && response.status === 200) {
         const data = response.data as any;
         // Handle wrapped response format from server
         const actualData = data.data || data;
+        
+        if (!actualData.authenticated) {
+          return {
+            valid: false,
+            error: 'API token is invalid or expired. Please run \'roiai-cli cc login\' to get a new token.'
+          };
+        }
+        
         return {
           valid: actualData.authenticated,
           user: actualData.user,
           machine: actualData.machine
         };
       } else {
+        // Handle non-200 responses
         const errorData = response.data as any;
-        // Handle structured error response
-        const errorMessage = errorData?.success === false && errorData?.error 
-          ? `${errorData.error.message} (${errorData.error.code})`
-          : errorData?.message || `Authentication failed: ${response.status}`;
+        let errorMessage: string;
+        
+        if (response.status === 401) {
+          errorMessage = 'Invalid or expired API token. Please run \'roiai-cli cc login\' to authenticate.';
+        } else if (response.status === 403) {
+          errorMessage = 'Access forbidden. Your account may not have permission to push data.';
+        } else if (response.status >= 500) {
+          errorMessage = `Server error (${response.status}). The RoiAI server is experiencing issues. Please try again later.`;
+        } else {
+          errorMessage = errorData?.success === false && errorData?.error 
+            ? `${errorData.error.message} (${errorData.error.code})`
+            : errorData?.message || `Unexpected response: ${response.status}`;
+        }
+        
         return {
           valid: false,
           error: errorMessage
         };
       }
     } catch (error) {
+      // Log full error details only in debug mode
+      this.logger.debug('Authentication check failed:', error);
+      
+      // Use the enhanced error handler
+      const enhancedError = NetworkErrorHandler.enhanceError(error, 'Authentication check');
+      
       return {
         valid: false,
-        error: error instanceof Error ? error.message : 'Network error during authentication check'
+        error: enhancedError
       };
     }
   }

@@ -41,8 +41,24 @@ function createPushCommand() {
             spinner.start('Verifying authentication...');
             const authCheck = await pushService.checkAuthentication();
             if (!authCheck.valid) {
-                spinner.fail(`Authentication failed: ${authCheck.error}`);
-                console.log(chalk_1.default.yellow('\nPlease check your API token and try again. You may need to run \'roiai-cli cc login\' to refresh your credentials.'));
+                spinner.fail('Authentication check failed');
+                console.log(chalk_1.default.red('\n❌ Authentication Error Details:'));
+                console.log(chalk_1.default.white(authCheck.error || 'Unknown error'));
+                // Add helpful next steps based on error type
+                if (authCheck.error?.includes('Network error') ||
+                    authCheck.error?.includes('Cannot connect') ||
+                    authCheck.error?.includes('Cannot find')) {
+                    console.log(chalk_1.default.yellow('\n💡 Troubleshooting tips:'));
+                    console.log(chalk_1.default.gray('  1. Check your internet connection'));
+                    console.log(chalk_1.default.gray('  2. Verify the API URL in your configuration'));
+                    console.log(chalk_1.default.gray('  3. Try accessing the server directly in a browser'));
+                    console.log(chalk_1.default.gray('  4. Check if you\'re behind a corporate firewall/proxy'));
+                }
+                else if (authCheck.error?.includes('Invalid') ||
+                    authCheck.error?.includes('expired')) {
+                    console.log(chalk_1.default.yellow('\n🔑 To fix this issue:'));
+                    console.log(chalk_1.default.green('  roiai-cli cc login'));
+                }
                 process.exit(1);
             }
             spinner.succeed(`Authenticated as ${authCheck.user?.email || 'user'}`);
@@ -108,9 +124,16 @@ function createPushCommand() {
                 if (batchNumber > 1 && batchNumber % 10 === 1) {
                     const authRecheck = await pushService.checkAuthentication();
                     if (!authRecheck.valid) {
-                        spinner.fail(`Authentication lost: ${authRecheck.error}`);
-                        console.log(chalk_1.default.red('\n🚫 Authentication failed during push session!'));
-                        console.log(chalk_1.default.yellow('Your API token may have expired. Please run \'roiai-cli cc login\' to refresh your credentials.'));
+                        spinner.fail('Authentication lost during push session');
+                        console.log(chalk_1.default.red('\n🚫 Authentication Error:'));
+                        console.log(chalk_1.default.white(authRecheck.error || 'Unknown error'));
+                        if (authRecheck.error?.includes('Network error') ||
+                            authRecheck.error?.includes('Cannot connect')) {
+                            console.log(chalk_1.default.yellow('\n💡 Connection lost. Please check your network and try again.'));
+                        }
+                        else {
+                            console.log(chalk_1.default.yellow('\n🔑 Your API token may have expired. Please run \'roiai-cli cc login\' to refresh your credentials.'));
+                        }
                         process.exit(1);
                     }
                 }
