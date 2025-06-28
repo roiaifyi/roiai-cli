@@ -139,4 +139,14 @@ npm run prisma:migrate
 The CLI is designed to support multiple AI services:
 - `roiai-cli cc` - Claude Code
 - `roiai-cli gpt` - OpenAI GPT (future)
-- `roiai-cli cursor` - Cursor AI (future)# roiai
+- `roiai-cli cursor` - Cursor AI (future)
+
+## Documentation
+
+- [Changelog](CHANGELOG.md) - Version history and release notes
+- [Contributing](CONTRIBUTING.md) - Guidelines for contributing (coming soon)
+- [API Documentation](docs/api.md) - Detailed API reference (coming soon)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
