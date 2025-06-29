@@ -1,6 +1,6 @@
 # Code Cleanup and Refactoring Summary
 
-This document summarizes the comprehensive code cleanup and refactoring performed on the roiai-cli codebase.
+This document summarizes the comprehensive code cleanup and refactoring performed on the roiai codebase.
 
 ## Overview
 

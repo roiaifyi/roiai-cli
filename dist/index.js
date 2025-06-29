@@ -12,7 +12,7 @@ const config_1 = require("./config");
 const program = new commander_1.Command();
 // Set up the main CLI
 program
-    .name('roiai-cli')
+    .name('roiai')
     .description('CLI tool for managing AI service usage data')
     .version('1.0.0')
     .option('-v, --verbose', 'Enable verbose logging')
@@ -53,7 +53,7 @@ program
 // Handle unknown commands
 program.on('command:*', () => {
     logger_1.logger.error(`Invalid command: ${program.args.join(' ')}`);
-    logger_1.logger.info(`Run ${chalk_1.default.cyan('roiai-cli --help')} for a list of available commands.`);
+    logger_1.logger.info(`Run ${chalk_1.default.cyan('roiai --help')} for a list of available commands.`);
     process.exit(1);
 });
 // Parse command line arguments

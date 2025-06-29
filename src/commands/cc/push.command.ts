@@ -24,7 +24,7 @@ export function createPushCommand() {
         await userService.loadUserInfo();
         
         if (!userService.isAuthenticated()) {
-          spinner.fail('Please login first using \'roiai-cli cc login\' to push data');
+          spinner.fail('Please login first using \'roiai cc login\' to push data');
           process.exit(1);
         }
         
@@ -60,7 +60,7 @@ export function createPushCommand() {
           } else if (authCheck.error?.includes('Invalid') || 
                      authCheck.error?.includes('expired')) {
             console.log(chalk.yellow('\n🔑 To fix this issue:'));
-            console.log(chalk.green('  roiai-cli cc login'));
+            console.log(chalk.green('  roiai cc login'));
           }
           
           process.exit(1);
@@ -154,7 +154,7 @@ export function createPushCommand() {
                   authRecheck.error?.includes('Cannot connect')) {
                 console.log(chalk.yellow('\n💡 Connection lost. Please check your network and try again.'));
               } else {
-                console.log(chalk.yellow('\n🔑 Your API token may have expired. Please run \'roiai-cli cc login\' to refresh your credentials.'));
+                console.log(chalk.yellow('\n🔑 Your API token may have expired. Please run \'roiai cc login\' to refresh your credentials.'));
               }
               
               process.exit(1);
@@ -244,7 +244,7 @@ export function createPushCommand() {
             )) {
               console.log(chalk.red('\n🚫 Authentication failed during push!'));
               console.log(chalk.yellow('Your API token may have expired or been revoked.'));
-              console.log(chalk.yellow('Please run \'roiai-cli cc login\' to refresh your credentials and try again.'));
+              console.log(chalk.yellow('Please run \'roiai cc login\' to refresh your credentials and try again.'));
               process.exit(1);
             }
             

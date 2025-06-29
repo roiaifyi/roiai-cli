@@ -39,7 +39,7 @@ export class SpinnerErrorHandler {
   static handleAuthError(spinner: Ora, error?: unknown): void {
     spinner.fail('Authentication failed');
     console.log(chalk.yellow('\nPlease check your API token and try again.'));
-    console.log(chalk.yellow('You may need to run \'roiai-cli cc login\' to refresh your credentials.'));
+    console.log(chalk.yellow('You may need to run \'roiai cc login\' to refresh your credentials.'));
     
     if (error) {
       logger.error('Authentication error', error);

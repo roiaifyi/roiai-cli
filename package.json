@@ -4,7 +4,7 @@
   "description": "CLI tool for managing AI service usage data",
   "main": "dist/index.js",
   "bin": {
-    "roiai-cli": "./dist/index.js"
+    "roiai": "./dist/index.js"
   },
   "directories": {
     "test": "tests"

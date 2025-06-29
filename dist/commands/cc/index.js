@@ -9,6 +9,8 @@ const login_command_1 = require("./login.command");
 const logout_command_1 = require("./logout.command");
 exports.ccCommand = new commander_1.Command('cc')
     .description('Claude Code usage tracking commands')
+    .helpOption(false)
+    .addHelpText('after', '\nRun \'roiai cc --help\' for more information on Claude Code commands.')
     .addCommand(sync_command_1.syncCommand)
     .addCommand(push_command_1.pushCommand)
     .addCommand(push_status_command_1.pushStatusCommand)

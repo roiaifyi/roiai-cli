@@ -250,7 +250,7 @@ export const syncCommand = new Command('sync')
       });
       
       if (pendingSync > 0) {
-        console.log(`\n${chalk.yellow('⚠️')}  ${pendingSync} records pending upload. Run ${chalk.bold('roiai-cli cc push')} to sync with remote server.`);
+        console.log(`\n${chalk.yellow('⚠️')}  ${pendingSync} records pending upload. Run ${chalk.bold('roiai cc push')} to sync with remote server.`);
       }
 
     } catch (error) {

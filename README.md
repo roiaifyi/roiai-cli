@@ -1,4 +1,4 @@
-# roiai-cli
+# roiai
 
 CLI tool for managing AI service usage data, starting with Claude Code tracking.
 
@@ -53,13 +53,13 @@ See [CONFIGURATION.md](CONFIGURATION.md) for detailed configuration options.
 Sync all Claude Code usage data to local database:
 
 ```bash
-roiai-cli cc sync
+roiai cc sync
 
 # Force full resync (clear existing data)
-roiai-cli cc sync --force
+roiai cc sync --force
 
 # Use custom data path
-roiai-cli cc sync --path /path/to/claude_raw_data
+roiai cc sync --path /path/to/claude_raw_data
 ```
 
 ### Push to Remote
@@ -67,13 +67,13 @@ roiai-cli cc sync --path /path/to/claude_raw_data
 Push local database to remote server:
 
 ```bash
-roiai-cli cc push
+roiai cc push
 
 # Skip confirmation
-roiai-cli cc push --yes
+roiai cc push --yes
 
 # Custom batch size
-roiai-cli cc push --batch-size 500
+roiai cc push --batch-size 500
 ```
 
 ## Database

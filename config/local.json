@@ -1,6 +1,6 @@
 {
   "app": {
-    "dataDir": "~/.roiai-cli",
+    "dataDir": "~/.roiai",
     "machineInfoFilename": "machine_info.json"
   },
   "user": {

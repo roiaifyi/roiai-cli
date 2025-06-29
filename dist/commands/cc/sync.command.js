@@ -217,7 +217,7 @@ exports.syncCommand = new commander_1.Command('sync')
             where: { syncedAt: null }
         });
         if (pendingSync > 0) {
-            console.log(`\n${chalk_1.default.yellow('⚠️')}  ${pendingSync} records pending upload. Run ${chalk_1.default.bold('roiai-cli cc push')} to sync with remote server.`);
+            console.log(`\n${chalk_1.default.yellow('⚠️')}  ${pendingSync} records pending upload. Run ${chalk_1.default.bold('roiai cc push')} to sync with remote server.`);
         }
     }
     catch (error) {

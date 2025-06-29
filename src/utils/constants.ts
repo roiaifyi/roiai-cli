@@ -1,11 +1,11 @@
 export const COMMAND_STRINGS = {
-  LOGIN_COMMAND: 'roiai-cli cc login',
-  PUSH_COMMAND: 'roiai-cli cc push',
-  SYNC_COMMAND: 'roiai-cli cc sync',
+  LOGIN_COMMAND: 'roiai cc login',
+  PUSH_COMMAND: 'roiai cc push',
+  SYNC_COMMAND: 'roiai cc sync',
   
   MESSAGES: {
-    LOGIN_REQUIRED: 'Please login first using \'roiai-cli cc login\' to push data',
-    LOGIN_REQUIRED_GENERAL: 'Please login first using \'roiai-cli cc login\'',
+    LOGIN_REQUIRED: 'Please login first using \'roiai cc login\' to push data',
+    LOGIN_REQUIRED_GENERAL: 'Please login first using \'roiai cc login\'',
     UNKNOWN_ERROR: 'Unknown error',
     OPERATION_FAILED: 'Operation failed',
     AUTHENTICATION_FAILED: 'Authentication failed',
@@ -23,7 +23,7 @@ export const COMMAND_STRINGS = {
   
   HTTP: {
     BEARER_PREFIX: 'Bearer ',
-    USER_AGENT_PREFIX: 'roiai-cli/'
+    USER_AGENT_PREFIX: 'roiai/'
   }
 } as const;
 

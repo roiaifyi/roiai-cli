@@ -75,7 +75,7 @@ export class PushService {
         if (!actualData.authenticated) {
           return {
             valid: false,
-            error: 'API token is invalid or expired. Please run \'roiai-cli cc login\' to get a new token.'
+            error: 'API token is invalid or expired. Please run \'roiai cc login\' to get a new token.'
           };
         }
         
@@ -90,7 +90,7 @@ export class PushService {
         let errorMessage: string;
         
         if (response.status === 401) {
-          errorMessage = 'Invalid or expired API token. Please run \'roiai-cli cc login\' to authenticate.';
+          errorMessage = 'Invalid or expired API token. Please run \'roiai cc login\' to authenticate.';
         } else if (response.status === 403) {
           errorMessage = 'Access forbidden. Your account may not have permission to push data.';
         } else if (response.status >= 500) {

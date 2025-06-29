@@ -1,6 +1,6 @@
-# Configuration Guide for roiai-cli
+# Configuration Guide for roiai
 
-This guide explains how to configure the roiai-cli for your environment.
+This guide explains how to configure the roiai for your environment.
 
 ## Quick Start
 
@@ -164,10 +164,10 @@ Some commands support direct path overrides:
 
 ```bash
 # Override raw data path for sync
-roiai-cli cc sync --path /custom/claude_raw_data
+roiai cc sync --path /custom/claude_raw_data
 
 # Override polling interval for watch
-roiai-cli cc watch --interval 10000
+roiai cc watch --interval 10000
 ```
 
 ## Troubleshooting
@@ -218,8 +218,8 @@ Here's a complete setup script:
 ```bash
 #!/bin/bash
 
-# Navigate to roiai-cli directory
-cd roiai-cli
+# Navigate to roiai directory
+cd roiai
 
 # Create config from example
 cp config/local.example.json config/local.json

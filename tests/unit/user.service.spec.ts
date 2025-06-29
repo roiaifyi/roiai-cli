@@ -54,7 +54,7 @@ describe('UserService', () => {
     }));
     
     // Mock static method
-    (MachineService as any).getAppDirectory = jest.fn().mockReturnValue('/home/test/.roiai-cli');
+    (MachineService as any).getAppDirectory = jest.fn().mockReturnValue('/home/test/.roiai');
     
     userService = new UserService();
     
@@ -68,7 +68,7 @@ describe('UserService', () => {
     // Setup config mock
     mockConfigManager.get.mockReturnValue({
       app: { 
-        dataDir: '~/.roiai-cli',
+        dataDir: '~/.roiai',
         machineInfoFilename: 'machine_info.json'
       },
       user: { infoFilename: 'user_info.json' },

@@ -12,7 +12,7 @@ jest.mock('../../src/config', () => ({
   configManager: {
     get: () => ({
       app: {
-        dataDir: '~/.roiai-cli',
+        dataDir: '~/.roiai',
         machineInfoFilename: 'machine_info.json'
       }
     })
@@ -99,7 +99,7 @@ describe('MachineService', () => {
   describe('getAppDirectory', () => {
     it('should handle home directory path with ~', () => {
       const result = MachineService.getAppDirectory();
-      expect(result).toBe('/Users/test/.roiai-cli');
+      expect(result).toBe('/Users/test/.roiai');
       expect(mockOs.homedir).toHaveBeenCalled();
     });
 
@@ -230,7 +230,7 @@ describe('MachineService', () => {
       await machineService.loadMachineInfo();
       
       expect(mockFs.mkdir).toHaveBeenCalledWith(
-        expect.stringContaining('.roiai-cli'),
+        expect.stringContaining('.roiai'),
         { recursive: true }
       );
       expect(mockFs.writeFile).toHaveBeenCalledWith(

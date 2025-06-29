@@ -4,7 +4,7 @@ import fs from 'fs';
 
 export interface Config {
   app: {
-    dataDir: string;              // Base directory for app data (e.g., ~/.roiai-cli)
+    dataDir: string;              // Base directory for app data (e.g., ~/.roiai)
     machineInfoFilename: string;  // Filename for machine info
   };
   database: {

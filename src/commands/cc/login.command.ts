@@ -160,7 +160,7 @@ export function createLoginCommand(): Command {
           } else {
             spinner.succeed(`Successfully logged in as ${user.email}`);
           }
-          console.log(chalk.dim('\nYou can now use \'roiai-cli cc push\' to sync your usage data.'));
+          console.log(chalk.dim('\nYou can now use \'roiai cc push\' to sync your usage data.'));
           
         } catch (error) {
           if (axios.isAxiosError(error)) {

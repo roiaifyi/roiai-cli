@@ -56,7 +56,7 @@ There is no linting or formatting configuration at the project level. When makin
 4. **Future Services**: Architecture supports adding GPT and Cursor tracking, but only Claude Code is implemented
 5. **Push Command**: The push functionality to remote servers is now implemented with authentication and retry logic
 6. **API Integration**: Updated to match roiai-web platform spec - login endpoint `/api/v1/cli/login`, push endpoint `/api/v1/cli/upsync`, Bearer auth
-7. **App Data Directory**: All app data (user info, machine info) is stored in `~/.roiai-cli/` by default, configurable via `app.dataDir`
+7. **App Data Directory**: All app data (user info, machine info) is stored in `~/.roiai/` by default, configurable via `app.dataDir`
 8. **Machine ID**: Persistent machine identification using MAC address + OS info, stored in `machine_info.json`
 9. **Push Request Format**: Updated to new API spec with messages array and metadata containing entities and batch_info with message counts
 10. **Code Quality**: Refactored to eliminate code duplication and unused dependencies, with shared utilities for common operations

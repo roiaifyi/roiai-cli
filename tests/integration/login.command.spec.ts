@@ -109,7 +109,7 @@ describe('Login Command Integration', () => {
     );
     
     // Check for success indication (console.log output)
-    expect(output).toContain('You can now use \'roiai-cli cc push\' to sync your usage data.');
+    expect(output).toContain('You can now use \'roiai cc push\' to sync your usage data.');
     
     // Check user info file was created
     expect(fs.existsSync(testUserInfoPath)).toBe(true);
@@ -158,7 +158,7 @@ describe('Login Command Integration', () => {
     );
     
     // Check for success indication
-    expect(output).toContain('You can now use \'roiai-cli cc push\' to sync your usage data.');
+    expect(output).toContain('You can now use \'roiai cc push\' to sync your usage data.');
   });
   
   it('should fail with invalid credentials', () => {

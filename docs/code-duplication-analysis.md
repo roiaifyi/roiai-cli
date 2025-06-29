@@ -1,7 +1,7 @@
 # Code Duplication Analysis
 
 ## Overview
-This document identifies duplicated code patterns found in the roiai-cli codebase that could be extracted into reusable utilities.
+This document identifies duplicated code patterns found in the roiai codebase that could be extracted into reusable utilities.
 
 ## Identified Patterns
 
@@ -52,7 +52,7 @@ export class SpinnerErrorHandler {
 **Pattern:**
 ```typescript
 if (!userService.isAuthenticated()) {
-  spinner.fail('Please login first using \'roiai-cli cc login\' to push data');
+  spinner.fail('Please login first using \'roiai cc login\' to push data');
   process.exit(1);
 }
 
@@ -75,7 +75,7 @@ export class AuthenticationValidator {
     spinner: Ora
   ): string {
     if (!userService.isAuthenticated()) {
-      spinner.fail('Please login first using \'roiai-cli cc login\' to push data');
+      spinner.fail('Please login first using \'roiai cc login\' to push data');
       process.exit(1);
     }
     
@@ -217,7 +217,7 @@ export class ApiErrorHandler {
     if (this.isAuthenticationError(error)) {
       console.log(chalk.red('\n🚫 Authentication failed!'));
       console.log(chalk.yellow('Your API token may have expired or been revoked.'));
-      console.log(chalk.yellow('Please run \'roiai-cli cc login\' to refresh your credentials.'));
+      console.log(chalk.yellow('Please run \'roiai cc login\' to refresh your credentials.'));
       process.exit(1);
     }
     

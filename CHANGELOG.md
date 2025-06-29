@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to roiai-cli will be documented in this file.
+All notable changes to roiai will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2024-12-28
 
 ### Added
-- Initial release of roiai-cli for AI service usage tracking
+- Initial release of roiai for AI service usage tracking
 - Core commands: `cc sync`, `cc push`, `cc login`, `cc logout`, `cc push-status`
 - Claude Code usage data synchronization from JSONL files
 - SQLite database with Prisma ORM for local storage

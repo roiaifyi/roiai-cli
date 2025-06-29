@@ -10,7 +10,7 @@ const program = new Command();
 
 // Set up the main CLI
 program
-  .name('roiai-cli')
+  .name('roiai')
   .description('CLI tool for managing AI service usage data')
   .version('1.0.0')
   .option('-v, --verbose', 'Enable verbose logging')
@@ -52,7 +52,7 @@ program
 // Handle unknown commands
 program.on('command:*', () => {
   logger.error(`Invalid command: ${program.args.join(' ')}`);
-  logger.info(`Run ${chalk.cyan('roiai-cli --help')} for a list of available commands.`);
+  logger.info(`Run ${chalk.cyan('roiai --help')} for a list of available commands.`);
   process.exit(1);
 });
 

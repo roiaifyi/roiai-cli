@@ -1,6 +1,6 @@
 # Code Cleanup and Refactoring Summary
 
-This document summarizes the code cleanup and refactoring performed on the roiai-cli project.
+This document summarizes the code cleanup and refactoring performed on the roiai project.
 
 ## Phase 1: Code Analysis and Cleanup ✅
 

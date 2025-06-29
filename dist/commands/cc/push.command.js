@@ -27,7 +27,7 @@ function createPushCommand() {
             const userService = new user_service_1.UserService();
             await userService.loadUserInfo();
             if (!userService.isAuthenticated()) {
-                spinner.fail('Please login first using \'roiai-cli cc login\' to push data');
+                spinner.fail('Please login first using \'roiai cc login\' to push data');
                 process.exit(1);
             }
             const apiToken = userService.getApiToken();
@@ -57,7 +57,7 @@ function createPushCommand() {
                 else if (authCheck.error?.includes('Invalid') ||
                     authCheck.error?.includes('expired')) {
                     console.log(chalk_1.default.yellow('\n🔑 To fix this issue:'));
-                    console.log(chalk_1.default.green('  roiai-cli cc login'));
+                    console.log(chalk_1.default.green('  roiai cc login'));
                 }
                 process.exit(1);
             }
@@ -132,7 +132,7 @@ function createPushCommand() {
                             console.log(chalk_1.default.yellow('\n💡 Connection lost. Please check your network and try again.'));
                         }
                         else {
-                            console.log(chalk_1.default.yellow('\n🔑 Your API token may have expired. Please run \'roiai-cli cc login\' to refresh your credentials.'));
+                            console.log(chalk_1.default.yellow('\n🔑 Your API token may have expired. Please run \'roiai cc login\' to refresh your credentials.'));
                         }
                         process.exit(1);
                     }
@@ -203,7 +203,7 @@ function createPushCommand() {
                         error.message.includes('Authentication failed'))) {
                         console.log(chalk_1.default.red('\n🚫 Authentication failed during push!'));
                         console.log(chalk_1.default.yellow('Your API token may have expired or been revoked.'));
-                        console.log(chalk_1.default.yellow('Please run \'roiai-cli cc login\' to refresh your credentials and try again.'));
+                        console.log(chalk_1.default.yellow('Please run \'roiai cc login\' to refresh your credentials and try again.'));
                         process.exit(1);
                     }
                     // When the entire batch fails, we need to increment retry count to prevent infinite loops

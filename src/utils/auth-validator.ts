@@ -25,7 +25,7 @@ export class AuthValidator {
     
     // Check authentication
     if (!userService.isAuthenticated()) {
-      const message = customErrorMessage || 'Please login first using \'roiai-cli cc login\' to push data';
+      const message = customErrorMessage || 'Please login first using \'roiai cc login\' to push data';
       spinner.fail(message);
       process.exit(1);
     }
@@ -103,7 +103,7 @@ export class AuthValidator {
     if (SpinnerErrorHandler.isAuthError(error)) {
       console.log(chalk.red(`\n🚫 Authentication failed during ${operation}!`));
       console.log(chalk.yellow('Your API token may have expired or been revoked.'));
-      console.log(chalk.yellow('Please run \'roiai-cli cc login\' to refresh your credentials and try again.'));
+      console.log(chalk.yellow('Please run \'roiai cc login\' to refresh your credentials and try again.'));
       process.exit(1);
     }
   }

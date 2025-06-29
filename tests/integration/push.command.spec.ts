@@ -406,7 +406,7 @@ describe('Push Command Integration Tests', () => {
 
       expect(output).toContain('Authentication failed during push');
       expect(output).toContain('API token may have expired');
-      expect(output).toContain('roiai-cli cc login');
+      expect(output).toContain('roiai cc login');
     });
   });
 
