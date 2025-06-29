@@ -8,8 +8,8 @@ import { UserService } from '../../services/user.service';
 import { MachineService } from '../../services/machine.service';
 import { configManager } from '../../config';
 import { EndpointResolver } from '../../utils/endpoint-resolver';
-import { createApiClient } from '../../generated/api-client';
-import { COMMAND_STRINGS } from '../../utils/constants';
+import { createAuthenticatedApiClient } from '../../utils/api-client-factory';
+import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 
 export function createLoginCommand(): Command {
   const command = new Command('login');
@@ -129,13 +129,7 @@ export function createLoginCommand(): Command {
             try {
               spinner.text = 'Revoking previous API key...';
               
-              const apiConfig = configManager.getApiConfig();
-              const apiClient = createApiClient({
-                baseUrl: apiConfig.baseUrl,
-                headers: {
-                  Authorization: `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${oldApiToken}`,
-                },
-              });
+              const apiClient = createAuthenticatedApiClient(oldApiToken);
               
               const logoutResponse = await apiClient.logout();
               
@@ -145,7 +139,7 @@ export function createLoginCommand(): Command {
               }
             } catch (error) {
               // Silently handle logout errors - don't interrupt the login flow
-              console.log(chalk.yellow(`\nWarning: Could not revoke previous API key: ${error instanceof Error ? error.message : 'Unknown error'}`));
+              console.log(chalk.yellow(`\nWarning: Could not revoke previous API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
             }
             
             // Clear local credentials before saving new ones

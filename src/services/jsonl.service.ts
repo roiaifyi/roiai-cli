@@ -15,6 +15,7 @@ import { BatchProcessor, BatchMessage } from "./batch-processor";
 import { Decimal } from "@prisma/client/runtime/library";
 import { MessageWriter } from "@prisma/client";
 import { logger } from "../utils/logger";
+import { configManager } from "../config";
 
 export class JSONLService {
   private batchProcessor: BatchProcessor;
@@ -66,7 +67,8 @@ export class JSONLService {
 
     try {
       const projectDirs = await fs.promises.readdir(projectsPath);
-      const validProjects = projectDirs.filter((dir) => !dir.startsWith("."));
+      const hiddenPrefix = configManager.get().processing?.hiddenDirectoryPrefix || '.';
+      const validProjects = projectDirs.filter((dir) => !dir.startsWith(hiddenPrefix));
 
       // Pre-load existing message IDs for efficient duplicate checking
       await this.batchProcessor.loadExistingMessageIds();

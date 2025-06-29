@@ -24,7 +24,8 @@
     },
     "timeouts": {
       "transaction": 30000
-    }
+    },
+    "hiddenDirectoryPrefix": "."
   },
   "api": {
     "baseUrl": "https://api.roiai.com",
@@ -37,17 +38,50 @@
   "push": {
     "batchSize": 1000,
     "maxRetries": 5,
-    "timeout": 30000
+    "timeout": 30000,
+    "authRecheckInterval": 10
   },
   "network": {
-    "authTimeout": 5000
+    "authTimeout": 5000,
+    "defaultMaxRetries": 3,
+    "backoff": {
+      "baseDelay": 1000,
+      "maxDelay": 5000
+    },
+    "defaultHttpsPort": "443"
   },
   "display": {
     "costPrecision": 4,
     "speedPrecision": 1,
     "durationPrecision": 2,
     "maxErrorsDisplayed": 10,
-    "maxSessionsShown": 5
+    "maxSessionsShown": 5,
+    "progressBarWidth": 50,
+    "progressBar": {
+      "filled": "█",
+      "empty": "░"
+    },
+    "separator": {
+      "char": "━",
+      "defaultWidth": 40
+    },
+    "sectionSeparator": "═",
+    "sectionSeparatorWidth": 50,
+    "progressUpdateInterval": 100,
+    "maxFailedMessagesShown": 5,
+    "units": {
+      "bytes": ["Bytes", "KB", "MB", "GB", "TB"]
+    },
+    "decimals": {
+      "bytes": 2
+    },
+    "duration": {
+      "thresholds": {
+        "seconds": 1000,
+        "minutes": 60000,
+        "hours": 3600000
+      }
+    }
   },
   "logging": {
     "level": "info"
@@ -65,5 +99,25 @@
       "o1-mini",
       "o1-preview"
     ]
+  },
+  "errorHandling": {
+    "patterns": {
+      "auth": ["401", "Unauthorized", "Invalid API key", "Authentication failed", "Token expired"],
+      "network": ["Network error", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "fetch failed"]
+    }
+  },
+  "messages": {
+    "sync": {
+      "firstTime": "ℹ️  First time sync detected. This initial sync will take longer, but future syncs will be blazingly fast!",
+      "forceSync": "ℹ️  Force sync requested. This will take longer as all data will be reprocessed."
+    },
+    "auth": {
+      "invalidToken": "API token is invalid or expired. Please run 'roiai cc login' to get a new token."
+    },
+    "httpErrors": {
+      "401": "Invalid or expired API token. Please run 'roiai cc login' to authenticate.",
+      "403": "Access forbidden. Your account may not have permission to push data.",
+      "5xx": "Server error ({status}). The RoiAI server is experiencing issues. Please try again later."
+    }
   }
 }

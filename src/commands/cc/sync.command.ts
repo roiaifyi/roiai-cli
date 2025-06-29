@@ -8,6 +8,7 @@ import { UserService } from '../../services/user.service';
 import { JSONLService } from '../../services/jsonl.service';
 import { AggregationService } from '../../services/aggregation.service';
 import { IncrementalAggregationService } from '../../services/incremental-aggregation.service';
+import { UserStatsService } from '../../services/user-stats.service';
 import { logger } from '../../utils/logger';
 
 export const syncCommand = new Command('sync')
@@ -31,7 +32,8 @@ export const syncCommand = new Command('sync')
       await userService.loadUserInfo();
 
       // Get initial cost before sync
-      const userStatsBeforeSync = await getUserAggregatedStats(userService);
+      const userStatsServicePreSync = new UserStatsService(prisma, userService);
+      const userStatsBeforeSync = await userStatsServicePreSync.getAggregatedStats();
       const costBeforeSync = userStatsBeforeSync ? Number(userStatsBeforeSync.totalCost) : 0;
 
       // Handle force flag
@@ -51,10 +53,11 @@ export const syncCommand = new Command('sync')
       
       // Inform user about sync speed
       if (needsFullRecalc) {
+        const messages = configManager.get().messages?.sync || {};
         if (options.force) {
-          console.log(chalk.blue('ℹ️  Force sync requested. This will take longer as all data will be reprocessed.'));
+          console.log(chalk.blue(messages.forceSync || 'ℹ️  Force sync requested. This will take longer as all data will be reprocessed.'));
         } else {
-          console.log(chalk.blue('ℹ️  First time sync detected. This initial sync will take longer, but future syncs will be blazingly fast!'));
+          console.log(chalk.blue(messages.firstTime || 'ℹ️  First time sync detected. This initial sync will take longer, but future syncs will be blazingly fast!'));
         }
         console.log(chalk.gray('   Only new or modified files will be processed in subsequent syncs.\n'));
       }
@@ -184,7 +187,8 @@ export const syncCommand = new Command('sync')
       }
 
       // Show aggregated user stats
-      const userStats = await getUserAggregatedStats(userService);
+      const userStatsService = new UserStatsService(prisma, userService);
+      const userStats = await userStatsService.getAggregatedStats();
       if (userStats) {
         console.log('\n' + chalk.bold('👤 User Stats:'));
         console.log(`   📁 Projects: ${chalk.cyan(userStats.totalProjects)}`);
@@ -192,7 +196,7 @@ export const syncCommand = new Command('sync')
         console.log(`   📝 Messages: ${chalk.cyan(userStats.totalMessages)}`);
         
         // Show message breakdown by writer
-        const messageBreakdown = await getMessageBreakdown(userService);
+        const messageBreakdown = await userStatsService.getMessageBreakdown();
         if (messageBreakdown) {
           console.log(`\n   ${chalk.bold('💬 Message Breakdown:')}`);
           console.log(`     👤 Human: ${chalk.green(messageBreakdown.human)} (${messageBreakdown.humanPercentage}%)`);
@@ -207,7 +211,7 @@ export const syncCommand = new Command('sync')
         console.log(`   ⚡ Cache read tokens: ${chalk.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
 
         // Show detailed user stats by model before total cost
-        const userStatsByModel = await getUserStatsByModel(userService);
+        const userStatsByModel = await userStatsService.getStatsByModel();
         if (userStatsByModel.length > 0) {
           console.log('\n' + chalk.bold('   🤖 Usage & Cost by Model:'));
           
@@ -232,7 +236,10 @@ export const syncCommand = new Command('sync')
         }
 
         // Show total cost as the bottom line
-        console.log('\n' + chalk.gray('═'.repeat(50)));
+        const fullConfig = configManager.get();
+        const sectionSeparator = fullConfig.display?.sectionSeparator || '═';
+        const sectionSeparatorWidth = fullConfig.display?.sectionSeparatorWidth || 50;
+        console.log('\n' + chalk.gray(sectionSeparator.repeat(sectionSeparatorWidth)));
         
         // Show incremental cost change
         const costAfterSync = Number(userStats.totalCost);
@@ -261,107 +268,3 @@ export const syncCommand = new Command('sync')
       await db.disconnect();
     }
   });
-
-async function getUserAggregatedStats(userService: UserService) {
-  const userId = userService.getAnonymousId();
-  
-  const user = await prisma.user.findUnique({
-    where: { id: userId }
-  });
-  
-  return user;
-}
-
-async function getUserStatsByModel(userService: UserService) {
-  const userId = userService.getAnonymousId();
-  
-  // Get aggregated stats by model from messages
-  const modelStats = await prisma.message.groupBy({
-    by: ['model'],
-    where: {
-      userId: userId,
-      model: { not: null }  // Only include messages with a model
-    },
-    _count: {
-      id: true
-    },
-    _sum: {
-      inputTokens: true,
-      outputTokens: true,
-      cacheCreationTokens: true,
-      cacheReadTokens: true,
-      messageCost: true
-    }
-  });
-
-  // Transform and filter out models with zero usage
-  const result = modelStats
-    .filter(stats => {
-      const totalTokens = Number(stats._sum.inputTokens || 0) + 
-                         Number(stats._sum.outputTokens || 0) + 
-                         Number(stats._sum.cacheCreationTokens || 0) + 
-                         Number(stats._sum.cacheReadTokens || 0);
-      return totalTokens > 0;
-    })
-    .map(stats => ({
-      model: stats.model!,
-      messageCount: stats._count?.id || 0,
-      inputTokens: Number(stats._sum.inputTokens || 0),
-      outputTokens: Number(stats._sum.outputTokens || 0),
-      cacheCreationTokens: Number(stats._sum.cacheCreationTokens || 0),
-      cacheReadTokens: Number(stats._sum.cacheReadTokens || 0),
-      cost: Number(stats._sum.messageCost || 0)
-    }))
-    .sort((a, b) => b.cost - a.cost); // Sort by cost descending
-
-  return result;
-}
-
-async function getMessageBreakdown(userService: UserService) {
-  const userId = userService.getAnonymousId();
-  
-  // Get message breakdown by writer type
-  const breakdown = await prisma.message.groupBy({
-    by: ['writer'],
-    where: {
-      userId: userId
-    },
-    _count: {
-      id: true
-    }
-  });
-  
-  let human = 0;
-  let agent = 0;
-  let assistant = 0;
-  
-  breakdown.forEach(item => {
-    const count = item._count.id;
-    switch (item.writer) {
-      case 'human':
-        human += count;
-        break;
-      case 'agent':
-        agent += count;
-        break;
-      case 'assistant':
-        assistant += count;
-        break;
-    }
-  });
-  
-  const total = human + agent + assistant;
-  const humanPercentage = total > 0 ? ((human / total) * 100).toFixed(1) : '0';
-  const agentPercentage = total > 0 ? ((agent / total) * 100).toFixed(1) : '0';
-  const assistantPercentage = total > 0 ? ((assistant / total) * 100).toFixed(1) : '0';
-  
-  return {
-    human,
-    agent,
-    assistant,
-    total,
-    humanPercentage,
-    agentPercentage,
-    assistantPercentage
-  };
-}

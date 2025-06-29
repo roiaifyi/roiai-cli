@@ -13,6 +13,7 @@ const batch_processor_1 = require("./batch-processor");
 const library_1 = require("@prisma/client/runtime/library");
 const client_1 = require("@prisma/client");
 const logger_1 = require("../utils/logger");
+const config_1 = require("../config");
 class JSONLService {
     pricingService;
     userService;
@@ -50,7 +51,8 @@ class JSONLService {
         const projectsPath = path_1.default.join(directoryPath, "projects");
         try {
             const projectDirs = await fs_1.default.promises.readdir(projectsPath);
-            const validProjects = projectDirs.filter((dir) => !dir.startsWith("."));
+            const hiddenPrefix = config_1.configManager.get().processing?.hiddenDirectoryPrefix || '.';
+            const validProjects = projectDirs.filter((dir) => !dir.startsWith(hiddenPrefix));
             // Pre-load existing message IDs for efficient duplicate checking
             await this.batchProcessor.loadExistingMessageIds();
             // Process projects sequentially to avoid race conditions with shared batch processor

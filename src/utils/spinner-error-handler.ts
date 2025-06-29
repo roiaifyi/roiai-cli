@@ -1,8 +1,16 @@
 import { Ora } from 'ora';
 import chalk from 'chalk';
 import { logger } from './logger';
+import { configManager } from '../config';
 
 export class SpinnerErrorHandler {
+  /**
+   * Extract error message from unknown error type
+   */
+  static getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
+  }
+
   /**
    * Handle error with spinner, log it, and optionally exit the process
    */
@@ -18,7 +26,7 @@ export class SpinnerErrorHandler {
   ): void {
     const { exit = true, verbose = false, exitCode = 1 } = options;
     
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = SpinnerErrorHandler.getErrorMessage(error);
     const finalMessage = message || `Operation failed: ${errorMessage}`;
     
     spinner.fail(finalMessage);
@@ -52,7 +60,7 @@ export class SpinnerErrorHandler {
    * Handle network errors
    */
   static handleNetworkError(spinner: Ora, error: unknown): void {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown network error';
+    const errorMessage = SpinnerErrorHandler.getErrorMessage(error);
     spinner.fail(`Network error: ${errorMessage}`);
     console.log(chalk.yellow('\nPlease check your internet connection and try again.'));
     logger.error('Network error', error);
@@ -64,7 +72,8 @@ export class SpinnerErrorHandler {
   static isAuthError(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
     
-    const authErrorPatterns = [
+    const config = configManager.get();
+    const authErrorPatterns = config.errorHandling?.patterns?.auth || [
       '401',
       'Unauthorized',
       'Invalid API key',
@@ -72,7 +81,7 @@ export class SpinnerErrorHandler {
       'Token expired'
     ];
     
-    return authErrorPatterns.some(pattern => 
+    return authErrorPatterns.some((pattern: string) => 
       error.message.toLowerCase().includes(pattern.toLowerCase())
     );
   }
@@ -83,7 +92,8 @@ export class SpinnerErrorHandler {
   static isNetworkError(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
     
-    const networkErrorPatterns = [
+    const config = configManager.get();
+    const networkErrorPatterns = config.errorHandling?.patterns?.network || [
       'Network error',
       'ECONNREFUSED',
       'ETIMEDOUT',
@@ -91,7 +101,7 @@ export class SpinnerErrorHandler {
       'fetch failed'
     ];
     
-    return networkErrorPatterns.some(pattern => 
+    return networkErrorPatterns.some((pattern: string) => 
       error.message.toLowerCase().includes(pattern.toLowerCase())
     );
   }

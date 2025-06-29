@@ -1,20 +1,19 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { PrismaClient } from '@prisma/client';
 import { UserService } from '../../services/user.service';
 import { configManager } from '../../config';
 import { EndpointResolver } from '../../utils/endpoint-resolver';
 import Table from 'cli-table3';
 import { logger } from '../../utils/logger';
+import { DatabaseManager } from '../../utils/database-manager';
 
 export function createPushStatusCommand() {
   return new Command('push-status')
     .description('Show push synchronization status')
     .option('-v, --verbose', 'Show detailed statistics')
     .action(async (options) => {
-      const prisma = new PrismaClient();
-      
-      try {
+      await DatabaseManager.withDatabase(async (prisma) => {
+        try {
         const pushConfig = configManager.getPushConfig();
         
         // Get statistics directly without requiring authentication
@@ -174,12 +173,11 @@ export function createPushStatusCommand() {
           }
         }
         
-      } catch (error) {
-        logger.error(chalk.red('Failed to get push status:'), error instanceof Error ? error.message : 'Unknown error');
-        process.exit(1);
-      } finally {
-        await prisma.$disconnect();
-      }
+        } catch (error) {
+          logger.error(chalk.red('Failed to get push status:'), error instanceof Error ? error.message : 'Unknown error');
+          process.exit(1);
+        }
+      });
     });
 }
 

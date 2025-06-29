@@ -14,6 +14,7 @@ const user_service_1 = require("../../services/user.service");
 const jsonl_service_1 = require("../../services/jsonl.service");
 const aggregation_service_1 = require("../../services/aggregation.service");
 const incremental_aggregation_service_1 = require("../../services/incremental-aggregation.service");
+const user_stats_service_1 = require("../../services/user-stats.service");
 const logger_1 = require("../../utils/logger");
 exports.syncCommand = new commander_1.Command('sync')
     .description('Sync Claude Code raw data to local database')
@@ -32,7 +33,8 @@ exports.syncCommand = new commander_1.Command('sync')
         // Load user info silently
         await userService.loadUserInfo();
         // Get initial cost before sync
-        const userStatsBeforeSync = await getUserAggregatedStats(userService);
+        const userStatsServicePreSync = new user_stats_service_1.UserStatsService(database_1.prisma, userService);
+        const userStatsBeforeSync = await userStatsServicePreSync.getAggregatedStats();
         const costBeforeSync = userStatsBeforeSync ? Number(userStatsBeforeSync.totalCost) : 0;
         // Handle force flag
         if (options.force) {
@@ -48,11 +50,12 @@ exports.syncCommand = new commander_1.Command('sync')
         const dataPath = options.path || config_1.configManager.getClaudeCodeConfig().rawDataPath;
         // Inform user about sync speed
         if (needsFullRecalc) {
+            const messages = config_1.configManager.get().messages?.sync || {};
             if (options.force) {
-                console.log(chalk_1.default.blue('ℹ️  Force sync requested. This will take longer as all data will be reprocessed.'));
+                console.log(chalk_1.default.blue(messages.forceSync || 'ℹ️  Force sync requested. This will take longer as all data will be reprocessed.'));
             }
             else {
-                console.log(chalk_1.default.blue('ℹ️  First time sync detected. This initial sync will take longer, but future syncs will be blazingly fast!'));
+                console.log(chalk_1.default.blue(messages.firstTime || 'ℹ️  First time sync detected. This initial sync will take longer, but future syncs will be blazingly fast!'));
             }
             console.log(chalk_1.default.gray('   Only new or modified files will be processed in subsequent syncs.\n'));
         }
@@ -162,14 +165,15 @@ exports.syncCommand = new commander_1.Command('sync')
             }
         }
         // Show aggregated user stats
-        const userStats = await getUserAggregatedStats(userService);
+        const userStatsService = new user_stats_service_1.UserStatsService(database_1.prisma, userService);
+        const userStats = await userStatsService.getAggregatedStats();
         if (userStats) {
             console.log('\n' + chalk_1.default.bold('👤 User Stats:'));
             console.log(`   📁 Projects: ${chalk_1.default.cyan(userStats.totalProjects)}`);
             console.log(`   💬 Sessions: ${chalk_1.default.cyan(userStats.totalSessions)}`);
             console.log(`   📝 Messages: ${chalk_1.default.cyan(userStats.totalMessages)}`);
             // Show message breakdown by writer
-            const messageBreakdown = await getMessageBreakdown(userService);
+            const messageBreakdown = await userStatsService.getMessageBreakdown();
             if (messageBreakdown) {
                 console.log(`\n   ${chalk_1.default.bold('💬 Message Breakdown:')}`);
                 console.log(`     👤 Human: ${chalk_1.default.green(messageBreakdown.human)} (${messageBreakdown.humanPercentage}%)`);
@@ -182,7 +186,7 @@ exports.syncCommand = new commander_1.Command('sync')
             console.log(`   💾 Cache creation tokens: ${chalk_1.default.cyan(userStats.totalCacheCreationTokens.toLocaleString())}`);
             console.log(`   ⚡ Cache read tokens: ${chalk_1.default.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
             // Show detailed user stats by model before total cost
-            const userStatsByModel = await getUserStatsByModel(userService);
+            const userStatsByModel = await userStatsService.getStatsByModel();
             if (userStatsByModel.length > 0) {
                 console.log('\n' + chalk_1.default.bold('   🤖 Usage & Cost by Model:'));
                 for (const modelStats of userStatsByModel) {
@@ -203,7 +207,10 @@ exports.syncCommand = new commander_1.Command('sync')
                 }
             }
             // Show total cost as the bottom line
-            console.log('\n' + chalk_1.default.gray('═'.repeat(50)));
+            const fullConfig = config_1.configManager.get();
+            const sectionSeparator = fullConfig.display?.sectionSeparator || '═';
+            const sectionSeparatorWidth = fullConfig.display?.sectionSeparatorWidth || 50;
+            console.log('\n' + chalk_1.default.gray(sectionSeparator.repeat(sectionSeparatorWidth)));
             // Show incremental cost change
             const costAfterSync = Number(userStats.totalCost);
             const incrementalCost = costAfterSync - costBeforeSync;
@@ -229,95 +236,4 @@ exports.syncCommand = new commander_1.Command('sync')
         await database_1.db.disconnect();
     }
 });
-async function getUserAggregatedStats(userService) {
-    const userId = userService.getAnonymousId();
-    const user = await database_1.prisma.user.findUnique({
-        where: { id: userId }
-    });
-    return user;
-}
-async function getUserStatsByModel(userService) {
-    const userId = userService.getAnonymousId();
-    // Get aggregated stats by model from messages
-    const modelStats = await database_1.prisma.message.groupBy({
-        by: ['model'],
-        where: {
-            userId: userId,
-            model: { not: null } // Only include messages with a model
-        },
-        _count: {
-            id: true
-        },
-        _sum: {
-            inputTokens: true,
-            outputTokens: true,
-            cacheCreationTokens: true,
-            cacheReadTokens: true,
-            messageCost: true
-        }
-    });
-    // Transform and filter out models with zero usage
-    const result = modelStats
-        .filter(stats => {
-        const totalTokens = Number(stats._sum.inputTokens || 0) +
-            Number(stats._sum.outputTokens || 0) +
-            Number(stats._sum.cacheCreationTokens || 0) +
-            Number(stats._sum.cacheReadTokens || 0);
-        return totalTokens > 0;
-    })
-        .map(stats => ({
-        model: stats.model,
-        messageCount: stats._count?.id || 0,
-        inputTokens: Number(stats._sum.inputTokens || 0),
-        outputTokens: Number(stats._sum.outputTokens || 0),
-        cacheCreationTokens: Number(stats._sum.cacheCreationTokens || 0),
-        cacheReadTokens: Number(stats._sum.cacheReadTokens || 0),
-        cost: Number(stats._sum.messageCost || 0)
-    }))
-        .sort((a, b) => b.cost - a.cost); // Sort by cost descending
-    return result;
-}
-async function getMessageBreakdown(userService) {
-    const userId = userService.getAnonymousId();
-    // Get message breakdown by writer type
-    const breakdown = await database_1.prisma.message.groupBy({
-        by: ['writer'],
-        where: {
-            userId: userId
-        },
-        _count: {
-            id: true
-        }
-    });
-    let human = 0;
-    let agent = 0;
-    let assistant = 0;
-    breakdown.forEach(item => {
-        const count = item._count.id;
-        switch (item.writer) {
-            case 'human':
-                human += count;
-                break;
-            case 'agent':
-                agent += count;
-                break;
-            case 'assistant':
-                assistant += count;
-                break;
-        }
-    });
-    const total = human + agent + assistant;
-    const humanPercentage = total > 0 ? ((human / total) * 100).toFixed(1) : '0';
-    const agentPercentage = total > 0 ? ((agent / total) * 100).toFixed(1) : '0';
-    const assistantPercentage = total > 0 ? ((assistant / total) * 100).toFixed(1) : '0';
-    return {
-        human,
-        agent,
-        assistant,
-        total,
-        humanPercentage,
-        agentPercentage,
-        assistantPercentage
-    };
-}
 //# sourceMappingURL=sync.command.js.map

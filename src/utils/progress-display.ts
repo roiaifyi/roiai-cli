@@ -1,15 +1,21 @@
 import chalk from 'chalk';
+import { configManager } from '../config';
 
 export class ProgressDisplay {
-  private static readonly PROGRESS_BAR_WIDTH = 50;
+  private static get PROGRESS_BAR_WIDTH() {
+    return configManager.get().display?.progressBarWidth || 50;
+  }
   
   /**
    * Generate a progress bar string
    */
   static generateProgressBar(percent: number, width: number = this.PROGRESS_BAR_WIDTH): string {
+    const config = configManager.get();
+    const filledChar = config.display?.progressBar?.filled || '█';
+    const emptyChar = config.display?.progressBar?.empty || '░';
     const filled = Math.floor((percent / 100) * width);
     const empty = width - filled;
-    return '█'.repeat(filled) + '░'.repeat(empty);
+    return filledChar.repeat(filled) + emptyChar.repeat(empty);
   }
 
   /**
@@ -99,7 +105,10 @@ export class ProgressDisplay {
     }
     
     if (!compact) {
-      console.log(`  ${chalk.gray('━'.repeat(40))}`);
+      const config = configManager.get();
+      const separatorChar = config.display?.separator?.char || '━';
+      const separatorWidth = config.display?.separator?.defaultWidth || 40;
+      console.log(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
     }
     
     Object.entries(stats).forEach(([key, value]) => {
@@ -120,7 +129,10 @@ export class ProgressDisplay {
     });
     
     if (!compact) {
-      console.log(`  ${chalk.gray('━'.repeat(40))}`);
+      const config = configManager.get();
+      const separatorChar = config.display?.separator?.char || '━';
+      const separatorWidth = config.display?.separator?.defaultWidth || 40;
+      console.log(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
     }
   }
 

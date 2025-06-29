@@ -70,6 +70,33 @@ The main configuration file controls all aspects of the CLI. Create this file by
   },
   "logging": {
     "level": "info"                          // Log level: debug, info, warn, error
+  },
+  "display": {
+    "costPrecision": 4,                      // Decimal places for cost display
+    "progressBarWidth": 50,                  // Width of progress bars in characters
+    "progressBar": {
+      "filled": "█",                         // Character for filled portion
+      "empty": "░"                           // Character for empty portion
+    },
+    "separator": {
+      "char": "━",                           // Character for separators
+      "defaultWidth": 40                     // Default separator width
+    },
+    "sectionSeparator": "═",                 // Character for section separators
+    "sectionSeparatorWidth": 50,             // Width of section separators
+    "maxFailedMessagesShown": 5              // Max failed messages to display
+  },
+  "errorHandling": {
+    "patterns": {
+      "auth": ["401", "Unauthorized"],      // Patterns to detect auth errors
+      "network": ["ECONNREFUSED", "ETIMEDOUT"] // Network error patterns
+    }
+  },
+  "messages": {
+    "sync": {
+      "firstTime": "ℹ️  First time sync detected...",  // First sync message
+      "forceSync": "ℹ️  Force sync requested..."        // Force sync message
+    }
   }
 }
 ```
@@ -106,6 +133,46 @@ The CLI fetches pricing data from a remote repository to ensure you always have 
   - `3600000` = 1 hour (default)
   - `0` = No cache, fetch every time
   - `86400000` = 24 hours
+
+## Display Customization
+
+You can customize how the CLI displays information:
+
+### Progress Bars
+```json
+{
+  "display": {
+    "progressBarWidth": 60,        // Make progress bars wider
+    "progressBar": {
+      "filled": "=",               // Use = for filled portion
+      "empty": "-"                 // Use - for empty portion
+    }
+  }
+}
+```
+
+### Separators and Formatting
+```json
+{
+  "display": {
+    "separator": {
+      "char": "─",                 // Use thin line for separators
+      "defaultWidth": 50           // Make separators wider
+    },
+    "sectionSeparator": "━",       // Use thick line for sections
+    "sectionSeparatorWidth": 60    // Make section separators wider
+  }
+}
+```
+
+### Error Display
+```json
+{
+  "display": {
+    "maxFailedMessagesShown": 10   // Show more failed messages
+  }
+}
+```
 
 ## Common Path Configurations
 

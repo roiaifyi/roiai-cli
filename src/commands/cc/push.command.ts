@@ -1,11 +1,12 @@
 import { Command } from 'commander';
 import ora from 'ora';
 import chalk from 'chalk';
-import { PrismaClient } from '@prisma/client';
 import { PushService } from '../../services/push.service';
 import { UserService } from '../../services/user.service';
 import { configManager } from '../../config';
 import { PushOptions } from '../../models/push.types';
+import { AuthValidator } from '../../utils/auth-validator';
+import { DatabaseManager } from '../../utils/database-manager';
 
 export function createPushCommand() {
   return new Command('push')
@@ -16,23 +17,12 @@ export function createPushCommand() {
     .option('-v, --verbose', 'Show detailed progress')
     .action(async (options: PushOptions) => {
       const spinner = ora('Initializing push...').start();
-      const prisma = new PrismaClient();
       
-      try {
+      await DatabaseManager.withDatabase(async (prisma) => {
+        try {
         // Initialize user service and check authentication
         const userService = new UserService();
-        await userService.loadUserInfo();
-        
-        if (!userService.isAuthenticated()) {
-          spinner.fail('Please login first using \'roiai cc login\' to push data');
-          process.exit(1);
-        }
-        
-        const apiToken = userService.getApiToken();
-        if (!apiToken) {
-          spinner.fail('No API token found. Please login again.');
-          process.exit(1);
-        }
+        await AuthValidator.validateAndGetToken(userService, spinner);
         
         const pushConfig = configManager.getPushConfig();
 
@@ -140,8 +130,9 @@ export function createPushCommand() {
         while (true) {
           batchNumber++;
           
-          // Periodically check authentication during long push sessions (every 10 batches)
-          if (batchNumber > 1 && batchNumber % 10 === 1) {
+          // Periodically check authentication during long push sessions
+          const authRecheckInterval = pushConfig.authRecheckInterval || 10;
+          if (batchNumber > 1 && batchNumber % authRecheckInterval === 1) {
             const authRecheck = await pushService.checkAuthentication();
             
             if (!authRecheck.valid) {
@@ -209,12 +200,13 @@ export function createPushCommand() {
               
               // Show failed message details if any
               if (response.results.failed.details.length > 0) {
+                const maxFailedShown = configManager.get().display?.maxFailedMessagesShown || 5;
                 console.log(chalk.red('\n  Failed messages:'));
-                for (const failure of response.results.failed.details.slice(0, 5)) {
+                for (const failure of response.results.failed.details.slice(0, maxFailedShown)) {
                   console.log(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
                 }
-                if (response.results.failed.details.length > 5) {
-                  console.log(`    ... and ${response.results.failed.details.length - 5} more`);
+                if (response.results.failed.details.length > maxFailedShown) {
+                  console.log(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);
                 }
               }
             }
@@ -278,15 +270,14 @@ export function createPushCommand() {
           }
         }
 
-      } catch (error) {
-        spinner.fail(`Push failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        if (options.verbose && error instanceof Error) {
-          console.error('\nError details:', error.stack);
+        } catch (error) {
+          spinner.fail(`Push failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          if (options.verbose && error instanceof Error) {
+            console.error('\nError details:', error.stack);
+          }
+          process.exit(1);
         }
-        process.exit(1);
-      } finally {
-        await prisma.$disconnect();
-      }
+      });
     });
 }
 

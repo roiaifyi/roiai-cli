@@ -30,9 +30,16 @@ export interface Config {
         batchSize: number;
         maxRetries: number;
         timeout: number;
+        authRecheckInterval?: number;
     };
     network?: {
         authTimeout: number;
+        defaultMaxRetries?: number;
+        backoff?: {
+            baseDelay?: number;
+            maxDelay?: number;
+        };
+        defaultHttpsPort?: string;
     };
     display?: {
         costPrecision: number;
@@ -40,6 +47,32 @@ export interface Config {
         durationPrecision: number;
         maxErrorsDisplayed: number;
         maxSessionsShown: number;
+        progressBarWidth?: number;
+        progressBar?: {
+            filled?: string;
+            empty?: string;
+        };
+        separator?: {
+            char?: string;
+            defaultWidth?: number;
+        };
+        sectionSeparator?: string;
+        sectionSeparatorWidth?: number;
+        progressUpdateInterval?: number;
+        maxFailedMessagesShown?: number;
+        units?: {
+            bytes?: string[];
+        };
+        decimals?: {
+            bytes?: number;
+        };
+        duration?: {
+            thresholds?: {
+                seconds?: number;
+                minutes?: number;
+                hours?: number;
+            };
+        };
     };
     logging: {
         level: string;
@@ -53,6 +86,7 @@ export interface Config {
         timeouts?: {
             transaction?: number;
         };
+        hiddenDirectoryPrefix?: string;
     };
     machine?: {
         networkInterfacePriority?: string[];
@@ -62,6 +96,24 @@ export interface Config {
     };
     pricing?: {
         syntheticModels?: string[];
+    };
+    errorHandling?: {
+        patterns?: {
+            auth?: string[];
+            network?: string[];
+        };
+    };
+    messages?: {
+        sync?: {
+            firstTime?: string;
+            forceSync?: string;
+        };
+        auth?: {
+            invalidToken?: string;
+        };
+        httpErrors?: {
+            [key: string]: string;
+        };
     };
 }
 declare class ConfigManager {
@@ -84,6 +136,7 @@ declare class ConfigManager {
         batchSize: number;
         maxRetries: number;
         timeout: number;
+        authRecheckInterval?: number;
     };
     getApiConfig(): {
         baseUrl: string;

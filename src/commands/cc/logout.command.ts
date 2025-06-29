@@ -2,9 +2,8 @@ import { Command } from 'commander';
 import ora from 'ora';
 import chalk from 'chalk';
 import { UserService } from '../../services/user.service';
-import { createApiClient } from '../../generated/api-client';
-import { configManager } from '../../config';
-import { COMMAND_STRINGS } from '../../utils/constants';
+import { createAuthenticatedApiClient } from '../../utils/api-client-factory';
+import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 
 export function createLogoutCommand(): Command {
   const command = new Command('logout');
@@ -33,13 +32,7 @@ export function createLogoutCommand(): Command {
           try {
             spinner.text = 'Revoking API key on server...';
             
-            const apiConfig = configManager.getApiConfig();
-            const apiClient = createApiClient({
-              baseUrl: apiConfig.baseUrl,
-              headers: {
-                Authorization: `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${apiToken}`,
-              },
-            });
+            const apiClient = createAuthenticatedApiClient(apiToken);
             
             const response = await apiClient.logout();
             
@@ -56,7 +49,7 @@ export function createLogoutCommand(): Command {
               console.log(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
             }
           } catch (error) {
-            console.log(chalk.yellow(`\nWarning: Could not contact server to revoke API key: ${error instanceof Error ? error.message : 'Unknown error'}`));
+            console.log(chalk.yellow(`\nWarning: Could not contact server to revoke API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
             console.log(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
           }
         }
@@ -74,7 +67,7 @@ export function createLogoutCommand(): Command {
         console.log(chalk.dim('\nContinuing in anonymous mode. Your local data remains intact.'));
         
       } catch (error) {
-        spinner.fail(`Logout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        spinner.fail(`Logout failed: ${SpinnerErrorHandler.getErrorMessage(error)}`);
         process.exit(1);
       }
     });

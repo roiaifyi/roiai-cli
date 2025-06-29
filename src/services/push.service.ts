@@ -8,16 +8,14 @@ import {
   EntityMaps,
   MessageEntity,
 } from "../models/push.types";
-import { createApiClient } from "../generated/api-client";
 import { UserService } from "./user.service";
-import { COMMAND_STRINGS } from "../utils/constants";
-import { configManager } from "../config";
+import { createAuthenticatedApiClient } from "../utils/api-client-factory";
 import { NetworkErrorHandler } from "../utils/network-error-handler";
 import { logger } from "../utils/logger";
 
 export class PushService {
   private prisma: PrismaClient;
-  private apiClient: ReturnType<typeof createApiClient>;
+  private apiClient: ReturnType<typeof createAuthenticatedApiClient>;
   private config: PushConfig;
   private authenticatedUserId: string | null = null;
   private logger = logger;
@@ -29,8 +27,6 @@ export class PushService {
   ) {
     this.prisma = prisma;
     this.config = config;
-
-    const apiConfig = configManager.getApiConfig();
 
     if (!userService) {
       throw new Error("PushService requires UserService for authentication");
@@ -46,12 +42,7 @@ export class PushService {
       throw new Error("No authenticated user ID available");
     }
 
-    this.apiClient = createApiClient({
-      baseUrl: apiConfig.baseUrl,
-      headers: {
-        Authorization: `${COMMAND_STRINGS.HTTP.BEARER_PREFIX}${apiToken}`,
-      },
-    });
+    this.apiClient = createAuthenticatedApiClient(apiToken);
   }
 
   /**
