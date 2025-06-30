@@ -10,6 +10,7 @@ const ora_1 = __importDefault(require("ora"));
 const chalk_1 = __importDefault(require("chalk"));
 const push_service_1 = require("../../services/push.service");
 const user_service_1 = require("../../services/user.service");
+const sync_service_1 = require("../../services/sync.service");
 const config_1 = require("../../config");
 const auth_validator_1 = require("../../utils/auth-validator");
 const database_manager_1 = require("../../utils/database-manager");
@@ -20,6 +21,7 @@ function createPushCommand() {
         .option('-d, --dry-run', 'Preview what would be pushed without actually pushing')
         .option('-f, --force', 'Reset retry count for failed records and retry')
         .option('-v, --verbose', 'Show detailed progress')
+        .option('-s, --skip-sync', 'Skip sync before push')
         .action(async (options) => {
         const spinner = (0, ora_1.default)('Initializing push...').start();
         await database_manager_1.DatabaseManager.withDatabase(async (prisma) => {
@@ -27,6 +29,28 @@ function createPushCommand() {
                 // Initialize user service and check authentication
                 const userService = new user_service_1.UserService();
                 await auth_validator_1.AuthValidator.validateAndGetToken(userService, spinner);
+                // Run sync first unless skipped
+                if (!options.skipSync) {
+                    spinner.text = 'Running sync before push...';
+                    const syncService = new sync_service_1.SyncService(prisma, userService);
+                    try {
+                        const syncResult = await syncService.sync({ quiet: true });
+                        if (syncResult.hasNewData) {
+                            spinner.succeed(`Sync completed: ${syncResult.messagesProcessed} messages processed` +
+                                (syncResult.incrementalCost > 0 ? ` (+$${syncResult.incrementalCost.toFixed(4)})` : ''));
+                        }
+                        else {
+                            spinner.succeed('Sync completed: No new data found');
+                        }
+                    }
+                    catch (syncError) {
+                        spinner.fail('Sync failed');
+                        console.error(chalk_1.default.red('Error during sync:'), syncError instanceof Error ? syncError.message : 'Unknown error');
+                        console.log(chalk_1.default.yellow('\nContinuing with push using existing data...'));
+                    }
+                    // Restart spinner for push
+                    spinner.start('Initializing push...');
+                }
                 const pushConfig = config_1.configManager.getPushConfig();
                 const pushService = new push_service_1.PushService(prisma, pushConfig, userService);
                 // Check authentication before proceeding

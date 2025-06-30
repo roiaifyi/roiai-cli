@@ -64,16 +64,22 @@ roiai cc sync --path /path/to/claude_raw_data
 
 ### Push to Remote
 
-Push local database to remote server:
+Push local database to remote server (automatically runs sync before pushing):
 
 ```bash
 roiai cc push
 
-# Skip confirmation
-roiai cc push --yes
+# Skip the automatic sync before push
+roiai cc push --skip-sync
 
 # Custom batch size
 roiai cc push --batch-size 500
+
+# Force retry of failed messages
+roiai cc push --force
+
+# Dry run to preview what would be pushed
+roiai cc push --dry-run
 ```
 
 ## Database

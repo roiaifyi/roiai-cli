@@ -18,6 +18,7 @@ export interface PushOptions {
   dryRun: boolean;
   force: boolean;
   verbose: boolean;
+  skipSync?: boolean;
 }
 
 export interface PushConfig {

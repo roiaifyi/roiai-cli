@@ -3,6 +3,7 @@ import ora from 'ora';
 import chalk from 'chalk';
 import { PushService } from '../../services/push.service';
 import { UserService } from '../../services/user.service';
+import { SyncService } from '../../services/sync.service';
 import { configManager } from '../../config';
 import { PushOptions } from '../../models/push.types';
 import { AuthValidator } from '../../utils/auth-validator';
@@ -15,6 +16,7 @@ export function createPushCommand() {
     .option('-d, --dry-run', 'Preview what would be pushed without actually pushing')
     .option('-f, --force', 'Reset retry count for failed records and retry')
     .option('-v, --verbose', 'Show detailed progress')
+    .option('-s, --skip-sync', 'Skip sync before push')
     .action(async (options: PushOptions) => {
       const spinner = ora('Initializing push...').start();
       
@@ -23,6 +25,32 @@ export function createPushCommand() {
         // Initialize user service and check authentication
         const userService = new UserService();
         await AuthValidator.validateAndGetToken(userService, spinner);
+        
+        // Run sync first unless skipped
+        if (!options.skipSync) {
+          spinner.text = 'Running sync before push...';
+          const syncService = new SyncService(prisma, userService);
+          
+          try {
+            const syncResult = await syncService.sync({ quiet: true });
+            
+            if (syncResult.hasNewData) {
+              spinner.succeed(
+                `Sync completed: ${syncResult.messagesProcessed} messages processed` +
+                (syncResult.incrementalCost > 0 ? ` (+$${syncResult.incrementalCost.toFixed(4)})` : '')
+              );
+            } else {
+              spinner.succeed('Sync completed: No new data found');
+            }
+          } catch (syncError) {
+            spinner.fail('Sync failed');
+            console.error(chalk.red('Error during sync:'), syncError instanceof Error ? syncError.message : 'Unknown error');
+            console.log(chalk.yellow('\nContinuing with push using existing data...'));
+          }
+          
+          // Restart spinner for push
+          spinner.start('Initializing push...');
+        }
         
         const pushConfig = configManager.getPushConfig();
 
