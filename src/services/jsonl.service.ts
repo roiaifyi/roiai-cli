@@ -15,7 +15,7 @@ import { BatchProcessor, BatchMessage } from "./batch-processor";
 import { Decimal } from "@prisma/client/runtime/library";
 import { MessageWriter } from "@prisma/client";
 import { logger } from "../utils/logger";
-import { configManager } from "../config";
+import { ConfigHelper } from "../utils/config-helper";
 
 export class JSONLService {
   private batchProcessor: BatchProcessor;
@@ -67,7 +67,7 @@ export class JSONLService {
 
     try {
       const projectDirs = await fs.promises.readdir(projectsPath);
-      const hiddenPrefix = configManager.get().processing?.hiddenDirectoryPrefix || '.';
+      const hiddenPrefix = ConfigHelper.getProcessing().hiddenDirectoryPrefix;
       const validProjects = projectDirs.filter((dir) => !dir.startsWith(hiddenPrefix));
 
       // Pre-load existing message IDs for efficient duplicate checking
@@ -196,7 +196,7 @@ export class JSONLService {
       .createHash("sha256")
       .update(`${projectName}:${machineId}`)
       .digest("hex")
-      .substring(0, 16);
+      .substring(0, ConfigHelper.getProcessing().idSubstringLength);
 
     // Check if project already exists
     const existingProject = await prisma.project.findUnique({

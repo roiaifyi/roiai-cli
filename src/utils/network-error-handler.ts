@@ -1,3 +1,6 @@
+import { logger } from './logger';
+import { ConfigHelper } from './config-helper';
+
 /**
  * Enhanced error handler for network and authentication errors
  * Provides detailed, actionable error messages for better user experience
@@ -119,7 +122,7 @@ export class NetworkErrorHandler {
   private static extractPort(message: string): string {
     // Try to extract port from error message
     const portMatch = message.match(/:(\d+)/);
-    return portMatch ? portMatch[1] : '443';
+    return portMatch ? portMatch[1] : ConfigHelper.getNetwork().defaultHttpsPort;
   }
 
   /**
@@ -127,7 +130,7 @@ export class NetworkErrorHandler {
    */
   static async retryWithBackoff<T>(
     operation: () => Promise<T>,
-    maxRetries: number = 3,
+    maxRetries: number = ConfigHelper.getNetwork().defaultMaxRetries,
     context: string = 'operation'
   ): Promise<T> {
     let lastError: Error | null = null;
@@ -148,8 +151,9 @@ export class NetworkErrorHandler {
         }
         
         if (attempt < maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-          console.log(`Retrying ${context} in ${delay}ms... (attempt ${attempt}/${maxRetries})`);
+          const backoffConfig = ConfigHelper.getNetwork().backoff;
+          const delay = Math.min(backoffConfig.baseDelay * Math.pow(2, attempt - 1), backoffConfig.maxDelay);
+          logger.info(`Retrying ${context} in ${delay}ms... (attempt ${attempt}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }

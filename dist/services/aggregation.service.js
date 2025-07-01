@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AggregationService = void 0;
 const client_1 = require("@prisma/client");
 const logger_1 = require("../utils/logger");
+const config_helper_1 = require("../utils/config-helper");
 class AggregationService {
     prisma;
     constructor(prisma) {
@@ -36,7 +37,7 @@ class AggregationService {
             }
         });
         // Batch update sessions using Promise.all for parallelism
-        const BATCH_SIZE = 100;
+        const BATCH_SIZE = config_helper_1.ConfigHelper.getProcessing().aggregationBatchSize;
         for (let i = 0; i < sessionAggregates.length; i += BATCH_SIZE) {
             const batch = sessionAggregates.slice(i, i + BATCH_SIZE);
             await Promise.all(batch.map(agg => this.prisma.session.update({
@@ -78,7 +79,7 @@ class AggregationService {
         // Create a map of session counts
         const sessionCountMap = new Map(sessionCounts.map((s) => [s.projectId, s._count._all]));
         // Batch update projects
-        const BATCH_SIZE = 100;
+        const BATCH_SIZE = config_helper_1.ConfigHelper.getProcessing().aggregationBatchSize;
         for (let i = 0; i < projectAggregates.length; i += BATCH_SIZE) {
             const batch = projectAggregates.slice(i, i + BATCH_SIZE);
             await Promise.all(batch.map(agg => this.prisma.project.update({
@@ -124,7 +125,7 @@ class AggregationService {
         const projectCountMap = new Map(projectCounts.map((p) => [p.clientMachineId, p._count._all]));
         const sessionCountMap = new Map(sessionCounts.map((s) => [s.clientMachineId, s._count._all]));
         // Batch update machines
-        const BATCH_SIZE = 100;
+        const BATCH_SIZE = config_helper_1.ConfigHelper.getProcessing().aggregationBatchSize;
         for (let i = 0; i < machineAggregates.length; i += BATCH_SIZE) {
             const batch = machineAggregates.slice(i, i + BATCH_SIZE);
             await Promise.all(batch.map(agg => this.prisma.machine.update({
@@ -171,7 +172,7 @@ class AggregationService {
         const projectCountMap = new Map(projectCounts.map((p) => [p.userId, p._count._all]));
         const sessionCountMap = new Map(sessionCounts.map((s) => [s.userId, s._count._all]));
         // Batch update users
-        const BATCH_SIZE = 100;
+        const BATCH_SIZE = config_helper_1.ConfigHelper.getProcessing().aggregationBatchSize;
         for (let i = 0; i < userAggregates.length; i += BATCH_SIZE) {
             const batch = userAggregates.slice(i, i + BATCH_SIZE);
             await Promise.all(batch.map(agg => this.prisma.user.update({

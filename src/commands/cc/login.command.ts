@@ -6,10 +6,11 @@ import axios from 'axios';
 import os from 'os';
 import { UserService } from '../../services/user.service';
 import { MachineService } from '../../services/machine.service';
-import { configManager } from '../../config';
 import { EndpointResolver } from '../../utils/endpoint-resolver';
 import { createAuthenticatedApiClient } from '../../utils/api-client-factory';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
+import { logger } from '../../utils/logger';
+import { ConfigHelper } from '../../utils/config-helper';
 
 export function createLoginCommand(): Command {
   const command = new Command('login');
@@ -56,7 +57,7 @@ export function createLoginCommand(): Command {
             });
             email = response.email;
             if (!email) {
-              console.log(chalk.red('Login cancelled'));
+              logger.error(chalk.red('Login cancelled'));
               return;
             }
           }
@@ -69,7 +70,7 @@ export function createLoginCommand(): Command {
             });
             password = response.password;
             if (!password) {
-              console.log(chalk.red('Login cancelled'));
+              logger.error(chalk.red('Login cancelled'));
               return;
             }
           }
@@ -108,7 +109,7 @@ export function createLoginCommand(): Command {
             headers: {
               'Content-Type': 'application/json',
             },
-            timeout: configManager.get().network?.authTimeout || 5000
+            timeout: ConfigHelper.getNetwork().authTimeout
           });
           
           const { success, data } = response.data;
@@ -135,11 +136,11 @@ export function createLoginCommand(): Command {
               
               if (!logoutResponse.ok) {
                 // Log warning but don't fail the login
-                console.log(chalk.yellow(`\nWarning: Could not revoke previous API key for ${oldEmail}`));
+                logger.warn(chalk.yellow(`\nWarning: Could not revoke previous API key for ${oldEmail}`));
               }
             } catch (error) {
               // Silently handle logout errors - don't interrupt the login flow
-              console.log(chalk.yellow(`\nWarning: Could not revoke previous API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
+              logger.warn(chalk.yellow(`\nWarning: Could not revoke previous API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
             }
             
             // Clear local credentials before saving new ones
@@ -154,28 +155,26 @@ export function createLoginCommand(): Command {
           } else {
             spinner.succeed(`Successfully logged in as ${user.email}`);
           }
-          console.log(chalk.dim('\nYou can now use \'roiai cc push\' to sync your usage data.'));
+          logger.info(chalk.dim('\nYou can now use \'roiai cc push\' to sync your usage data.'));
           
         } catch (error) {
           if (axios.isAxiosError(error)) {
             if (error.response?.status === 401) {
-              spinner.fail('Invalid credentials');
+              SpinnerErrorHandler.handleError(spinner, error, 'Invalid credentials');
             } else if (error.response?.status === 404) {
-              spinner.fail('Authentication endpoint not found. Please check your server configuration.');
+              SpinnerErrorHandler.handleError(spinner, error, 'Authentication endpoint not found. Please check your server configuration.');
             } else if (error.code === 'ECONNREFUSED') {
-              spinner.fail(`Cannot connect to server at ${authEndpoint}`);
+              SpinnerErrorHandler.handleError(spinner, error, `Cannot connect to server at ${authEndpoint}`);
             } else {
-              spinner.fail(`Authentication failed: ${error.response?.data?.message || error.message}`);
+              SpinnerErrorHandler.handleError(spinner, error, `Authentication failed: ${error.response?.data?.message || error.message}`);
             }
           } else {
-            spinner.fail(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            SpinnerErrorHandler.handleError(spinner, error, 'Login failed');
           }
-          process.exit(1);
         }
         
       } catch (error) {
-        spinner.fail(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        process.exit(1);
+        SpinnerErrorHandler.handleError(spinner, error, 'Login failed');
       }
     });
     

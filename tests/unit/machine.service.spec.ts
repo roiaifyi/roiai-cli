@@ -15,6 +15,9 @@ jest.mock('../../src/config', () => ({
         dataDir: '~/.roiai',
         machineInfoFilename: 'machine_info.json'
       }
+    }),
+    getMachineConfig: () => ({
+      invalidMacAddress: '00:00:00:00:00:00'
     })
   }
 }));

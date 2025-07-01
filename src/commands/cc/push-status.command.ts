@@ -6,6 +6,9 @@ import { EndpointResolver } from '../../utils/endpoint-resolver';
 import Table from 'cli-table3';
 import { logger } from '../../utils/logger';
 import { DatabaseManager } from '../../utils/database-manager';
+import { QueryHelper } from '../../utils/query-helper';
+import { ConfigHelper } from '../../utils/config-helper';
+import { FormatterUtils } from '../../utils/formatter-utils';
 
 export function createPushStatusCommand() {
   return new Command('push-status')
@@ -18,20 +21,12 @@ export function createPushStatusCommand() {
         
         // Get statistics directly without requiring authentication
         const [total, synced, unsynced, retryDistribution] = await Promise.all([
-          prisma.message.count(),
+          QueryHelper.getMessageCount(prisma),
           prisma.messageSyncStatus.count({
             where: { syncedAt: { not: null } },
           }),
-          prisma.message.count({
-            where: {
-              syncStatus: { syncedAt: null },
-            },
-          }),
-          prisma.messageSyncStatus.groupBy({
-            by: ["retryCount"],
-            where: { syncedAt: null },
-            _count: true,
-          }),
+          QueryHelper.getUnsyncedMessageCount(prisma),
+          QueryHelper.getRetryDistribution(prisma),
         ]);
 
         const stats = {
@@ -44,7 +39,7 @@ export function createPushStatusCommand() {
           })),
         };
         
-        console.log(chalk.bold('\n📊 Push Status\n'));
+        logger.info(chalk.bold('\n📊 Push Status\n'));
         
         // Summary table
         const summaryTable = new Table({
@@ -56,14 +51,14 @@ export function createPushStatusCommand() {
           ['Total Messages', stats.total],
           ['Synced', chalk.green(stats.synced.toString())],
           ['Unsynced', chalk.yellow(stats.unsynced.toString())],
-          ['Success Rate', stats.total > 0 ? `${((stats.synced / stats.total) * 100).toFixed(1)}%` : 'N/A']
+          ['Success Rate', stats.total > 0 ? `${FormatterUtils.formatPercentage(stats.synced, stats.total)}%` : 'N/A']
         );
         
-        console.log(summaryTable.toString());
+        logger.info(summaryTable.toString());
         
         // Retry distribution
         if (stats.retryDistribution.length > 0) {
-          console.log(chalk.bold('\n🔄 Retry Distribution\n'));
+          logger.info(chalk.bold('\n🔄 Retry Distribution\n'));
           
           const retryTable = new Table({
             head: ['Retry Count', 'Messages'],
@@ -71,27 +66,28 @@ export function createPushStatusCommand() {
           });
           
           stats.retryDistribution.forEach(r => {
+            const retryWarningThreshold = ConfigHelper.getPushConfig().retryWarningThreshold;
             const color = r.retryCount >= pushConfig.maxRetries ? chalk.red : 
-                         r.retryCount >= 3 ? chalk.yellow : 
+                         r.retryCount >= retryWarningThreshold ? chalk.yellow : 
                          chalk.white;
             retryTable.push([r.retryCount, color(r.count.toString())]);
           });
           
-          console.log(retryTable.toString());
+          logger.info(retryTable.toString());
           
           const maxRetriesReached = stats.retryDistribution
             .filter(r => r.retryCount >= pushConfig.maxRetries)
             .reduce((sum, r) => sum + r.count, 0);
             
           if (maxRetriesReached > 0) {
-            console.log(chalk.red(`\n⚠️  ${maxRetriesReached} messages have reached max retries (${pushConfig.maxRetries})`));
-            console.log(chalk.dim('Run with --force flag to reset retry counts'));
+            logger.info(chalk.red(`\n⚠️  ${maxRetriesReached} messages have reached max retries (${pushConfig.maxRetries})`));
+            logger.info(chalk.dim('Run with --force flag to reset retry counts'));
           }
         }
         
         if (options.verbose) {
           // Recent push history
-          console.log(chalk.bold('\n📅 Recent Push Activity\n'));
+          logger.info(chalk.bold('\n📅 Recent Push Activity\n'));
           
           const recentPushes = await prisma.messageSyncStatus.findMany({
             where: {
@@ -100,7 +96,7 @@ export function createPushStatusCommand() {
             orderBy: {
               syncedAt: 'desc'
             },
-            take: 10
+            take: ConfigHelper.getPushConfig().recentPushHistoryLimit
           });
           
           if (recentPushes.length > 0) {
@@ -117,9 +113,9 @@ export function createPushStatusCommand() {
               ]);
             });
             
-            console.log(historyTable.toString());
+            logger.info(historyTable.toString());
           } else {
-            console.log(chalk.dim('No recent push activity'));
+            logger.info(chalk.dim('No recent push activity'));
           }
           
           // Failed messages sample
@@ -129,20 +125,20 @@ export function createPushStatusCommand() {
               retryCount: { gte: 3 },
               syncResponse: { not: null }
             },
-            take: 5,
+            take: ConfigHelper.getPushConfig().sampleFailedMessagesLimit,
             orderBy: {
               retryCount: 'desc'
             }
           });
           
           if (failedMessages.length > 0) {
-            console.log(chalk.bold('\n❌ Sample Failed Messages\n'));
+            logger.info(chalk.bold('\n❌ Sample Failed Messages\n'));
             
             failedMessages.forEach(msg => {
-              console.log(`Message: ${msg.messageId}`);
-              console.log(`  Retries: ${msg.retryCount}`);
-              console.log(`  Error: ${chalk.red(msg.syncResponse || 'Unknown error')}`);
-              console.log();
+              logger.info(`Message: ${msg.messageId}`);
+              logger.info(`  Retries: ${msg.retryCount}`);
+              logger.info(`  Error: ${chalk.red(msg.syncResponse || 'Unknown error')}`);
+              logger.info('');
             });
           }
         }
@@ -152,29 +148,29 @@ export function createPushStatusCommand() {
         await userService.loadUserInfo();
         const isAuthenticated = userService.isAuthenticated();
         
-        console.log(chalk.bold('\n⚙️  Configuration\n'));
-        console.log(`Endpoint: ${EndpointResolver.getPushEndpoint()}`);
-        console.log(`Authentication: ${isAuthenticated ? chalk.green('Logged in') : chalk.red('Not logged in')}`);
-        console.log(`Batch Size: ${pushConfig.batchSize}`);
-        console.log(`Max Retries: ${pushConfig.maxRetries}`);
-        console.log(`Timeout: ${pushConfig.timeout}ms`);
+        logger.info(chalk.bold('\n⚙️  Configuration\n'));
+        logger.info(`Endpoint: ${EndpointResolver.getPushEndpoint()}`);
+        logger.info(`Authentication: ${isAuthenticated ? chalk.green('Logged in') : chalk.red('Not logged in')}`);
+        logger.info(`Batch Size: ${pushConfig.batchSize}`);
+        logger.info(`Max Retries: ${pushConfig.maxRetries}`);
+        logger.info(`Timeout: ${pushConfig.timeout}ms`);
         
         // Next steps
         if (stats.unsynced > 0) {
-          console.log(chalk.bold('\n💡 Next Steps\n'));
+          logger.info(chalk.bold('\n💡 Next Steps\n'));
           if (!isAuthenticated) {
-            console.log(chalk.yellow('1. Login with: roiai login'));
+            logger.info(chalk.yellow('1. Login with: roiai login'));
           }
-          console.log(`${!isAuthenticated ? '2' : '1'}. Run ${chalk.cyan('roiai cc push')} to sync ${stats.unsynced} messages`);
+          logger.info(`${!isAuthenticated ? '2' : '1'}. Run ${chalk.cyan('roiai cc push')} to sync ${stats.unsynced} messages`);
           
           const needsForce = stats.retryDistribution.some(r => r.retryCount >= pushConfig.maxRetries);
           if (needsForce) {
-            console.log(`${!isAuthenticated ? '3' : '2'}. Use ${chalk.cyan('roiai cc push --force')} to retry failed messages`);
+            logger.info(`${!isAuthenticated ? '3' : '2'}. Use ${chalk.cyan('roiai cc push --force')} to retry failed messages`);
           }
         }
         
         } catch (error) {
-          logger.error(chalk.red('Failed to get push status:'), error instanceof Error ? error.message : 'Unknown error');
+          logger.error(chalk.red('Failed to get push status:'), FormatterUtils.getErrorMessage(error));
           process.exit(1);
         }
       });

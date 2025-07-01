@@ -55,7 +55,7 @@ export class MachineService {
       
       // Skip internal, virtual, and invalid interfaces
       if (iface.internal || 
-          iface.mac === '00:00:00:00:00:00' ||
+          iface.mac === configManager.getMachineConfig().invalidMacAddress ||
           name.startsWith('utun') ||
           name.startsWith('awdl') ||
           name.startsWith('llw') ||

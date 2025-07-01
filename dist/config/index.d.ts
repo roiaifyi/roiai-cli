@@ -31,6 +31,9 @@ export interface Config {
         maxRetries: number;
         timeout: number;
         authRecheckInterval?: number;
+        retryWarningThreshold?: number;
+        recentPushHistoryLimit?: number;
+        sampleFailedMessagesLimit?: number;
     };
     network?: {
         authTimeout: number;
@@ -40,6 +43,12 @@ export interface Config {
             maxDelay?: number;
         };
         defaultHttpsPort?: string;
+        httpStatusCodes?: {
+            ok?: number;
+            unauthorized?: number;
+            forbidden?: number;
+            serverErrorThreshold?: number;
+        };
     };
     display?: {
         costPrecision: number;
@@ -73,6 +82,7 @@ export interface Config {
                 hours?: number;
             };
         };
+        bytesBase?: number;
     };
     logging: {
         level: string;
@@ -82,17 +92,20 @@ export interface Config {
             default?: number;
             transaction?: number;
             session?: number;
+            aggregation?: number;
         };
         timeouts?: {
             transaction?: number;
         };
         hiddenDirectoryPrefix?: string;
+        idSubstringLength?: number;
     };
     machine?: {
         networkInterfacePriority?: string[];
         virtualInterfacePrefixes?: string[];
         machineIdLength?: number;
         machineInfoVersion?: number;
+        invalidMacAddress?: string;
     };
     pricing?: {
         syntheticModels?: string[];
@@ -137,6 +150,9 @@ declare class ConfigManager {
         maxRetries: number;
         timeout: number;
         authRecheckInterval?: number;
+        retryWarningThreshold?: number;
+        recentPushHistoryLimit?: number;
+        sampleFailedMessagesLimit?: number;
     };
     getApiConfig(): {
         baseUrl: string;
@@ -145,6 +161,13 @@ declare class ConfigManager {
             push: string;
         };
         uuidNamespace?: string;
+    };
+    getMachineConfig(): {
+        networkInterfacePriority?: string[];
+        virtualInterfacePrefixes?: string[];
+        machineIdLength?: number;
+        machineInfoVersion?: number;
+        invalidMacAddress?: string;
     };
 }
 export declare const configManager: ConfigManager;

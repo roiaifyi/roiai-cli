@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import { UserService } from '../../services/user.service';
 import { createAuthenticatedApiClient } from '../../utils/api-client-factory';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
+import { logger } from '../../utils/logger';
 
 export function createLogoutCommand(): Command {
   const command = new Command('logout');
@@ -45,12 +46,12 @@ export function createLogoutCommand(): Command {
               const errorMessage = errorData?.success === false && errorData?.error 
                 ? `${errorData.error.message} (${errorData.error.code})`
                 : errorData?.message || 'Unknown error';
-              console.log(chalk.yellow(`\nWarning: Failed to revoke API key on server: ${errorMessage}`));
-              console.log(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
+              logger.warn(chalk.yellow(`\nWarning: Failed to revoke API key on server: ${errorMessage}`));
+              logger.warn(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
             }
           } catch (error) {
-            console.log(chalk.yellow(`\nWarning: Could not contact server to revoke API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
-            console.log(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
+            logger.warn(chalk.yellow(`\nWarning: Could not contact server to revoke API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
+            logger.warn(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
           }
         }
         
@@ -64,7 +65,7 @@ export function createLogoutCommand(): Command {
           spinner.succeed(`Logged out from ${email} (local credentials cleared)`);
         }
         
-        console.log(chalk.dim('\nContinuing in anonymous mode. Your local data remains intact.'));
+        logger.info(chalk.dim('\nContinuing in anonymous mode. Your local data remains intact.'));
         
       } catch (error) {
         spinner.fail(`Logout failed: ${SpinnerErrorHandler.getErrorMessage(error)}`);

@@ -1,7 +1,7 @@
 import { Prisma, MessageWriter } from '@prisma/client';
 import { prisma } from '../database';
 import { logger } from '../utils/logger';
-import { configManager } from '../config';
+import { ConfigHelper } from '../utils/config-helper';
 
 export interface BatchMessage {
   id: string;
@@ -34,8 +34,7 @@ export class BatchProcessor {
   private readonly batchSize: number;
 
   constructor(batchSize?: number) {
-    const config = configManager.get();
-    this.batchSize = batchSize || config.processing?.batchSizes?.default || 1000;
+    this.batchSize = batchSize || ConfigHelper.getProcessing().defaultBatchSize;
   }
 
   /**
@@ -82,8 +81,7 @@ export class BatchProcessor {
     
     try {
       // Process messages in smaller chunks to reduce transaction contention
-      const config = configManager.get();
-      const CHUNK_SIZE = config.processing?.batchSizes?.transaction || 100;
+      const CHUNK_SIZE = ConfigHelper.getProcessing().transactionChunkSize;
       
       for (let i = 0; i < this.messageBuffer.length; i += CHUNK_SIZE) {
         const messageChunk = this.messageBuffer.slice(i, i + CHUNK_SIZE);
@@ -104,7 +102,7 @@ export class BatchProcessor {
             
             successfullyInserted += messageChunk.length;
           }, {
-            timeout: 30000 // 30 second timeout
+            timeout: ConfigHelper.getProcessing().transactionTimeout
           });
         } catch (chunkError: any) {
           logger.debug(`Chunk ${i}-${i + CHUNK_SIZE} failed, processing individually: ${chunkError.code}`);
@@ -171,7 +169,7 @@ export class BatchProcessor {
     const createdSessions = new Set<string>();
     
     // Process sessions in small batches to reduce contention
-    const BATCH_SIZE = 10;
+    const BATCH_SIZE = ConfigHelper.getProcessing().sessionBatchSize;
     for (let i = 0; i < sessionIds.length; i += BATCH_SIZE) {
       const batch = sessionIds.slice(i, i + BATCH_SIZE);
       

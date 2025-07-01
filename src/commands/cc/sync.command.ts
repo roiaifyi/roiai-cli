@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { db, prisma } from '../../database';
 import { UserService } from '../../services/user.service';
 import { SyncService } from '../../services/sync.service';
-import { logger } from '../../utils/logger';
+import { ErrorHandler } from '../../utils/error-handler';
 
 export const syncCommand = new Command('sync')
   .description('Sync Claude Code raw data to local database')
@@ -20,8 +20,7 @@ export const syncCommand = new Command('sync')
       });
 
     } catch (error) {
-      logger.error('Sync error:', error);
-      process.exit(1);
+      ErrorHandler.handleAsyncError(error, 'Sync');
     } finally {
       await db.disconnect();
     }

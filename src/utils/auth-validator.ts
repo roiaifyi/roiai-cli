@@ -2,6 +2,7 @@ import { Ora } from 'ora';
 import chalk from 'chalk';
 import { UserService } from '../services/user.service';
 import { SpinnerErrorHandler } from './spinner-error-handler';
+import { logger } from './logger';
 
 export class AuthValidator {
   /**
@@ -87,9 +88,9 @@ export class AuthValidator {
    */
   static displayAuthStatus(isAuthenticated: boolean, email?: string): void {
     if (isAuthenticated && email) {
-      console.log(`Authentication: ${chalk.green(`Logged in as ${email}`)}`);
+      logger.info(`Authentication: ${chalk.green(`Logged in as ${email}`)}`);
     } else {
-      console.log(`Authentication: ${chalk.red('Not logged in')}`);
+      logger.info(`Authentication: ${chalk.red('Not logged in')}`);
     }
   }
 
@@ -101,9 +102,9 @@ export class AuthValidator {
     operation: string = 'operation'
   ): void {
     if (SpinnerErrorHandler.isAuthError(error)) {
-      console.log(chalk.red(`\n🚫 Authentication failed during ${operation}!`));
-      console.log(chalk.yellow('Your API token may have expired or been revoked.'));
-      console.log(chalk.yellow('Please run \'roiai cc login\' to refresh your credentials and try again.'));
+      logger.error(chalk.red(`\n🚫 Authentication failed during ${operation}!`));
+      logger.info(chalk.yellow('Your API token may have expired or been revoked.'));
+      logger.info(chalk.yellow('Please run \'roiai cc login\' to refresh your credentials and try again.'));
       process.exit(1);
     }
   }

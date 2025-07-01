@@ -13,7 +13,7 @@ const batch_processor_1 = require("./batch-processor");
 const library_1 = require("@prisma/client/runtime/library");
 const client_1 = require("@prisma/client");
 const logger_1 = require("../utils/logger");
-const config_1 = require("../config");
+const config_helper_1 = require("../utils/config-helper");
 class JSONLService {
     pricingService;
     userService;
@@ -51,7 +51,7 @@ class JSONLService {
         const projectsPath = path_1.default.join(directoryPath, "projects");
         try {
             const projectDirs = await fs_1.default.promises.readdir(projectsPath);
-            const hiddenPrefix = config_1.configManager.get().processing?.hiddenDirectoryPrefix || '.';
+            const hiddenPrefix = config_helper_1.ConfigHelper.getProcessing().hiddenDirectoryPrefix;
             const validProjects = projectDirs.filter((dir) => !dir.startsWith(hiddenPrefix));
             // Pre-load existing message IDs for efficient duplicate checking
             await this.batchProcessor.loadExistingMessageIds();
@@ -151,7 +151,7 @@ class JSONLService {
             .createHash("sha256")
             .update(`${projectName}:${machineId}`)
             .digest("hex")
-            .substring(0, 16);
+            .substring(0, config_helper_1.ConfigHelper.getProcessing().idSubstringLength);
         // Check if project already exists
         const existingProject = await database_1.prisma.project.findUnique({
             where: {

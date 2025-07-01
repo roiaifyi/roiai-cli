@@ -35,6 +35,9 @@ export interface Config {
     maxRetries: number;
     timeout: number;
     authRecheckInterval?: number;
+    retryWarningThreshold?: number;
+    recentPushHistoryLimit?: number;
+    sampleFailedMessagesLimit?: number;
   };
   network?: {
     authTimeout: number;
@@ -44,6 +47,12 @@ export interface Config {
       maxDelay?: number;
     };
     defaultHttpsPort?: string;
+    httpStatusCodes?: {
+      ok?: number;
+      unauthorized?: number;
+      forbidden?: number;
+      serverErrorThreshold?: number;
+    };
   };
   display?: {
     costPrecision: number;
@@ -77,6 +86,7 @@ export interface Config {
         hours?: number;
       };
     };
+    bytesBase?: number;
   };
   logging: {
     level: string;
@@ -86,17 +96,20 @@ export interface Config {
       default?: number;
       transaction?: number;
       session?: number;
+      aggregation?: number;
     };
     timeouts?: {
       transaction?: number;
     };
     hiddenDirectoryPrefix?: string;
+    idSubstringLength?: number;
   };
   machine?: {
     networkInterfacePriority?: string[];
     virtualInterfacePrefixes?: string[];
     machineIdLength?: number;
     machineInfoVersion?: number;
+    invalidMacAddress?: string;
   };
   pricing?: {
     syntheticModels?: string[];
@@ -179,6 +192,10 @@ class ConfigManager {
 
   getApiConfig() {
     return this.config.api;
+  }
+
+  getMachineConfig() {
+    return this.config.machine || {};
   }
 }
 

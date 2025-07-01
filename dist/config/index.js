@@ -53,6 +53,9 @@ class ConfigManager {
     getApiConfig() {
         return this.config.api;
     }
+    getMachineConfig() {
+        return this.config.machine || {};
+    }
 }
 exports.configManager = new ConfigManager();
 //# sourceMappingURL=index.js.map

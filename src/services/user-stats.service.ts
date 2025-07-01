@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { UserService } from './user.service';
+import { FormatterUtils } from '../utils/formatter-utils';
 
 export interface ModelStats {
   model: string;
@@ -132,11 +133,11 @@ export class UserStatsService {
     
     return {
       human,
-      humanPercentage: ((human / total) * 100).toFixed(1),
+      humanPercentage: FormatterUtils.formatPercentage(human, total),
       agent,
-      agentPercentage: ((agent / total) * 100).toFixed(1),
+      agentPercentage: FormatterUtils.formatPercentage(agent, total),
       assistant,
-      assistantPercentage: ((assistant / total) * 100).toFixed(1),
+      assistantPercentage: FormatterUtils.formatPercentage(assistant, total),
       total
     };
   }

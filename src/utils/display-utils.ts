@@ -1,5 +1,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
+import { logger } from './logger';
+import { ConfigHelper } from './config-helper';
 
 export interface TableColumn {
   header: string;
@@ -69,9 +71,9 @@ export class DisplayUtils {
   static formatBytes(bytes: number, decimals: number = 2): string {
     if (bytes === 0) return '0 Bytes';
     
-    const k = 1024;
+    const k = ConfigHelper.getDisplay().bytesBase || 1024;
     const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ConfigHelper.getDisplay().units?.bytes || ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     
@@ -139,8 +141,8 @@ export class DisplayUtils {
    * Display a section header
    */
   static sectionHeader(title: string, emoji?: string): void {
-    console.log(chalk.bold(`\n${emoji ? emoji + ' ' : ''}${title}`));
-    console.log(this.separator());
+    logger.info(chalk.bold(`\n${emoji ? emoji + ' ' : ''}${title}`));
+    logger.info(this.separator());
   }
 
   /**
@@ -160,7 +162,7 @@ export class DisplayUtils {
     Object.entries(data).forEach(([key, value]) => {
       const formattedKey = colorKeys ? chalk.gray(key + ':') : key + ':';
       const formattedValue = formatters[key] ? formatters[key](value) : value;
-      console.log(`${indentStr}${formattedKey} ${formattedValue}`);
+      logger.info(`${indentStr}${formattedKey} ${formattedValue}`);
     });
   }
 }

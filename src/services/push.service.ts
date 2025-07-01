@@ -12,6 +12,8 @@ import { UserService } from "./user.service";
 import { createAuthenticatedApiClient } from "../utils/api-client-factory";
 import { NetworkErrorHandler } from "../utils/network-error-handler";
 import { logger } from "../utils/logger";
+import { configManager } from "../config";
+import { ConfigHelper } from "../utils/config-helper";
 
 export class PushService {
   private prisma: PrismaClient;
@@ -58,7 +60,9 @@ export class PushService {
       
       this.logger.debug(`Health check completed in ${responseTime}ms`);
       
-      if (response.ok && response.status === 200) {
+      const statusCodes = ConfigHelper.getNetwork().httpStatusCodes;
+      
+      if (response.ok && response.status === statusCodes.ok) {
         const data = response.data as any;
         // Handle wrapped response format from server
         const actualData = data.data || data;
@@ -80,11 +84,11 @@ export class PushService {
         const errorData = response.data as any;
         let errorMessage: string;
         
-        if (response.status === 401) {
+        if (response.status === statusCodes.unauthorized) {
           errorMessage = 'Invalid or expired API token. Please run \'roiai cc login\' to authenticate.';
-        } else if (response.status === 403) {
+        } else if (response.status === statusCodes.forbidden) {
           errorMessage = 'Access forbidden. Your account may not have permission to push data.';
-        } else if (response.status >= 500) {
+        } else if (response.status >= (statusCodes.serverErrorThreshold || 500)) {
           errorMessage = `Server error (${response.status}). The RoiAI server is experiencing issues. Please try again later.`;
         } else {
           errorMessage = errorData?.success === false && errorData?.error 
@@ -423,7 +427,10 @@ export class PushService {
     // This ensures machine/project/session/message IDs are unique per authenticated user
     try {
       // Use a fixed namespace UUID and combine with user ID to create namespace
-      const NAMESPACE_UUID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"; // Standard UUID namespace
+      const NAMESPACE_UUID = configManager.getApiConfig().uuidNamespace;
+      if (!NAMESPACE_UUID) {
+        throw new Error('UUID namespace not configured');
+      }
       const userSpecificNamespace = uuidv5(userNamespace, NAMESPACE_UUID);
       return uuidv5(localId, userSpecificNamespace);
     } catch (error) {

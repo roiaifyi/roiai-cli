@@ -10,6 +10,9 @@ import { AggregationService } from './aggregation.service';
 import { IncrementalAggregationService } from './incremental-aggregation.service';
 import { UserStatsService } from './user-stats.service';
 import { logger } from '../utils/logger';
+import { ConfigHelper } from '../utils/config-helper';
+import { DisplayUtils } from '../utils/display-utils';
+import { FormatterUtils } from '../utils/formatter-utils';
 
 export interface SyncOptions {
   force?: boolean;
@@ -71,13 +74,13 @@ export class SyncService {
       
       // Inform user about sync speed (only if not quiet)
       if (!options.quiet && needsFullRecalc) {
-        const messages = configManager.get().messages?.sync || {};
+        const messages = ConfigHelper.getSyncMessages();
         if (options.force) {
-          console.log(chalk.blue(messages.forceSync || 'ℹ️  Force sync requested. This will take longer as all data will be reprocessed.'));
+          logger.info(chalk.blue(messages.forceSync));
         } else {
-          console.log(chalk.blue(messages.firstTime || 'ℹ️  First time sync detected. This initial sync will take longer, but future syncs will be blazingly fast!'));
+          logger.info(chalk.blue(messages.firstTime));
         }
-        console.log(chalk.gray('   Only new or modified files will be processed in subsequent syncs.\n'));
+        logger.info(chalk.gray('   Only new or modified files will be processed in subsequent syncs.\n'));
       }
       
       // Start processing
@@ -88,8 +91,8 @@ export class SyncService {
         let lastProgressUpdate = Date.now();
         jsonlService.setProgressCallback((progress) => {
           const now = Date.now();
-          // Update every 100ms to avoid too frequent updates
-          if (now - lastProgressUpdate > 100) {
+          // Update based on configured interval to avoid too frequent updates
+          if (now - lastProgressUpdate > ConfigHelper.getDisplay().progressUpdateInterval) {
             const projectProgress = progress.totalProjects > 0 
               ? Math.round((progress.processedProjects / progress.totalProjects) * 100)
               : 0;
@@ -166,43 +169,53 @@ export class SyncService {
   ): Promise<void> {
     // Show incremental changes
     if (hasNewData && (changes.newMessages > 0 || changes.newProjects.length > 0 || changes.newSessions.length > 0)) {
-      console.log('\n' + chalk.bold('🔄 Incremental Changes:'));
+      logger.info('\n' + chalk.bold('🔄 Incremental Changes:'));
       
       if (changes.newProjects.length > 0) {
-        console.log(`   ${chalk.green('+')} New projects: ${chalk.cyan(changes.newProjects.join(', '))}`);
+        logger.info(`   ${chalk.green('+')} New projects: ${chalk.cyan(changes.newProjects.join(', '))}`);
       }
       
       if (changes.newSessions.length > 0) {
-        console.log(`   ${chalk.green('+')} New sessions: ${chalk.cyan(changes.newSessions.length)} session(s)`);
+        logger.info(`   ${chalk.green('+')} New sessions: ${chalk.cyan(changes.newSessions.length)} session(s)`);
         if (changes.newSessions.length <= 5) {
-          console.log(`     ${chalk.gray(changes.newSessions.map((s: string) => s.substring(0, 8) + '...').join(', '))}`);
+          logger.info(`     ${chalk.gray(changes.newSessions.map((s: string) => s.substring(0, 8) + '...').join(', '))}`);
         }
       }
       
       if (changes.newMessages > 0) {
-        console.log(`   ${chalk.green('+')} New messages: ${chalk.cyan(changes.newMessages)}`);
+        logger.info(`   ${chalk.green('+')} New messages: ${chalk.cyan(changes.newMessages)}`);
       }
     }
 
     // Show results
-    console.log('\n' + chalk.bold('📊 Sync Results:'));
-    console.log(`   Projects processed: ${chalk.green(result.projectsProcessed)}`);
-    console.log(`   Sessions processed: ${chalk.green(result.sessionsProcessed)}`);
-    console.log(`   Messages processed: ${chalk.green(result.messagesProcessed)}`);
+    DisplayUtils.sectionHeader('Sync Results', '📊');
     
-    // Show processing speed
-    const messagesPerSecond = result.messagesProcessed > 0 
-      ? (result.messagesProcessed / duration).toFixed(1)
-      : '0';
-    console.log(`   Processing speed: ${chalk.cyan(messagesPerSecond + ' messages/sec')}`);
+    const syncStats = {
+      'Projects processed': result.projectsProcessed,
+      'Sessions processed': result.sessionsProcessed,
+      'Messages processed': result.messagesProcessed,
+      'Processing speed': result.messagesProcessed > 0 
+        ? `${(result.messagesProcessed / duration).toFixed(1)} messages/sec`
+        : '0 messages/sec'
+    };
+    
+    DisplayUtils.displayKeyValue(syncStats, {
+      formatters: {
+        'Projects processed': (v) => DisplayUtils.formatNumber(v, 'success'),
+        'Sessions processed': (v) => DisplayUtils.formatNumber(v, 'success'),
+        'Messages processed': (v) => DisplayUtils.formatNumber(v, 'success'),
+        'Processing speed': (v) => chalk.cyan(v)
+      }
+    });
     
     if (result.errors.length > 0) {
-      console.log(`   Errors: ${chalk.red(result.errors.length)}`);
-      if (result.errors.length <= 10) {
-        result.errors.forEach((err: string) => console.log(chalk.red(`     - ${err}`)));
+      logger.info(`   Errors: ${chalk.red(result.errors.length)}`);
+      const maxErrors = ConfigHelper.getDisplay().maxErrorsDisplayed;
+      if (result.errors.length <= maxErrors) {
+        result.errors.forEach((err: string) => logger.error(chalk.red(`     - ${err}`)));
       } else {
-        console.log(chalk.red(`     (showing first 10 of ${result.errors.length} errors)`));
-        result.errors.slice(0, 10).forEach((err: string) => console.log(chalk.red(`     - ${err}`)));
+        logger.info(chalk.red(`     (showing first ${maxErrors} of ${result.errors.length} errors)`));
+        result.errors.slice(0, maxErrors).forEach((err: string) => logger.error(chalk.red(`     - ${err}`)));
       }
     }
 
@@ -210,63 +223,72 @@ export class SyncService {
     const userStatsService = new UserStatsService(this.prisma, this.userService);
     const userStats = await userStatsService.getAggregatedStats();
     if (userStats) {
-      console.log('\n' + chalk.bold('👤 User Stats:'));
-      console.log(`   📁 Projects: ${chalk.cyan(userStats.totalProjects)}`);
-      console.log(`   💬 Sessions: ${chalk.cyan(userStats.totalSessions)}`);
-      console.log(`   📝 Messages: ${chalk.cyan(userStats.totalMessages)}`);
+      DisplayUtils.sectionHeader('User Stats', '👤');
+      
+      const stats = {
+        '📁 Projects': userStats.totalProjects,
+        '💬 Sessions': userStats.totalSessions,
+        '📝 Messages': userStats.totalMessages
+      };
+      
+      DisplayUtils.displayKeyValue(stats, {
+        formatters: {
+          '📁 Projects': (v) => chalk.cyan(v),
+          '💬 Sessions': (v) => chalk.cyan(v),
+          '📝 Messages': (v) => chalk.cyan(v)
+        }
+      });
       
       // Show message breakdown by writer
       const messageBreakdown = await userStatsService.getMessageBreakdown();
       if (messageBreakdown) {
-        console.log(`\n   ${chalk.bold('💬 Message Breakdown:')}`);
-        console.log(`     👤 Human: ${chalk.green(messageBreakdown.human)} (${messageBreakdown.humanPercentage}%)`);
-        console.log(`     ⚙️  Agent: ${chalk.yellow(messageBreakdown.agent)} (${messageBreakdown.agentPercentage}%)`);
-        console.log(`     🤖 Assistant: ${chalk.blue(messageBreakdown.assistant)} (${messageBreakdown.assistantPercentage}%)`);
-        console.log(`     📊 Total: ${chalk.cyan(messageBreakdown.total)} messages`);
+        logger.info(`\n   ${chalk.bold('💬 Message Breakdown:')}`);
+        logger.info(`     👤 Human: ${chalk.green(messageBreakdown.human)} (${messageBreakdown.humanPercentage}%)`);
+        logger.info(`     ⚙️  Agent: ${chalk.yellow(messageBreakdown.agent)} (${messageBreakdown.agentPercentage}%)`);
+        logger.info(`     🤖 Assistant: ${chalk.blue(messageBreakdown.assistant)} (${messageBreakdown.assistantPercentage}%)`);
+        logger.info(`     📊 Total: ${chalk.cyan(messageBreakdown.total)} messages`);
       }
       
-      console.log(`\n   🔤 Input tokens: ${chalk.cyan(userStats.totalInputTokens.toLocaleString())}`);
-      console.log(`   💭 Output tokens: ${chalk.cyan(userStats.totalOutputTokens.toLocaleString())}`);
-      console.log(`   💾 Cache creation tokens: ${chalk.cyan(userStats.totalCacheCreationTokens.toLocaleString())}`);
-      console.log(`   ⚡ Cache read tokens: ${chalk.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
+      logger.info(`\n   🔤 Input tokens: ${chalk.cyan(userStats.totalInputTokens.toLocaleString())}`);
+      logger.info(`   💭 Output tokens: ${chalk.cyan(userStats.totalOutputTokens.toLocaleString())}`);
+      logger.info(`   💾 Cache creation tokens: ${chalk.cyan(userStats.totalCacheCreationTokens.toLocaleString())}`);
+      logger.info(`   ⚡ Cache read tokens: ${chalk.cyan(userStats.totalCacheReadTokens.toLocaleString())}`);
 
       // Show detailed user stats by model before total cost
       const userStatsByModel = await userStatsService.getStatsByModel();
       if (userStatsByModel.length > 0) {
-        console.log('\n' + chalk.bold('   🤖 Usage & Cost by Model:'));
+        logger.info('\n' + chalk.bold('   🤖 Usage & Cost by Model:'));
         
         for (const modelStats of userStatsByModel) {
-          console.log(`\n      ${chalk.magenta('●')} ${chalk.cyan.bold(modelStats.model)}:`);
-          console.log(`        📊 Messages: ${chalk.white(modelStats.messageCount.toLocaleString())}`);
-          console.log(`        📥 Input: ${chalk.green(modelStats.inputTokens.toLocaleString())} tokens`);
-          console.log(`        📤 Output: ${chalk.green(modelStats.outputTokens.toLocaleString())} tokens`);
+          logger.info(`\n      ${chalk.magenta('●')} ${chalk.cyan.bold(modelStats.model)}:`);
+          logger.info(`        📊 Messages: ${chalk.white(modelStats.messageCount.toLocaleString())}`);
+          logger.info(`        📥 Input: ${chalk.green(modelStats.inputTokens.toLocaleString())} tokens`);
+          logger.info(`        📤 Output: ${chalk.green(modelStats.outputTokens.toLocaleString())} tokens`);
           
           if (modelStats.cacheCreationTokens > 0) {
-            console.log(`        💾 Cache write: ${chalk.blue(modelStats.cacheCreationTokens.toLocaleString())} tokens`);
+            logger.info(`        💾 Cache write: ${chalk.blue(modelStats.cacheCreationTokens.toLocaleString())} tokens`);
           }
           if (modelStats.cacheReadTokens > 0) {
-            console.log(`        ⚡ Cache read: ${chalk.blue(modelStats.cacheReadTokens.toLocaleString())} tokens`);
+            logger.info(`        ⚡ Cache read: ${chalk.blue(modelStats.cacheReadTokens.toLocaleString())} tokens`);
           }
           
           const totalTokens = modelStats.inputTokens + modelStats.outputTokens + 
                             modelStats.cacheCreationTokens + modelStats.cacheReadTokens;
-          console.log(`        🎯 Total: ${chalk.yellow.bold(totalTokens.toLocaleString())} tokens`);
-          console.log(`        💰 Cost: ${chalk.bold.green('$' + modelStats.cost.toFixed(4))}`);
+          logger.info(`        🎯 Total: ${chalk.yellow.bold(totalTokens.toLocaleString())} tokens`);
+          logger.info(`        💰 Cost: ${chalk.bold.green(FormatterUtils.formatCurrency(modelStats.cost))}`);
         }
       }
 
       // Show total cost as the bottom line
-      const fullConfig = configManager.get();
-      const sectionSeparator = fullConfig.display?.sectionSeparator || '═';
-      const sectionSeparatorWidth = fullConfig.display?.sectionSeparatorWidth || 50;
-      console.log('\n' + chalk.gray(sectionSeparator.repeat(sectionSeparatorWidth)));
+      const display = ConfigHelper.getDisplay();
+      logger.info('\n' + chalk.gray(display.sectionSeparator.repeat(display.sectionSeparatorWidth)));
       
       // Show incremental cost change
       if (incrementalCost > 0) {
-        console.log(`${chalk.bold('📈 Cost Added:')} ${chalk.bold.yellow('+$' + incrementalCost.toFixed(4))}`);
+        logger.info(`${chalk.bold('📈 Cost Added:')} ${chalk.bold.yellow('+' + FormatterUtils.formatCurrency(incrementalCost))}`);
       }
       
-      console.log(`${chalk.bold('💵 Total Cost:')} ${chalk.bold.green('$' + Number(userStats.totalCost).toFixed(4))}`);
+      logger.info(`${chalk.bold('💵 Total Cost:')} ${chalk.bold.green(FormatterUtils.formatCurrency(Number(userStats.totalCost)))}`);
     }
 
     // Check for pending sync items
@@ -275,7 +297,7 @@ export class SyncService {
     });
     
     if (pendingSync > 0) {
-      console.log(`\n${chalk.yellow('⚠️')}  ${pendingSync} records pending upload. Run ${chalk.bold('roiai cc push')} to sync with remote server.`);
+      logger.info(`\n${chalk.yellow('⚠️')}  ${pendingSync} records pending upload. Run ${chalk.bold('roiai cc push')} to sync with remote server.`);
     }
   }
 }

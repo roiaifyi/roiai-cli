@@ -1,18 +1,19 @@
 import chalk from 'chalk';
-import { configManager } from '../config';
+import { ConfigHelper } from './config-helper';
+import { logger } from './logger';
 
 export class ProgressDisplay {
   private static get PROGRESS_BAR_WIDTH() {
-    return configManager.get().display?.progressBarWidth || 50;
+    return ConfigHelper.getDisplay().progressBarWidth;
   }
   
   /**
    * Generate a progress bar string
    */
   static generateProgressBar(percent: number, width: number = this.PROGRESS_BAR_WIDTH): string {
-    const config = configManager.get();
-    const filledChar = config.display?.progressBar?.filled || '█';
-    const emptyChar = config.display?.progressBar?.empty || '░';
+    const display = ConfigHelper.getDisplay();
+    const filledChar = display.progressBarFilled;
+    const emptyChar = display.progressBarEmpty;
     const filled = Math.floor((percent / 100) * width);
     const empty = width - filled;
     return filledChar.repeat(filled) + emptyChar.repeat(empty);
@@ -101,14 +102,14 @@ export class ProgressDisplay {
     const { title, useColors = true, compact = false } = options;
     
     if (title) {
-      console.log(chalk.bold(`\n${title}`));
+      logger.info(chalk.bold(`\n${title}`));
     }
     
     if (!compact) {
-      const config = configManager.get();
-      const separatorChar = config.display?.separator?.char || '━';
-      const separatorWidth = config.display?.separator?.defaultWidth || 40;
-      console.log(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
+      const display = ConfigHelper.getDisplay();
+      const separatorChar = display.separatorChar;
+      const separatorWidth = display.separatorDefaultWidth;
+      logger.info(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
     }
     
     Object.entries(stats).forEach(([key, value]) => {
@@ -125,14 +126,14 @@ export class ProgressDisplay {
         }
       }
       
-      console.log(`  ${formattedKey}: ${formattedValue}`);
+      logger.info(`  ${formattedKey}: ${formattedValue}`);
     });
     
     if (!compact) {
-      const config = configManager.get();
-      const separatorChar = config.display?.separator?.char || '━';
-      const separatorWidth = config.display?.separator?.defaultWidth || 40;
-      console.log(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
+      const display = ConfigHelper.getDisplay();
+      const separatorChar = display.separatorChar;
+      const separatorWidth = display.separatorDefaultWidth;
+      logger.info(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
     }
   }
 
@@ -156,6 +157,6 @@ export class ProgressDisplay {
       return `${item.label}: ${value}`;
     });
     
-    console.log(parts.join(', '));
+    logger.info(parts.join(', '));
   }
 }

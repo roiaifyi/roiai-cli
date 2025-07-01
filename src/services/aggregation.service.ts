@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { logger } from '../utils/logger';
+import { ConfigHelper } from '../utils/config-helper';
 
 export class AggregationService {
   constructor(private prisma: PrismaClient) {}
@@ -36,7 +37,7 @@ export class AggregationService {
     });
 
     // Batch update sessions using Promise.all for parallelism
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = ConfigHelper.getProcessing().aggregationBatchSize;
     for (let i = 0; i < sessionAggregates.length; i += BATCH_SIZE) {
       const batch = sessionAggregates.slice(i, i + BATCH_SIZE);
       await Promise.all(
@@ -89,7 +90,7 @@ export class AggregationService {
     );
 
     // Batch update projects
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = ConfigHelper.getProcessing().aggregationBatchSize;
     for (let i = 0; i < projectAggregates.length; i += BATCH_SIZE) {
       const batch = projectAggregates.slice(i, i + BATCH_SIZE);
       await Promise.all(
@@ -149,7 +150,7 @@ export class AggregationService {
     );
 
     // Batch update machines
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = ConfigHelper.getProcessing().aggregationBatchSize;
     for (let i = 0; i < machineAggregates.length; i += BATCH_SIZE) {
       const batch = machineAggregates.slice(i, i + BATCH_SIZE);
       await Promise.all(
@@ -210,7 +211,7 @@ export class AggregationService {
     );
 
     // Batch update users
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = ConfigHelper.getProcessing().aggregationBatchSize;
     for (let i = 0; i < userAggregates.length; i += BATCH_SIZE) {
       const batch = userAggregates.slice(i, i + BATCH_SIZE);
       await Promise.all(

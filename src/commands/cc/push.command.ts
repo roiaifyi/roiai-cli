@@ -8,6 +8,11 @@ import { configManager } from '../../config';
 import { PushOptions } from '../../models/push.types';
 import { AuthValidator } from '../../utils/auth-validator';
 import { DatabaseManager } from '../../utils/database-manager';
+import { logger } from '../../utils/logger';
+import { ConfigHelper } from '../../utils/config-helper';
+import { ProgressDisplay } from '../../utils/progress-display';
+import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
+import { FormatterUtils } from '../../utils/formatter-utils';
 
 export function createPushCommand() {
   return new Command('push')
@@ -37,15 +42,15 @@ export function createPushCommand() {
             if (syncResult.hasNewData) {
               spinner.succeed(
                 `Sync completed: ${syncResult.messagesProcessed} messages processed` +
-                (syncResult.incrementalCost > 0 ? ` (+$${syncResult.incrementalCost.toFixed(4)})` : '')
+                (syncResult.incrementalCost > 0 ? ` (+${FormatterUtils.formatCurrency(syncResult.incrementalCost)})` : '')
               );
             } else {
               spinner.succeed('Sync completed: No new data found');
             }
           } catch (syncError) {
             spinner.fail('Sync failed');
-            console.error(chalk.red('Error during sync:'), syncError instanceof Error ? syncError.message : 'Unknown error');
-            console.log(chalk.yellow('\nContinuing with push using existing data...'));
+            logger.error(chalk.red('Error during sync:'), syncError instanceof Error ? syncError.message : 'Unknown error');
+            logger.info(chalk.yellow('\nContinuing with push using existing data...'));
           }
           
           // Restart spinner for push
@@ -63,22 +68,22 @@ export function createPushCommand() {
         if (!authCheck.valid) {
           spinner.fail('Authentication check failed');
           
-          console.log(chalk.red('\n❌ Authentication Error Details:'));
-          console.log(chalk.white(authCheck.error || 'Unknown error'));
+          logger.error(chalk.red('\n❌ Authentication Error Details:'));
+          logger.error(chalk.white(authCheck.error || 'Unknown error'));
           
           // Add helpful next steps based on error type
           if (authCheck.error?.includes('Network error') || 
               authCheck.error?.includes('Cannot connect') ||
               authCheck.error?.includes('Cannot find')) {
-            console.log(chalk.yellow('\n💡 Troubleshooting tips:'));
-            console.log(chalk.gray('  1. Check your internet connection'));
-            console.log(chalk.gray('  2. Verify the API URL in your configuration'));
-            console.log(chalk.gray('  3. Try accessing the server directly in a browser'));
-            console.log(chalk.gray('  4. Check if you\'re behind a corporate firewall/proxy'));
+            logger.info(chalk.yellow('\n💡 Troubleshooting tips:'));
+            logger.info(chalk.gray('  1. Check your internet connection'));
+            logger.info(chalk.gray('  2. Verify the API URL in your configuration'));
+            logger.info(chalk.gray('  3. Try accessing the server directly in a browser'));
+            logger.info(chalk.gray('  4. Check if you\'re behind a corporate firewall/proxy'));
           } else if (authCheck.error?.includes('Invalid') || 
                      authCheck.error?.includes('expired')) {
-            console.log(chalk.yellow('\n🔑 To fix this issue:'));
-            console.log(chalk.green('  roiai cc login'));
+            logger.info(chalk.yellow('\n🔑 To fix this issue:'));
+            logger.info(chalk.green('  roiai cc login'));
           }
           
           process.exit(1);
@@ -86,7 +91,7 @@ export function createPushCommand() {
         
         spinner.succeed(`Authenticated as ${authCheck.user?.email || 'user'}`);
         if (options.verbose && authCheck.machine) {
-          console.log(`  Machine: ${authCheck.machine.name || authCheck.machine.id}`);
+          logger.info(`  Machine: ${authCheck.machine.name || authCheck.machine.id}`);
         }
         
         // Use config batch size if not specified in command line
@@ -109,10 +114,10 @@ export function createPushCommand() {
         );
         
         if (stats.retryDistribution.length > 0 && options.verbose) {
-          console.log(chalk.dim('\nRetry distribution:'));
+          logger.info(chalk.dim('\nRetry distribution:'));
           stats.retryDistribution.forEach(r => {
             const icon = r.retryCount === 0 ? '🆕' : r.retryCount >= pushConfig.maxRetries ? '⚠️' : '🔄';
-            console.log(`  ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk.bold(r.count.toLocaleString())} messages`);
+            logger.info(`  ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk.bold(r.count.toLocaleString())} messages`);
           });
         }
 
@@ -140,8 +145,8 @@ export function createPushCommand() {
 
         if (options.dryRun) {
           spinner.info('Dry run mode - no data will be pushed');
-          console.log(`\nWould push ${eligibleCount} messages (out of ${stats.unsynced} total unsynced)`);
-          console.log(`Total batches needed: ${Math.ceil(eligibleCount / batchSize)}`);
+          logger.info(`\nWould push ${eligibleCount} messages (out of ${stats.unsynced} total unsynced)`);
+          logger.info(`Total batches needed: ${Math.ceil(eligibleCount / batchSize)}`);
           return;
         }
 
@@ -152,7 +157,7 @@ export function createPushCommand() {
         const processedMessages = new Set<string>();
         const totalBatches = Math.ceil(eligibleCount / batchSize);
 
-        console.log(''); // Add empty line for progress display
+        logger.info(''); // Add empty line for progress display
         spinner.start('Starting push...');
 
         while (true) {
@@ -164,36 +169,41 @@ export function createPushCommand() {
             const authRecheck = await pushService.checkAuthentication();
             
             if (!authRecheck.valid) {
-              spinner.fail('Authentication lost during push session');
-              
-              console.log(chalk.red('\n🚫 Authentication Error:'));
-              console.log(chalk.white(authRecheck.error || 'Unknown error'));
+              const error = new Error(authRecheck.error || 'Authentication lost during push session');
               
               if (authRecheck.error?.includes('Network error') || 
                   authRecheck.error?.includes('Cannot connect')) {
-                console.log(chalk.yellow('\n💡 Connection lost. Please check your network and try again.'));
+                SpinnerErrorHandler.handleNetworkError(spinner, error);
+                process.exit(1);
               } else {
-                console.log(chalk.yellow('\n🔑 Your API token may have expired. Please run \'roiai cc login\' to refresh your credentials.'));
+                SpinnerErrorHandler.handleAuthError(spinner, error);
               }
-              
-              process.exit(1);
             }
           }
           
           // Calculate progress
           const processedCount = processedMessages.size;
-          const progressPercent = eligibleCount > 0 ? Math.round((processedCount / eligibleCount) * 100) : 0;
-          const progressBar = '█'.repeat(Math.floor(progressPercent / 2)) + '░'.repeat(50 - Math.floor(progressPercent / 2));
           
-          spinner.text = `[${progressBar}] ${progressPercent}% - Batch ${batchNumber}/${totalBatches} (${totalPushed} pushed, ${totalFailed} failed)`;
+          spinner.text = ProgressDisplay.formatBatchProgress(
+            batchNumber,
+            totalBatches,
+            processedCount,
+            eligibleCount,
+            { pushed: totalPushed, failed: totalFailed }
+          );
           
           // Select batch
           const messages = await pushService.selectUnpushedBatchWithEntities(batchSize);
           
           if (messages.length === 0) {
             // Final progress update before stopping
-            const finalProgressBar = '█'.repeat(50);
-            spinner.succeed(`[${finalProgressBar}] 100% - Completed all ${totalBatches} batches`);
+            spinner.succeed(ProgressDisplay.formatBatchProgress(
+              totalBatches,
+              totalBatches,
+              eligibleCount,
+              eligibleCount,
+              { pushed: totalPushed, failed: totalFailed }
+            ));
             break;
           }
 
@@ -223,18 +233,18 @@ export function createPushCommand() {
             // Don't print success line, progress will be updated in next iteration
             
             if (options.verbose) {
-              console.log(`  Sync ID: ${response.syncId}`);
-              console.log(`  Processing time: ${response.summary.processingTimeMs}ms`);
+              logger.info(`  Sync ID: ${response.syncId}`);
+              logger.info(`  Processing time: ${response.summary.processingTimeMs}ms`);
               
               // Show failed message details if any
               if (response.results.failed.details.length > 0) {
-                const maxFailedShown = configManager.get().display?.maxFailedMessagesShown || 5;
-                console.log(chalk.red('\n  Failed messages:'));
+                const maxFailedShown = ConfigHelper.getDisplay().maxFailedMessagesShown;
+                logger.error(chalk.red('\n  Failed messages:'));
                 for (const failure of response.results.failed.details.slice(0, maxFailedShown)) {
-                  console.log(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
+                  logger.error(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
                 }
                 if (response.results.failed.details.length > maxFailedShown) {
-                  console.log(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);
+                  logger.error(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);
                 }
               }
             }
@@ -247,7 +257,7 @@ export function createPushCommand() {
             const errorProgressPercent = eligibleCount > 0 ? Math.round((errorProcessedCount / eligibleCount) * 100) : 0;
             const errorProgressBar = '█'.repeat(Math.floor(errorProgressPercent / 2)) + '░'.repeat(50 - Math.floor(errorProgressPercent / 2));
             
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            const errorMessage = SpinnerErrorHandler.getErrorMessage(error);
             // Update spinner text to show error but continue
             if (!options.verbose) {
               spinner.text = `[${errorProgressBar}] ${errorProgressPercent}% - Batch ${batchNumber}/${totalBatches}: ${chalk.red('failed')} - ${errorMessage}`;
@@ -256,24 +266,16 @@ export function createPushCommand() {
             }
             
             // Check if this is an authentication error
-            if (error instanceof Error && (
-              error.message.includes('401') || 
-              error.message.includes('Unauthorized') ||
-              error.message.includes('Invalid API key') ||
-              error.message.includes('Authentication failed')
-            )) {
-              console.log(chalk.red('\n🚫 Authentication failed during push!'));
-              console.log(chalk.yellow('Your API token may have expired or been revoked.'));
-              console.log(chalk.yellow('Please run \'roiai cc login\' to refresh your credentials and try again.'));
-              process.exit(1);
+            if (SpinnerErrorHandler.isAuthError(error)) {
+              SpinnerErrorHandler.handleAuthError(spinner, error);
             }
             
             // When the entire batch fails, we need to increment retry count to prevent infinite loops
             await pushService.incrementRetryCountForBatch(messageIds);
             
             // For network errors, we might want to stop processing
-            if (error instanceof Error && error.message.includes('Network error')) {
-              console.log(chalk.yellow('\nNetwork error detected. You can run the command again to retry.'));
+            if (SpinnerErrorHandler.isNetworkError(error)) {
+              logger.info(chalk.yellow('\nNetwork error detected. You can run the command again to retry.'));
               break;
             }
           }
@@ -282,7 +284,7 @@ export function createPushCommand() {
         // Final summary in a compact format
         const finalStats = await pushService.getPushStatistics();
         
-        console.log(
+        logger.info(
           `\n${chalk.bold('Summary:')} ` +
           `${chalk.green(totalPushed.toLocaleString())} pushed, ` +
           `${chalk.red(totalFailed.toLocaleString())} failed, ` +
@@ -292,16 +294,16 @@ export function createPushCommand() {
         if (finalStats.unsynced > 0) {
           const eligibleRemaining = await pushService.countEligibleMessages();
           if (eligibleRemaining === 0) {
-            console.log(chalk.dim('\nAll remaining messages have hit max retries. Use --force to retry them.'));
+            logger.info(chalk.dim('\nAll remaining messages have hit max retries. Use --force to retry them.'));
           } else {
-            console.log(chalk.dim('\nRun the command again to retry failed messages.'));
+            logger.info(chalk.dim('\nRun the command again to retry failed messages.'));
           }
         }
 
         } catch (error) {
-          spinner.fail(`Push failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          spinner.fail(`Push failed: ${SpinnerErrorHandler.getErrorMessage(error)}`);
           if (options.verbose && error instanceof Error) {
-            console.error('\nError details:', error.stack);
+            logger.error('\nError details:', error.stack);
           }
           process.exit(1);
         }
