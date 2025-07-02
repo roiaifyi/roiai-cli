@@ -19,26 +19,24 @@ function getControlSettings() {
 
 // Mock login endpoint matching the spec
 app.post('/api/v1/cli/login', (req, res) => {
-  const { email, password, token, machine_info } = req.body;
+  const { email, password, username, machine_info } = req.body;
   
-  if (token === 'valid-token' || (email === 'test@example.com' && password === 'password123')) {
+  // Support token-based auth by checking if password matches known tokens
+  if (password === 'valid-token' || (email === 'test@example.com' && password === 'password123')) {
     res.json({
-      success: true,
-      data: {
-        user: {
-          id: '123',
-          email: 'test@example.com',
-          username: 'testuser'
-        },
-        api_key: 'roiai_auth-token-123'
-      }
+      user: {
+        id: '123',
+        email: 'test@example.com',
+        username: 'testuser'
+      },
+      api_key: 'roiai_auth-token-123'
     });
   } else {
     res.status(401).json({ 
       success: false,
       error: {
-        code: 'INVALID_CREDENTIALS',
-        message: 'Invalid email or password'
+        code: 'AUTH_001',
+        message: 'Invalid credentials'
       }
     });
   }

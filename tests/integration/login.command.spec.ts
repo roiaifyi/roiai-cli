@@ -10,7 +10,13 @@ describe('Login Command Integration', () => {
   const cliPath = path.join(__dirname, '../../dist/index.js');
   const testUserInfoPath = path.join(TEST_DATA_DIR, 'user_info.json');
   
-  beforeAll((done) => {
+  beforeAll(async () => {
+    // Set up test database
+    execSync('node ' + path.join(__dirname, '../helpers/setup-test-db.js'), {
+      env: { ...process.env, TEST_DB_PATH },
+      stdio: 'inherit'
+    });
+    
     // Start the mock server as a separate process
     const mockServerPath = path.join(__dirname, '../helpers/mock-server.js');
     mockServerProcess = spawn('node', [mockServerPath], {
@@ -18,14 +24,12 @@ describe('Login Command Integration', () => {
         ...process.env,
         MOCK_SERVER_PORT: port.toString()
       },
-      stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+      stdio: ['ignore', 'pipe', 'pipe']
     });
     
-    // Wait for server to be ready
-    mockServerProcess.on('message', (msg: any) => {
-      if (msg.type === 'ready') {
-        done();
-      }
+    // Handle server output
+    mockServerProcess.stdout?.on('data', (data) => {
+      console.log('Mock server:', data.toString().trim());
     });
     
     // Handle server errors
@@ -35,23 +39,40 @@ describe('Login Command Integration', () => {
     
     mockServerProcess.on('error', (err) => {
       console.error('Failed to start mock server:', err);
-      done(err);
+      throw err;
     });
+    
+    // Wait for server to start
+    await new Promise(resolve => setTimeout(resolve, 1500));
   });
   
   afterAll((done) => {
     // Kill the mock server
     if (mockServerProcess && !mockServerProcess.killed) {
-      mockServerProcess.on('exit', () => done());
+      mockServerProcess.on('exit', () => {
+        // Clean up test database
+        if (fs.existsSync(TEST_DB_PATH)) {
+          fs.unlinkSync(TEST_DB_PATH);
+        }
+        done();
+      });
       mockServerProcess.kill('SIGTERM');
       // Force kill after timeout
       setTimeout(() => {
         if (!mockServerProcess.killed) {
           mockServerProcess.kill('SIGKILL');
         }
+        // Clean up test database
+        if (fs.existsSync(TEST_DB_PATH)) {
+          fs.unlinkSync(TEST_DB_PATH);
+        }
         done();
       }, 1000);
     } else {
+      // Clean up test database
+      if (fs.existsSync(TEST_DB_PATH)) {
+        fs.unlinkSync(TEST_DB_PATH);
+      }
       done();
     }
   });
@@ -103,10 +124,19 @@ describe('Login Command Integration', () => {
       })
     };
     
-    const output = execSync(
-      `node ${cliPath} cc login -e test@example.com -p password123 2>&1`,
-      { env, encoding: 'utf8', shell: '/bin/bash' }
-    );
+    let output;
+    try {
+      output = execSync(
+        `node ${cliPath} cc login -e test@example.com -p password123 2>&1`,
+        { env, encoding: 'utf8', shell: '/bin/bash' }
+      );
+    } catch (err: any) {
+      console.error('Login command failed:');
+      console.error('stdout:', err.stdout);
+      console.error('stderr:', err.stderr);
+      console.error('status:', err.status);
+      throw err;
+    }
     
     // Check for success indication (console.log output)
     expect(output).toContain('You can now use \'roiai cc push\' to sync your usage data.');
@@ -152,10 +182,19 @@ describe('Login Command Integration', () => {
       })
     };
     
-    const output = execSync(
-      `node ${cliPath} cc login -t valid-token 2>&1`,
-      { env, encoding: 'utf8', shell: '/bin/bash' }
-    );
+    let output;
+    try {
+      output = execSync(
+        `node ${cliPath} cc login -t valid-token 2>&1`,
+        { env, encoding: 'utf8', shell: '/bin/bash' }
+      );
+    } catch (err: any) {
+      console.error('Login with token command failed:');
+      console.error('stdout:', err.stdout);
+      console.error('stderr:', err.stderr);
+      console.error('status:', err.status);
+      throw err;
+    }
     
     // Check for success indication
     expect(output).toContain('You can now use \'roiai cc push\' to sync your usage data.');
@@ -265,10 +304,19 @@ describe('Login Command Integration', () => {
       })
     };
     
-    const output = execSync(
-      `node ${cliPath} cc login -t valid-token 2>&1`,
-      { env, encoding: 'utf8', shell: '/bin/bash' }
-    );
+    let output;
+    try {
+      output = execSync(
+        `node ${cliPath} cc login -t valid-token 2>&1`,
+        { env, encoding: 'utf8', shell: '/bin/bash' }
+      );
+    } catch (err: any) {
+      console.error('Re-login command failed:');
+      console.error('stdout:', err.stdout);
+      console.error('stderr:', err.stderr);
+      console.error('status:', err.status);
+      throw err;
+    }
     
     expect(output).toContain('Successfully switched from existing@example.com to test@example.com');
   });
