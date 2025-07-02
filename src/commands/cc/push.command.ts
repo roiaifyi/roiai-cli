@@ -8,7 +8,6 @@ import { configManager } from '../../config';
 import { PushOptions } from '../../models/push.types';
 import { AuthValidator } from '../../utils/auth-validator';
 import { DatabaseManager } from '../../utils/database-manager';
-import { logger } from '../../utils/logger';
 import { ConfigHelper } from '../../utils/config-helper';
 import { ProgressDisplay } from '../../utils/progress-display';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
@@ -50,8 +49,8 @@ export function createPushCommand() {
             }
           } catch (syncError) {
             spinner.fail('Sync failed');
-            logger.error(chalk.red('Error during sync:'), syncError instanceof Error ? syncError.message : 'Unknown error');
-            logger.info(chalk.yellow('\nContinuing with push using existing data...'));
+            console.error(chalk.red('Error during sync:'), syncError instanceof Error ? syncError.message : 'Unknown error');
+            console.log(chalk.yellow('\nContinuing with push using existing data...'));
           }
           
           // Restart spinner for push
@@ -96,7 +95,7 @@ export function createPushCommand() {
         
         spinner.succeed(`Authenticated as ${authCheck.user?.email || 'user'}`);
         if (options.verbose && authCheck.machine) {
-          logger.info(`  Machine: ${authCheck.machine.name || authCheck.machine.id}`);
+          console.log(chalk.dim(`  Machine: ${authCheck.machine.name || authCheck.machine.id}`));
         }
         
         // Use config batch size if not specified in command line
@@ -119,10 +118,10 @@ export function createPushCommand() {
         );
         
         if (stats.retryDistribution.length > 0 && options.verbose) {
-          logger.info(chalk.dim('\nRetry distribution:'));
+          console.log(chalk.dim('\nRetry distribution:'));
           stats.retryDistribution.forEach(r => {
             const icon = r.retryCount === 0 ? '🆕' : r.retryCount >= pushConfig.maxRetries ? '⚠️' : '🔄';
-            logger.info(`  ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk.bold(r.count.toLocaleString())} messages`);
+            console.log(`  ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk.bold(r.count.toLocaleString())} messages`);
           });
         }
 
@@ -150,8 +149,8 @@ export function createPushCommand() {
 
         if (options.dryRun) {
           spinner.info('Dry run mode - no data will be pushed');
-          logger.info(`\nWould push ${eligibleCount} messages (out of ${stats.unsynced} total unsynced)`);
-          logger.info(`Total batches needed: ${Math.ceil(eligibleCount / batchSize)}`);
+          console.log(`\nWould push ${eligibleCount} messages (out of ${stats.unsynced} total unsynced)`);
+          console.log(`Total batches needed: ${Math.ceil(eligibleCount / batchSize)}`);
           return;
         }
 
@@ -162,7 +161,7 @@ export function createPushCommand() {
         const processedMessages = new Set<string>();
         const totalBatches = Math.ceil(eligibleCount / batchSize);
 
-        logger.info(''); // Add empty line for progress display
+        console.log(''); // Add empty line for progress display
         spinner.start('Starting push...');
 
         while (true) {
@@ -238,24 +237,24 @@ export function createPushCommand() {
             // Don't print success line, progress will be updated in next iteration
             
             if (options.verbose) {
-              logger.info(`  Sync ID: ${response.syncId}`);
-              logger.info(`  Processing time: ${response.summary.processingTimeMs}ms`);
+              console.log(chalk.dim(`  Sync ID: ${response.syncId}`));
+              console.log(chalk.dim(`  Processing time: ${response.summary.processingTimeMs}ms`));
               
               // Show failed message details if any with helpful context
               if (response.results.failed.details.length > 0) {
                 const maxFailedShown = ConfigHelper.getDisplay().maxFailedMessagesShown;
-                logger.error(chalk.red('\n  Failed messages:'));
+                console.error(chalk.red('\n  Failed messages:'));
                 for (const failure of response.results.failed.details.slice(0, maxFailedShown)) {
-                  logger.error(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
+                  console.error(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
                   
                   // Add helpful tips using error formatter
                   const tip = ErrorFormatter.getErrorTip(failure.code);
                   if (tip) {
-                    logger.error(chalk.dim(`      → ${tip}`));
+                    console.error(chalk.dim(`      → ${tip}`));
                   }
                 }
                 if (response.results.failed.details.length > maxFailedShown) {
-                  logger.error(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);
+                  console.error(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);
                 }
               }
             }
@@ -286,7 +285,7 @@ export function createPushCommand() {
             
             // For network errors, we might want to stop processing
             if (SpinnerErrorHandler.isNetworkError(error)) {
-              logger.info(chalk.yellow('\nNetwork error detected. You can run the command again to retry.'));
+              console.log(chalk.yellow('\nNetwork error detected. You can run the command again to retry.'));
               break;
             }
           }
@@ -295,7 +294,7 @@ export function createPushCommand() {
         // Final summary in a compact format
         const finalStats = await pushService.getPushStatistics();
         
-        logger.info(
+        console.log(
           `\n${chalk.bold('Summary:')} ` +
           `${chalk.green(totalPushed.toLocaleString())} pushed, ` +
           `${chalk.red(totalFailed.toLocaleString())} failed, ` +
@@ -305,16 +304,16 @@ export function createPushCommand() {
         if (finalStats.unsynced > 0) {
           const eligibleRemaining = await pushService.countEligibleMessages();
           if (eligibleRemaining === 0) {
-            logger.info(chalk.dim('\nAll remaining messages have hit max retries. Use --force to retry them.'));
+            console.log(chalk.dim('\nAll remaining messages have hit max retries. Use --force to retry them.'));
           } else {
-            logger.info(chalk.dim('\nRun the command again to retry failed messages.'));
+            console.log(chalk.dim('\nRun the command again to retry failed messages.'));
           }
         }
 
         } catch (error) {
           spinner.fail(`Push failed: ${SpinnerErrorHandler.getErrorMessage(error)}`);
           if (options.verbose && error instanceof Error) {
-            logger.error('\nError details:', error.stack);
+            console.error(chalk.dim('\nError details:'), error.stack);
           }
           process.exit(1);
         }

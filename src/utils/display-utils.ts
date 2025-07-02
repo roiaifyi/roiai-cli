@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
-import { logger } from './logger';
 import { ConfigHelper } from './config-helper';
 
 export interface TableColumn {
@@ -141,8 +140,8 @@ export class DisplayUtils {
    * Display a section header
    */
   static sectionHeader(title: string, emoji?: string): void {
-    logger.info(chalk.bold(`\n${emoji ? emoji + ' ' : ''}${title}`));
-    logger.info(this.separator());
+    console.log(chalk.bold(`\n${emoji ? emoji + ' ' : ''}${title}`));
+    console.log(this.separator());
   }
 
   /**
@@ -162,7 +161,7 @@ export class DisplayUtils {
     Object.entries(data).forEach(([key, value]) => {
       const formattedKey = colorKeys ? chalk.gray(key + ':') : key + ':';
       const formattedValue = formatters[key] ? formatters[key](value) : value;
-      logger.info(`${indentStr}${formattedKey} ${formattedValue}`);
+      console.log(`${indentStr}${formattedKey} ${formattedValue}`);
     });
   }
 }

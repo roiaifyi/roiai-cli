@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { ConfigHelper } from './config-helper';
-import { logger } from './logger';
 
 export class ProgressDisplay {
   private static get PROGRESS_BAR_WIDTH() {
@@ -102,14 +101,14 @@ export class ProgressDisplay {
     const { title, useColors = true, compact = false } = options;
     
     if (title) {
-      logger.info(chalk.bold(`\n${title}`));
+      console.log(chalk.bold(`\n${title}`));
     }
     
     if (!compact) {
       const display = ConfigHelper.getDisplay();
       const separatorChar = display.separatorChar;
       const separatorWidth = display.separatorDefaultWidth;
-      logger.info(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
+      console.log(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
     }
     
     Object.entries(stats).forEach(([key, value]) => {
@@ -126,14 +125,14 @@ export class ProgressDisplay {
         }
       }
       
-      logger.info(`  ${formattedKey}: ${formattedValue}`);
+      console.log(`  ${formattedKey}: ${formattedValue}`);
     });
     
     if (!compact) {
       const display = ConfigHelper.getDisplay();
       const separatorChar = display.separatorChar;
       const separatorWidth = display.separatorDefaultWidth;
-      logger.info(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
+      console.log(`  ${chalk.gray(separatorChar.repeat(separatorWidth))}`);
     }
   }
 
@@ -157,6 +156,6 @@ export class ProgressDisplay {
       return `${item.label}: ${value}`;
     });
     
-    logger.info(parts.join(', '));
+    console.log(parts.join(', '));
   }
 }

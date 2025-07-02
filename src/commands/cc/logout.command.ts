@@ -3,7 +3,6 @@ import ora from 'ora';
 import chalk from 'chalk';
 import { UserService } from '../../services/user.service';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
-import { logger } from '../../utils/logger';
 import { createApiClient } from '../../api/typed-client';
 import { configManager } from '../../config';
 
@@ -57,8 +56,8 @@ export function createLogoutCommand(): Command {
               }
             }
             
-            logger.warn(chalk.yellow(`\nWarning: Failed to revoke API key on server: ${errorMessage}`));
-            logger.warn(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
+            console.log(chalk.yellow(`\n⚠️  Warning: Failed to revoke API key on server: ${errorMessage}`));
+            console.log(chalk.yellow('   You can manually delete the API key in the web interface if needed.'));
           }
         }
         
@@ -72,7 +71,7 @@ export function createLogoutCommand(): Command {
           spinner.succeed(`Logged out from ${email} (local credentials cleared)`);
         }
         
-        logger.info(chalk.dim('\nContinuing in anonymous mode. Your local data remains intact.'));
+        console.log(chalk.dim('\nContinuing in anonymous mode. Your local data remains intact.'));
         
       } catch (error) {
         spinner.fail(`Logout failed: ${SpinnerErrorHandler.getErrorMessage(error)}`);

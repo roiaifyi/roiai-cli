@@ -6,7 +6,6 @@ import os from 'os';
 import { UserService } from '../../services/user.service';
 import { MachineService } from '../../services/machine.service';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
-import { logger } from '../../utils/logger';
 import { createApiClient, CliLoginRequest } from '../../api/typed-client';
 import { configManager } from '../../config';
 
@@ -32,8 +31,8 @@ export function createLoginCommand(): Command {
         // If already logged in with same account and not forcing re-login, just show status
         if (userService.isAuthenticated() && oldEmail && !options.token && !options.email && !options.password) {
           spinner.info(`Already logged in as ${oldEmail}`);
-          logger.info(chalk.dim('\nYou can use \'roiai cc push\' to sync your usage data.'));
-          logger.info(chalk.dim('To switch accounts, use \'roiai cc logout\' first or provide credentials.'));
+          console.log(chalk.dim('\nYou can use \'roiai cc push\' to sync your usage data.'));
+          console.log(chalk.dim('To switch accounts, use \'roiai cc logout\' first or provide credentials.'));
           return;
         }
         
@@ -59,7 +58,7 @@ export function createLoginCommand(): Command {
             });
             const input = response.emailOrUsername;
             if (!input) {
-              logger.error(chalk.red('Login cancelled'));
+              console.error(chalk.red('Login cancelled'));
               return;
             }
             // Determine if it's email or username
@@ -85,7 +84,7 @@ export function createLoginCommand(): Command {
             });
             password = response.password;
             if (!password) {
-              logger.error(chalk.red('Login cancelled'));
+              console.error(chalk.red('Login cancelled'));
               return;
             }
           }
@@ -152,7 +151,7 @@ export function createLoginCommand(): Command {
               // If we get here, logout succeeded
             } catch (error) {
               // Silently handle logout errors - don't interrupt the login flow
-              logger.warn(chalk.yellow(`\nWarning: Could not revoke previous API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
+              console.log(chalk.yellow(`\n⚠️  Warning: Could not revoke previous API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
             }
             
             // Clear local credentials before saving new ones
@@ -167,7 +166,7 @@ export function createLoginCommand(): Command {
           } else {
             spinner.succeed(`Successfully logged in as ${user.email}`);
           }
-          logger.info(chalk.dim('\nYou can now use \'roiai cc push\' to sync your usage data.'));
+          console.log(chalk.dim('\nYou can now use \'roiai cc push\' to sync your usage data.'));
           
         } catch (error: any) {
           // Handle typed errors
@@ -175,7 +174,9 @@ export function createLoginCommand(): Command {
           if (error.code) {
             switch (error.code) {
               case 'AUTH_001':
-                SpinnerErrorHandler.handleError(spinner, error, 'Invalid credentials. Please check your email/username and password.');
+                spinner.fail('Invalid credentials. Please check your email/username and password.');
+                console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
+                process.exit(1);
                 break;
               case 'VAL_001':
               case 'VAL_002':
@@ -192,17 +193,29 @@ export function createLoginCommand(): Command {
                 SpinnerErrorHandler.handleError(spinner, error, `Cannot connect to server at ${apiConfig.baseUrl}`);
                 break;
               default:
-                SpinnerErrorHandler.handleError(spinner, error, `Login failed: ${error.message}`);
+                spinner.fail(`Login failed: ${error.message}`);
+                // Show account creation hint for auth-related errors
+                if (error.message && error.message.toLowerCase().includes('email not verified')) {
+                  console.log(chalk.yellow('\nPlease check your email to verify your account.'));
+                  console.log(chalk.cyan('Need a new account? Create one at https://roiAI.fyi'));
+                } else {
+                  console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
+                }
+                process.exit(1);
             }
           } else if (error.statusCode === 404) {
             SpinnerErrorHandler.handleError(spinner, error, 'Authentication endpoint not found. Please check your server configuration.');
           } else {
-            SpinnerErrorHandler.handleError(spinner, error, 'Login failed');
+            spinner.fail('Login failed');
+            console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
+            process.exit(1);
           }
         }
         
       } catch (error) {
-        SpinnerErrorHandler.handleError(spinner, error, 'Login failed');
+        spinner.fail('Login failed');
+        console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
+        process.exit(1);
       }
     });
     

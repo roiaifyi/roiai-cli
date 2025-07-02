@@ -45,8 +45,8 @@ export class SpinnerErrorHandler {
    */
   static handleAuthError(spinner: Ora, _error?: unknown): void {
     spinner.fail('Authentication failed');
-    logger.info(chalk.yellow('\nPlease check your API token and try again.'));
-    logger.info(chalk.yellow('You may need to run \'roiai cc login\' to refresh your credentials.'));
+    console.log(chalk.yellow('\nPlease check your API token and try again.'));
+    console.log(chalk.yellow('You may need to run \'roiai cc login\' to refresh your credentials.'));
     
     process.exit(1);
   }
@@ -57,7 +57,7 @@ export class SpinnerErrorHandler {
   static handleNetworkError(spinner: Ora, error: unknown): void {
     const errorMessage = SpinnerErrorHandler.getErrorMessage(error);
     spinner.fail(`Network error: ${errorMessage}`);
-    logger.info(chalk.yellow('\nPlease check your internet connection and try again.'));
+    console.log(chalk.yellow('\nPlease check your internet connection and try again.'));
   }
 
   /**

@@ -14,7 +14,6 @@ const sync_service_1 = require("../../services/sync.service");
 const config_1 = require("../../config");
 const auth_validator_1 = require("../../utils/auth-validator");
 const database_manager_1 = require("../../utils/database-manager");
-const logger_1 = require("../../utils/logger");
 const config_helper_1 = require("../../utils/config-helper");
 const progress_display_1 = require("../../utils/progress-display");
 const spinner_error_handler_1 = require("../../utils/spinner-error-handler");
@@ -51,8 +50,8 @@ function createPushCommand() {
                     }
                     catch (syncError) {
                         spinner.fail('Sync failed');
-                        logger_1.logger.error(chalk_1.default.red('Error during sync:'), syncError instanceof Error ? syncError.message : 'Unknown error');
-                        logger_1.logger.info(chalk_1.default.yellow('\nContinuing with push using existing data...'));
+                        console.error(chalk_1.default.red('Error during sync:'), syncError instanceof Error ? syncError.message : 'Unknown error');
+                        console.log(chalk_1.default.yellow('\nContinuing with push using existing data...'));
                     }
                     // Restart spinner for push
                     spinner.start('Initializing push...');
@@ -89,7 +88,7 @@ function createPushCommand() {
                 }
                 spinner.succeed(`Authenticated as ${authCheck.user?.email || 'user'}`);
                 if (options.verbose && authCheck.machine) {
-                    logger_1.logger.info(`  Machine: ${authCheck.machine.name || authCheck.machine.id}`);
+                    console.log(chalk_1.default.dim(`  Machine: ${authCheck.machine.name || authCheck.machine.id}`));
                 }
                 // Use config batch size if not specified in command line
                 const batchSize = options.batchSize || pushConfig.batchSize;
@@ -105,10 +104,10 @@ function createPushCommand() {
                     `(${chalk_1.default.green(stats.synced.toLocaleString())} already synced, ` +
                     `${chalk_1.default.bold(stats.total.toLocaleString())} total)`);
                 if (stats.retryDistribution.length > 0 && options.verbose) {
-                    logger_1.logger.info(chalk_1.default.dim('\nRetry distribution:'));
+                    console.log(chalk_1.default.dim('\nRetry distribution:'));
                     stats.retryDistribution.forEach(r => {
                         const icon = r.retryCount === 0 ? '🆕' : r.retryCount >= pushConfig.maxRetries ? '⚠️' : '🔄';
-                        logger_1.logger.info(`  ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk_1.default.bold(r.count.toLocaleString())} messages`);
+                        console.log(`  ${icon} ${r.retryCount} ${r.retryCount === 1 ? 'retry' : 'retries'}: ${chalk_1.default.bold(r.count.toLocaleString())} messages`);
                     });
                 }
                 // Handle force option
@@ -132,8 +131,8 @@ function createPushCommand() {
                 }
                 if (options.dryRun) {
                     spinner.info('Dry run mode - no data will be pushed');
-                    logger_1.logger.info(`\nWould push ${eligibleCount} messages (out of ${stats.unsynced} total unsynced)`);
-                    logger_1.logger.info(`Total batches needed: ${Math.ceil(eligibleCount / batchSize)}`);
+                    console.log(`\nWould push ${eligibleCount} messages (out of ${stats.unsynced} total unsynced)`);
+                    console.log(`Total batches needed: ${Math.ceil(eligibleCount / batchSize)}`);
                     return;
                 }
                 // Main push loop
@@ -142,7 +141,7 @@ function createPushCommand() {
                 let batchNumber = 0;
                 const processedMessages = new Set();
                 const totalBatches = Math.ceil(eligibleCount / batchSize);
-                logger_1.logger.info(''); // Add empty line for progress display
+                console.log(''); // Add empty line for progress display
                 spinner.start('Starting push...');
                 while (true) {
                     batchNumber++;
@@ -190,22 +189,22 @@ function createPushCommand() {
                         totalFailed += failed;
                         // Don't print success line, progress will be updated in next iteration
                         if (options.verbose) {
-                            logger_1.logger.info(`  Sync ID: ${response.syncId}`);
-                            logger_1.logger.info(`  Processing time: ${response.summary.processingTimeMs}ms`);
+                            console.log(chalk_1.default.dim(`  Sync ID: ${response.syncId}`));
+                            console.log(chalk_1.default.dim(`  Processing time: ${response.summary.processingTimeMs}ms`));
                             // Show failed message details if any with helpful context
                             if (response.results.failed.details.length > 0) {
                                 const maxFailedShown = config_helper_1.ConfigHelper.getDisplay().maxFailedMessagesShown;
-                                logger_1.logger.error(chalk_1.default.red('\n  Failed messages:'));
+                                console.error(chalk_1.default.red('\n  Failed messages:'));
                                 for (const failure of response.results.failed.details.slice(0, maxFailedShown)) {
-                                    logger_1.logger.error(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
+                                    console.error(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
                                     // Add helpful tips using error formatter
                                     const tip = error_formatter_1.ErrorFormatter.getErrorTip(failure.code);
                                     if (tip) {
-                                        logger_1.logger.error(chalk_1.default.dim(`      → ${tip}`));
+                                        console.error(chalk_1.default.dim(`      → ${tip}`));
                                     }
                                 }
                                 if (response.results.failed.details.length > maxFailedShown) {
-                                    logger_1.logger.error(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);
+                                    console.error(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);
                                 }
                             }
                         }
@@ -232,31 +231,31 @@ function createPushCommand() {
                         await pushService.incrementRetryCountForBatch(messageIds);
                         // For network errors, we might want to stop processing
                         if (spinner_error_handler_1.SpinnerErrorHandler.isNetworkError(error)) {
-                            logger_1.logger.info(chalk_1.default.yellow('\nNetwork error detected. You can run the command again to retry.'));
+                            console.log(chalk_1.default.yellow('\nNetwork error detected. You can run the command again to retry.'));
                             break;
                         }
                     }
                 }
                 // Final summary in a compact format
                 const finalStats = await pushService.getPushStatistics();
-                logger_1.logger.info(`\n${chalk_1.default.bold('Summary:')} ` +
+                console.log(`\n${chalk_1.default.bold('Summary:')} ` +
                     `${chalk_1.default.green(totalPushed.toLocaleString())} pushed, ` +
                     `${chalk_1.default.red(totalFailed.toLocaleString())} failed, ` +
                     `${chalk_1.default.yellow(finalStats.unsynced.toLocaleString())} remaining`);
                 if (finalStats.unsynced > 0) {
                     const eligibleRemaining = await pushService.countEligibleMessages();
                     if (eligibleRemaining === 0) {
-                        logger_1.logger.info(chalk_1.default.dim('\nAll remaining messages have hit max retries. Use --force to retry them.'));
+                        console.log(chalk_1.default.dim('\nAll remaining messages have hit max retries. Use --force to retry them.'));
                     }
                     else {
-                        logger_1.logger.info(chalk_1.default.dim('\nRun the command again to retry failed messages.'));
+                        console.log(chalk_1.default.dim('\nRun the command again to retry failed messages.'));
                     }
                 }
             }
             catch (error) {
                 spinner.fail(`Push failed: ${spinner_error_handler_1.SpinnerErrorHandler.getErrorMessage(error)}`);
                 if (options.verbose && error instanceof Error) {
-                    logger_1.logger.error('\nError details:', error.stack);
+                    console.error(chalk_1.default.dim('\nError details:'), error.stack);
                 }
                 process.exit(1);
             }

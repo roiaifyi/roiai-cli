@@ -1,5 +1,5 @@
-import { logger } from './logger';
 import { ConfigHelper } from './config-helper';
+import chalk from 'chalk';
 
 /**
  * Enhanced error handler for network and authentication errors
@@ -153,7 +153,7 @@ export class NetworkErrorHandler {
         if (attempt < maxRetries) {
           const backoffConfig = ConfigHelper.getNetwork().backoff;
           const delay = Math.min(backoffConfig.baseDelay * Math.pow(2, attempt - 1), backoffConfig.maxDelay);
-          logger.info(`Retrying ${context} in ${delay}ms... (attempt ${attempt}/${maxRetries})`);
+          console.log(chalk.yellow(`Retrying ${context} in ${delay}ms... (attempt ${attempt}/${maxRetries})`));
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
