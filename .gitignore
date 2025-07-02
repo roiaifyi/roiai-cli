@@ -9,3 +9,4 @@ coverage/
 *.log
 .env
 .env.local
+tmp/

@@ -13,6 +13,7 @@ import { ConfigHelper } from '../../utils/config-helper';
 import { ProgressDisplay } from '../../utils/progress-display';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 import { FormatterUtils } from '../../utils/formatter-utils';
+import { ErrorFormatter } from '../../utils/error-formatter';
 
 export function createPushCommand() {
   return new Command('push')
@@ -236,12 +237,18 @@ export function createPushCommand() {
               logger.info(`  Sync ID: ${response.syncId}`);
               logger.info(`  Processing time: ${response.summary.processingTimeMs}ms`);
               
-              // Show failed message details if any
+              // Show failed message details if any with helpful context
               if (response.results.failed.details.length > 0) {
                 const maxFailedShown = ConfigHelper.getDisplay().maxFailedMessagesShown;
                 logger.error(chalk.red('\n  Failed messages:'));
                 for (const failure of response.results.failed.details.slice(0, maxFailedShown)) {
                   logger.error(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
+                  
+                  // Add helpful tips using error formatter
+                  const tip = ErrorFormatter.getErrorTip(failure.code);
+                  if (tip) {
+                    logger.error(chalk.dim(`      → ${tip}`));
+                  }
                 }
                 if (response.results.failed.details.length > maxFailedShown) {
                   logger.error(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);

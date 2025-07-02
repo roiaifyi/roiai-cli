@@ -2,9 +2,10 @@ import { Command } from 'commander';
 import ora from 'ora';
 import chalk from 'chalk';
 import { UserService } from '../../services/user.service';
-import { createAuthenticatedApiClient } from '../../utils/api-client-factory';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 import { logger } from '../../utils/logger';
+import { createApiClient } from '../../api/typed-client';
+import { configManager } from '../../config';
 
 export function createLogoutCommand(): Command {
   const command = new Command('logout');
@@ -33,24 +34,30 @@ export function createLogoutCommand(): Command {
           try {
             spinner.text = 'Revoking API key on server...';
             
-            const apiClient = createAuthenticatedApiClient(apiToken);
+            const apiConfig = configManager.getApiConfig();
+            const apiClient = createApiClient(apiConfig.baseUrl, apiToken);
             
-            const response = await apiClient.logout();
+            await apiClient.cliLogout();
             
-            if (response.ok) {
-              serverLogoutSuccess = true;
-              spinner.text = 'API key revoked successfully';
-            } else {
-              const errorData = response.data as any;
-              // Handle structured error response
-              const errorMessage = errorData?.success === false && errorData?.error 
-                ? `${errorData.error.message} (${errorData.error.code})`
-                : errorData?.message || 'Unknown error';
-              logger.warn(chalk.yellow(`\nWarning: Failed to revoke API key on server: ${errorMessage}`));
-              logger.warn(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
+            // Typed response should be SuccessResponse if it worked
+            serverLogoutSuccess = true;
+            spinner.text = 'API key revoked successfully';
+          } catch (error: any) {
+            // Handle typed errors
+            let errorMessage = SpinnerErrorHandler.getErrorMessage(error);
+            
+            if (error.code) {
+              switch (error.code) {
+                case 'AUTH_004':
+                  errorMessage = 'API key is invalid or already revoked';
+                  break;
+                case 'NETWORK_ERROR':
+                  errorMessage = 'Could not contact server';
+                  break;
+              }
             }
-          } catch (error) {
-            logger.warn(chalk.yellow(`\nWarning: Could not contact server to revoke API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
+            
+            logger.warn(chalk.yellow(`\nWarning: Failed to revoke API key on server: ${errorMessage}`));
             logger.warn(chalk.yellow('You can manually delete the API key in the web interface if needed.'));
           }
         }

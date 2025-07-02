@@ -107,12 +107,14 @@ describe('Push Command Integration Tests', () => {
 
     // Create authenticated user info
     const userInfo = {
-      user: {
-        id: '550e8400-e29b-41d4-a716-446655440000',  // Valid UUID
+      anonymousId: 'anon-test-machine',
+      clientMachineId: 'test-machine',
+      auth: {
+        userId: '550e8400-e29b-41d4-a716-446655440000',  // Valid UUID
         email: 'test@example.com',
-        username: 'testuser'
-      },
-      api_key: 'test-auth-token'
+        username: 'testuser',
+        apiToken: 'test-auth-token'
+      }
     };
     fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
     fs.writeFileSync(path.join(TEST_DATA_DIR, 'user_info.json'), JSON.stringify(userInfo, null, 2));
@@ -230,6 +232,7 @@ describe('Push Command Integration Tests', () => {
   };
 
   beforeEach(async () => {
+    // Reset database - this will handle initialization if needed
     await resetTestDatabase();
     
     // Reset mock server mode

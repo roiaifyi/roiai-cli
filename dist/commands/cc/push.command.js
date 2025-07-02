@@ -19,6 +19,7 @@ const config_helper_1 = require("../../utils/config-helper");
 const progress_display_1 = require("../../utils/progress-display");
 const spinner_error_handler_1 = require("../../utils/spinner-error-handler");
 const formatter_utils_1 = require("../../utils/formatter-utils");
+const error_formatter_1 = require("../../utils/error-formatter");
 function createPushCommand() {
     return new commander_1.Command('push')
         .description('Push local usage data to remote server')
@@ -187,12 +188,17 @@ function createPushCommand() {
                         if (options.verbose) {
                             logger_1.logger.info(`  Sync ID: ${response.syncId}`);
                             logger_1.logger.info(`  Processing time: ${response.summary.processingTimeMs}ms`);
-                            // Show failed message details if any
+                            // Show failed message details if any with helpful context
                             if (response.results.failed.details.length > 0) {
                                 const maxFailedShown = config_helper_1.ConfigHelper.getDisplay().maxFailedMessagesShown;
                                 logger_1.logger.error(chalk_1.default.red('\n  Failed messages:'));
                                 for (const failure of response.results.failed.details.slice(0, maxFailedShown)) {
                                     logger_1.logger.error(`    ${failure.messageId}: ${failure.code} - ${failure.error}`);
+                                    // Add helpful tips using error formatter
+                                    const tip = error_formatter_1.ErrorFormatter.getErrorTip(failure.code);
+                                    if (tip) {
+                                        logger_1.logger.error(chalk_1.default.dim(`      → ${tip}`));
+                                    }
                                 }
                                 if (response.results.failed.details.length > maxFailedShown) {
                                     logger_1.logger.error(`    ... and ${response.results.failed.details.length - maxFailedShown} more`);

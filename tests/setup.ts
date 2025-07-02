@@ -73,6 +73,19 @@ export async function resetTestDatabase() {
   const prisma = createTestPrismaClient();
   
   try {
+    // Check if database exists by trying to count users
+    // If it fails, the database doesn't exist yet, so skip reset
+    try {
+      await prisma.user.count();
+    } catch (error: any) {
+      if (error.message?.includes('does not exist')) {
+        // Database not initialized yet, create it
+        await ensureDatabaseInitialized();
+        return;
+      }
+      throw error;
+    }
+    
     // Delete all data in reverse order of dependencies
     // Note: messageSyncStatus will be cascade deleted with messages
     await prisma.message.deleteMany();
@@ -90,4 +103,12 @@ export async function resetTestDatabase() {
     fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
   }
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
+}
+
+// Helper to ensure database is initialized
+export async function ensureDatabaseInitialized() {
+  // Create the database schema using push
+  execSync('npx prisma db push --force-reset --skip-generate', {
+    env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` }
+  });
 }

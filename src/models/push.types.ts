@@ -11,6 +11,10 @@ export {
   SyncErrorCode,
   ValidationError,
   Error as ApiError,
+  HealthCheckResponse,
+  SuccessResponse,
+  ErrorResponse,
+  ErrorCode,
 } from '../generated/api-client';
 
 export interface PushOptions {

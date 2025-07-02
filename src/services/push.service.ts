@@ -7,6 +7,9 @@ import {
   PushConfig,
   EntityMaps,
   MessageEntity,
+  ErrorResponse,
+  HealthCheckResponse,
+  ValidationError,
 } from "../models/push.types";
 import { UserService } from "./user.service";
 import { createAuthenticatedApiClient } from "../utils/api-client-factory";
@@ -14,6 +17,7 @@ import { NetworkErrorHandler } from "../utils/network-error-handler";
 import { logger } from "../utils/logger";
 import { configManager } from "../config";
 import { ConfigHelper } from "../utils/config-helper";
+import { ErrorFormatter } from "../utils/error-formatter";
 
 export class PushService {
   private prisma: PrismaClient;
@@ -63,11 +67,9 @@ export class PushService {
       const statusCodes = ConfigHelper.getNetwork().httpStatusCodes;
       
       if (response.ok && response.status === statusCodes.ok) {
-        const data = response.data as any;
-        // Handle wrapped response format from server
-        const actualData = data.data || data;
+        const healthData = response.data as HealthCheckResponse;
         
-        if (!actualData.authenticated) {
+        if (!healthData.authenticated) {
           return {
             valid: false,
             error: 'API token is invalid or expired. Please run \'roiai cc login\' to get a new token.'
@@ -75,13 +77,13 @@ export class PushService {
         }
         
         return {
-          valid: actualData.authenticated,
-          user: actualData.user,
-          machine: actualData.machine
+          valid: healthData.authenticated,
+          user: healthData.user,
+          machine: healthData.machine
         };
       } else {
-        // Handle non-200 responses
-        const errorData = response.data as any;
+        // Handle error responses
+        const errorData = response.data as ErrorResponse;
         let errorMessage: string;
         
         if (response.status === statusCodes.unauthorized) {
@@ -90,10 +92,12 @@ export class PushService {
           errorMessage = 'Access forbidden. Your account may not have permission to push data.';
         } else if (response.status >= (statusCodes.serverErrorThreshold || 500)) {
           errorMessage = `Server error (${response.status}). The RoiAI server is experiencing issues. Please try again later.`;
+        } else if ('error' in errorData && errorData.error) {
+          // Use typed error response with formatter
+          const error = errorData.error;
+          errorMessage = ErrorFormatter.formatError(error.code, error.message);
         } else {
-          errorMessage = errorData?.success === false && errorData?.error 
-            ? `${errorData.error.message} (${errorData.error.code})`
-            : errorData?.message || `Unexpected response: ${response.status}`;
+          errorMessage = `Unexpected response: ${response.status}`;
         }
         
         return {
@@ -264,17 +268,37 @@ export class PushService {
     try {
       const response = await this.apiClient.upsyncData(request);
       if (!response.ok) {
-        // Handle error responses
-        const errorData = response.data as any;
+        // Handle error responses with proper typing
+        const errorData = response.data as ErrorResponse | ValidationError;
         
-        // Handle structured error response
-        let errorMessage = errorData?.success === false && errorData?.error 
-          ? `${errorData.error.message} (${errorData.error.code})`
-          : errorData?.message || "Unknown error";
+        let errorMessage: string;
         
-        // If validation error, include details
-        if (errorData?.error?.details) {
-          errorMessage += ` - ${JSON.stringify(errorData.error.details)}`;
+        if ('errors' in errorData && errorData.code === 'VALIDATION_ERROR') {
+          // Handle validation error
+          const validationError = errorData as ValidationError;
+          errorMessage = validationError.message;
+          // errorCode not used
+          
+          // Format validation errors nicely
+          errorMessage += `\n\n${ErrorFormatter.formatValidationErrors(validationError.errors)}`;
+          
+        } else if ('error' in errorData && errorData.error) {
+          // Handle standard error response
+          const error = errorData.error;
+          errorMessage = error.message;
+          // errorCode = error.code; - not used
+          
+          // Use error formatter for consistent messaging
+          errorMessage = ErrorFormatter.formatError(error.code, error.message);
+          
+          if (error.details) {
+            errorMessage += `\n\nDetails: ${JSON.stringify(error.details, null, 2)}`;
+          }
+        } else {
+          // Fallback for unknown error format or legacy format
+          const errorObj = errorData as any;
+          errorMessage = errorObj?.message || 'Unknown error occurred during push';
+          // errorCode = 'UNKNOWN'; - not used
         }
         
         // Check for authentication failures

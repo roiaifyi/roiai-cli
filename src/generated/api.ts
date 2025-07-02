@@ -44,6 +44,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Verify email via link
+         * @description Verify email by clicking verification link
+         */
+        get: operations["verifyEmailGet"];
+        put?: never;
+        /**
+         * Verify email address
+         * @description Verify user's email address with verification token
+         */
+        post: operations["verifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend verification email
+         * @description Resend email verification link to user
+         */
+        post: operations["resendVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/change-password": {
         parameters: {
             query?: never;
@@ -214,6 +258,140 @@ export interface paths {
          * @description Delete an API key
          */
         delete: operations["deleteApiKey"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get user activity data
+         * @description Returns daily activity data for the authenticated user within a specified date range
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Number of days to retrieve (1-365) */
+                    days?: number;
+                    /** @description End date for the activity period (ISO 8601 format) */
+                    endDate?: string;
+                    /** @description Grouping period for activity data */
+                    groupBy?: "day" | "week" | "month";
+                    /** @description Include breakdown by message types */
+                    includeBreakdown?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Activity data retrieved successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        /** @example {
+                         *       "success": true,
+                         *       "data": {
+                         *         "period": {
+                         *           "start": "2025-06-22",
+                         *           "end": "2025-06-29",
+                         *           "days": 7
+                         *         },
+                         *         "dailyActivity": [
+                         *           {
+                         *             "date": "2025-06-22",
+                         *             "cost": 12.5,
+                         *             "messages": 150,
+                         *             "tokens": 25000,
+                         *             "sessions": 3
+                         *           },
+                         *           {
+                         *             "date": "2025-06-23",
+                         *             "cost": 8.25,
+                         *             "messages": 100,
+                         *             "tokens": 18000,
+                         *             "sessions": 2
+                         *           }
+                         *         ]
+                         *       }
+                         *     } */
+                        "application/json": components["schemas"]["SuccessResponse"] & {
+                            data?: components["schemas"]["UserActivityResponse"];
+                        };
+                    };
+                };
+                /** @description Invalid query parameters */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analytics/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record batch of analytics events
+         * @description Record multiple analytics events in a single request. Recommended for performance.
+         */
+        post: operations["recordBatchEvents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/feature-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get feature flags by keys
+         * @description Returns requested feature flags
+         */
+        get: operations["getFeatureFlags"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -791,6 +969,115 @@ export interface components {
                 processingTimeMs: number;
             };
         };
+        UserActivityResponse: {
+            period: {
+                /**
+                 * Format: date
+                 * @description Start date of the period
+                 * @example 2025-06-22
+                 */
+                start: string;
+                /**
+                 * Format: date
+                 * @description End date of the period
+                 * @example 2025-06-29
+                 */
+                end: string;
+                /**
+                 * @description Number of days in the period
+                 * @example 7
+                 */
+                days: number;
+            };
+            /** @description Daily activity data */
+            dailyActivity: {
+                /**
+                 * Format: date
+                 * @description Date for this activity data
+                 * @example 2025-06-22
+                 */
+                date: string;
+                /**
+                 * Format: float
+                 * @description Total cost for the day
+                 * @example 12.5
+                 */
+                cost: number;
+                /**
+                 * @description Total number of messages
+                 * @example 150
+                 */
+                messages: number;
+                /**
+                 * @description Total number of tokens
+                 * @example 25000
+                 */
+                tokens: number;
+                /**
+                 * @description Number of sessions created
+                 * @example 3
+                 */
+                sessions: number;
+                /** @description Message type breakdown (only if includeBreakdown=true) */
+                breakdown?: {
+                    messageTypes?: {
+                        /**
+                         * @description Number of human messages
+                         * @example 50
+                         */
+                        human?: number;
+                        /**
+                         * @description Number of agent messages
+                         * @example 50
+                         */
+                        agent?: number;
+                        /**
+                         * @description Number of assistant messages
+                         * @example 50
+                         */
+                        assistant?: number;
+                    };
+                };
+            }[];
+        };
+        AnalyticsEventRequest: {
+            /**
+             * @description High-level event category
+             * @enum {string}
+             */
+            eventType: "share" | "view" | "click" | "feature";
+            /**
+             * @description Specific event identifier
+             * @example boasting_card_download
+             */
+            eventName: string;
+            /**
+             * @description Event-specific data. Structure varies by event type.
+             * @example {
+             *       "period": "weekly",
+             *       "rank": 3,
+             *       "cost": 543.21
+             *     }
+             */
+            eventData?: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description Client session identifier
+             * @example sess_1234567890_abc
+             */
+            sessionId?: string;
+            /**
+             * @description Current page path
+             * @example /dashboard
+             */
+            pagePath?: string;
+            /**
+             * @description Referrer URL or source
+             * @example https://google.com
+             */
+            referrer?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -887,6 +1174,125 @@ export interface operations {
                      *       "code": "DB_001",
                      *       "message": "Email already exists"
                      *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    verifyEmailGet: {
+        parameters: {
+            query: {
+                /** @description Email verification token */
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to success or error page */
+            302: {
+                headers: {
+                    /** @description Redirect URL */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing token parameter */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    verifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Email verification token
+                     * @example abc123def456...
+                     */
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Email verified successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Invalid or expired token */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    resendVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: email
+                     * @description User email address
+                     * @example user@example.com
+                     */
+                    email?: string;
+                    /**
+                     * @description Username
+                     * @example johndoe
+                     */
+                    username?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Verification email sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example Verification email sent */
+                        message?: string;
+                    };
+                };
+            };
+            /** @description Bad request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["Error"];
                 };
             };
@@ -1391,6 +1797,115 @@ export interface operations {
             };
             /** @description API key not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    recordBatchEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /** @example {
+                 *       "events": [
+                 *         {
+                 *           "eventType": "view",
+                 *           "eventName": "rankings_page",
+                 *           "eventData": {
+                 *             "period": "monthly"
+                 *           },
+                 *           "sessionId": "sess_1234567890",
+                 *           "pagePath": "/rankings"
+                 *         },
+                 *         {
+                 *           "eventType": "feature",
+                 *           "eventName": "rank_revealed",
+                 *           "eventData": {
+                 *             "period": "monthly",
+                 *             "rank": 5
+                 *           },
+                 *           "sessionId": "sess_1234567890",
+                 *           "pagePath": "/rankings"
+                 *         }
+                 *       ]
+                 *     } */
+                "application/json": {
+                    events: components["schemas"]["AnalyticsEventRequest"][];
+                };
+            };
+        };
+        responses: {
+            /** @description Events recorded successfully */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad request - Invalid event data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Payload too large - Too many events in batch */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getFeatureFlags: {
+        parameters: {
+            query: {
+                /**
+                 * @description Comma-separated list of flag keys
+                 * @example analytics_dashboard_enabled,analytics_rankings_enabled
+                 */
+                keys: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Feature flags retrieved successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example {
+                         *       "analytics_dashboard_enabled": true,
+                         *       "analytics_rankings_enabled": true,
+                         *       "analytics_platform_enabled": false
+                         *     } */
+                        flags?: {
+                            [key: string]: boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Bad request - No keys provided */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
