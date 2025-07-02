@@ -58,14 +58,6 @@ export class TypedApiClient {
       // Handle direct response format (legacy)
       return response.data as CliLoginResponse;
     } catch (error) {
-      // Debug logging
-      if (axios.isAxiosError(error) && error.response) {
-        console.error('Login API error:', {
-          status: error.response.status,
-          data: error.response.data,
-          headers: error.response.headers
-        });
-      }
       throw this.handleError(error);
     }
   }

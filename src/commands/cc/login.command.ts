@@ -29,12 +29,10 @@ export function createLoginCommand(): Command {
         const oldApiToken = userService.getApiToken();
         const oldEmail = userService.getAuthenticatedEmail();
         
-        // If already logged in with same account and not forcing re-login, just show status
+        // If already logged in, show current status but continue to allow re-login
         if (userService.isAuthenticated() && oldEmail && !options.token && !options.email && !options.password) {
-          spinner.info(`Already logged in as ${oldEmail}`);
-          console.log(chalk.dim('\nYou can use \'roiai cc push\' to sync your usage data.'));
-          console.log(chalk.dim('To switch accounts, use \'roiai cc logout\' first or provide credentials.'));
-          return;
+          spinner.info(`Currently logged in as ${oldEmail}`);
+          console.log(chalk.dim('Proceeding to login with new credentials...\n'));
         }
         
         spinner.stop();
@@ -165,7 +163,11 @@ export function createLoginCommand(): Command {
               // If we get here, logout succeeded
             } catch (error) {
               // Silently handle logout errors - don't interrupt the login flow
-              console.log(chalk.yellow(`\n⚠️  Warning: Could not revoke previous API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
+              if (options.verbose) {
+                console.log(chalk.yellow(`\n⚠️  Note: Could not revoke previous API key: ${SpinnerErrorHandler.getErrorMessage(error)}`));
+              }
+              // The old key might already be invalid or the server might be unreachable
+              // This is not critical as we're replacing it anyway
             }
             
             // Clear local credentials before saving new ones
@@ -179,6 +181,8 @@ export function createLoginCommand(): Command {
           const displayName = user.email || user.username || user.id;
           if (oldEmail && oldEmail !== displayName) {
             spinner.succeed(`Successfully switched from ${oldEmail} to ${displayName}`);
+          } else if (oldEmail === displayName) {
+            spinner.succeed(`Successfully re-authenticated as ${displayName}`);
           } else {
             spinner.succeed(`Successfully logged in as ${displayName}`);
           }
