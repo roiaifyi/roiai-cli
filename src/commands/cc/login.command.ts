@@ -17,6 +17,7 @@ export function createLoginCommand(): Command {
     .option('-e, --email <email>', 'Email address')
     .option('-p, --password <password>', 'Password')
     .option('-t, --token <token>', 'API token (alternative to email/password)')
+    .option('-v, --verbose', 'Show detailed error information')
     .action(async (options) => {
       const spinner = ora('Initializing login...').start();
       
@@ -115,10 +116,7 @@ export function createLoginCommand(): Command {
           
           if (token) {
             // Token-based authentication
-            // The API requires either email or username even for token auth
-            // Use a placeholder email for token-based auth
             loginRequest.password = token;
-            loginRequest.email = 'token@auth.local';
           } else {
             // Email/username + password authentication
             loginRequest.password = password;
@@ -132,7 +130,23 @@ export function createLoginCommand(): Command {
           
           // Authenticate with server using typed client
           spinner.text = 'Authenticating with server...';
+          
+          // Debug: Log the request
+          if (options.verbose) {
+            console.log(chalk.dim('\nLogin request:'), {
+              email: loginRequest.email,
+              username: loginRequest.username,
+              hasPassword: !!loginRequest.password,
+              machineInfo: loginRequest.machine_info
+            });
+          }
+          
           const loginResponse = await apiClient.cliLogin(loginRequest);
+          
+          // Debug: Log the response
+          if (options.verbose) {
+            console.log(chalk.dim('\nLogin response:'), loginResponse);
+          }
           
           // Extract user and API key from typed response
           const { user, api_key } = loginResponse;
@@ -158,13 +172,15 @@ export function createLoginCommand(): Command {
             await userService.logout();
           }
           
-          // Save new authentication info
+          // Save new authentication info using the full user info from server
           await userService.login(user.id, user.email || '', api_key, user.username);
           
-          if (oldEmail && oldEmail !== user.email) {
-            spinner.succeed(`Successfully switched from ${oldEmail} to ${user.email}`);
+          // Display appropriate success message using server response data
+          const displayName = user.email || user.username || user.id;
+          if (oldEmail && oldEmail !== displayName) {
+            spinner.succeed(`Successfully switched from ${oldEmail} to ${displayName}`);
           } else {
-            spinner.succeed(`Successfully logged in as ${user.email}`);
+            spinner.succeed(`Successfully logged in as ${displayName}`);
           }
           console.log(chalk.dim('\nYou can now use \'roiai cc push\' to sync your usage data.'));
           
@@ -213,7 +229,15 @@ export function createLoginCommand(): Command {
         }
         
       } catch (error) {
-        spinner.fail('Login failed');
+        // Log the actual error for debugging
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        spinner.fail(`Login failed: ${errorMessage}`);
+        
+        // Show more details in verbose mode
+        if (options.verbose && error instanceof Error) {
+          console.error(chalk.dim('\nError details:'), error);
+        }
+        
         console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
         process.exit(1);
       }

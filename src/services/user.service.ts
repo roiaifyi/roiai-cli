@@ -152,7 +152,7 @@ export class UserService {
     this.userInfo.auth = {
       userId: realUserId,
       email: email,
-      username: username || email.split('@')[0],
+      username: username || (email ? email.split('@')[0] : ''),
       apiToken: apiKey
     };
 
@@ -162,7 +162,7 @@ export class UserService {
       user: {
         id: realUserId,
         email: email,
-        username: username || email.split('@')[0]
+        username: username || (email ? email.split('@')[0] : '')
       },
       api_key: apiKey
     };

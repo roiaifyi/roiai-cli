@@ -7,13 +7,9 @@ import {
   PushConfig,
   EntityMaps,
   MessageEntity,
-  ErrorResponse,
-  HealthCheckResponse,
-  ValidationError,
 } from "../models/push.types";
 import { UserService } from "./user.service";
-import { createAuthenticatedApiClient } from "../utils/api-client-factory";
-import { NetworkErrorHandler } from "../utils/network-error-handler";
+import { createApiClient, TypedApiClient } from "../api/typed-client";
 import { logger } from "../utils/logger";
 import { configManager } from "../config";
 import { ConfigHelper } from "../utils/config-helper";
@@ -21,7 +17,7 @@ import { ErrorFormatter } from "../utils/error-formatter";
 
 export class PushService {
   private prisma: PrismaClient;
-  private apiClient: ReturnType<typeof createAuthenticatedApiClient>;
+  private apiClient: TypedApiClient;
   private config: PushConfig;
   private authenticatedUserId: string | null = null;
   private logger = logger;
@@ -48,7 +44,8 @@ export class PushService {
       throw new Error("No authenticated user ID available");
     }
 
-    this.apiClient = createAuthenticatedApiClient(apiToken);
+    const apiConfig = configManager.getApiConfig();
+    this.apiClient = createApiClient(apiConfig.baseUrl, apiToken);
   }
 
   /**
@@ -59,62 +56,44 @@ export class PushService {
       this.logger.debug('Checking authentication with server...');
       const startTime = Date.now();
       
-      const response = await this.apiClient.healthCheck();
+      const healthData = await this.apiClient.cliHealthCheck();
       const responseTime = Date.now() - startTime;
       
       this.logger.debug(`Health check completed in ${responseTime}ms`);
       
-      const statusCodes = ConfigHelper.getNetwork().httpStatusCodes;
-      
-      if (response.ok && response.status === statusCodes.ok) {
-        const healthData = response.data as HealthCheckResponse;
-        
-        if (!healthData.authenticated) {
-          return {
-            valid: false,
-            error: 'API token is invalid or expired. Please run \'roiai cc login\' to get a new token.'
-          };
-        }
-        
-        return {
-          valid: healthData.authenticated,
-          user: healthData.user,
-          machine: healthData.machine
-        };
-      } else {
-        // Handle error responses
-        const errorData = response.data as ErrorResponse;
-        let errorMessage: string;
-        
-        if (response.status === statusCodes.unauthorized) {
-          errorMessage = 'Invalid or expired API token. Please run \'roiai cc login\' to authenticate.';
-        } else if (response.status === statusCodes.forbidden) {
-          errorMessage = 'Access forbidden. Your account may not have permission to push data.';
-        } else if (response.status >= (statusCodes.serverErrorThreshold || 500)) {
-          errorMessage = `Server error (${response.status}). The RoiAI server is experiencing issues. Please try again later.`;
-        } else if ('error' in errorData && errorData.error) {
-          // Use typed error response with formatter
-          const error = errorData.error;
-          errorMessage = ErrorFormatter.formatError(error.code, error.message);
-        } else {
-          errorMessage = `Unexpected response: ${response.status}`;
-        }
-        
+      if (!healthData.authenticated) {
         return {
           valid: false,
-          error: errorMessage
+          error: 'API token is invalid or expired. Please run \'roiai cc login\' to get a new token.'
         };
       }
-    } catch (error) {
-      // Log full error details only in debug mode
-      this.logger.debug('Authentication check failed:', error);
       
-      // Use the enhanced error handler
-      const enhancedError = NetworkErrorHandler.enhanceError(error, 'Authentication check');
+      return {
+        valid: healthData.authenticated,
+        user: healthData.user,
+        machine: healthData.machine
+      };
+    } catch (error: any) {
+      // Handle error responses
+      let errorMessage: string;
+      const statusCodes = ConfigHelper.getNetwork().httpStatusCodes;
+      
+      if (error.statusCode === statusCodes.unauthorized) {
+        errorMessage = 'Invalid or expired API token. Please run \'roiai cc login\' to authenticate.';
+      } else if (error.statusCode === statusCodes.forbidden) {
+        errorMessage = 'Access forbidden. Your account may not have permission to push data.';
+      } else if (error.statusCode >= (statusCodes.serverErrorThreshold || 500)) {
+        errorMessage = `Server error (${error.statusCode}). The RoiAI server is experiencing issues. Please try again later.`;
+      } else if (error.code) {
+        // Use typed error response with formatter
+        errorMessage = ErrorFormatter.formatError(error.code, error.message);
+      } else {
+        errorMessage = error.message || 'Health check failed';
+      }
       
       return {
         valid: false,
-        error: enhancedError
+        error: errorMessage
       };
     }
   }
@@ -266,62 +245,34 @@ export class PushService {
 
   async executePush(request: PushRequest): Promise<PushResponse> {
     try {
-      const response = await this.apiClient.upsyncData(request);
-      if (!response.ok) {
-        // Handle error responses with proper typing
-        const errorData = response.data as ErrorResponse | ValidationError;
+      const response = await this.apiClient.cliUpsync(request);
+      return response;
+    } catch (error: any) {
+      // Handle typed errors from TypedApiClient
+      let errorMessage: string;
+      
+      if (error.code === 'VALIDATION_ERROR' && error.errors) {
+        // Handle validation error
+        errorMessage = error.message;
+        // Format validation errors nicely
+        errorMessage += `\n\n${ErrorFormatter.formatValidationErrors(error.errors)}`;
+      } else if (error.code) {
+        // Use error formatter for consistent messaging
+        errorMessage = ErrorFormatter.formatError(error.code, error.message);
         
-        let errorMessage: string;
-        
-        if ('errors' in errorData && errorData.code === 'VALIDATION_ERROR') {
-          // Handle validation error
-          const validationError = errorData as ValidationError;
-          errorMessage = validationError.message;
-          // errorCode not used
-          
-          // Format validation errors nicely
-          errorMessage += `\n\n${ErrorFormatter.formatValidationErrors(validationError.errors)}`;
-          
-        } else if ('error' in errorData && errorData.error) {
-          // Handle standard error response
-          const error = errorData.error;
-          errorMessage = error.message;
-          // errorCode = error.code; - not used
-          
-          // Use error formatter for consistent messaging
-          errorMessage = ErrorFormatter.formatError(error.code, error.message);
-          
-          if (error.details) {
-            errorMessage += `\n\nDetails: ${JSON.stringify(error.details, null, 2)}`;
-          }
-        } else {
-          // Fallback for unknown error format or legacy format
-          const errorObj = errorData as any;
-          errorMessage = errorObj?.message || 'Unknown error occurred during push';
-          // errorCode = 'UNKNOWN'; - not used
+        if (error.details) {
+          errorMessage += `\n\nDetails: ${JSON.stringify(error.details, null, 2)}`;
         }
-        
-        // Check for authentication failures
-        if (response.status === 401) {
-          throw new Error(`Authentication failed: ${errorMessage}`);
-        }
-        
-        throw new Error(`Push failed: ${response.status} - ${errorMessage}`);
+      } else {
+        errorMessage = error.message || 'Unknown error occurred during push';
       }
-      return response.data as PushResponse;
-    } catch (error) {
-      if (error instanceof Error) {
-        // Re-throw with more context if needed
-        if (error.message.includes("fetch")) {
-          throw new Error(`Network error: ${error.message}`);
-        }
-        
-        // Pass through authentication errors
-        if (error.message.includes("Authentication failed")) {
-          throw error;
-        }
+      
+      // Check for authentication failures
+      if (error.statusCode === 401) {
+        throw new Error(`Authentication failed: ${errorMessage}`);
       }
-      throw error;
+      
+      throw new Error(`Push failed: ${errorMessage}`);
     }
   }
 

@@ -48,9 +48,24 @@ export class TypedApiClient {
    */
   async cliLogin(data: CliLoginRequest): Promise<CliLoginResponse> {
     try {
-      const response = await this.client.post<CliLoginResponse>('/api/v1/cli/login', data);
-      return response.data;
+      const response = await this.client.post('/api/v1/cli/login', data);
+      
+      // Handle wrapped response format
+      if (response.data.success === true && response.data.data) {
+        return response.data.data as CliLoginResponse;
+      }
+      
+      // Handle direct response format (legacy)
+      return response.data as CliLoginResponse;
     } catch (error) {
+      // Debug logging
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Login API error:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      }
       throw this.handleError(error);
     }
   }
@@ -60,8 +75,15 @@ export class TypedApiClient {
    */
   async cliLogout(): Promise<SuccessResponse> {
     try {
-      const response = await this.client.post<SuccessResponse>('/api/v1/cli/logout');
-      return response.data;
+      const response = await this.client.post('/api/v1/cli/logout');
+      
+      // Handle wrapped response format
+      if (response.data.success === true && response.data.data) {
+        return response.data.data as SuccessResponse;
+      }
+      
+      // Return the wrapper itself if it matches SuccessResponse
+      return response.data as SuccessResponse;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -72,8 +94,15 @@ export class TypedApiClient {
    */
   async cliHealthCheck(): Promise<HealthCheckResponse> {
     try {
-      const response = await this.client.get<HealthCheckResponse>('/api/v1/cli/health');
-      return response.data;
+      const response = await this.client.get('/api/v1/cli/health');
+      
+      // Handle wrapped response format
+      if (response.data.success === true && response.data.data) {
+        return response.data.data as HealthCheckResponse;
+      }
+      
+      // Handle direct response format (legacy)
+      return response.data as HealthCheckResponse;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -84,8 +113,15 @@ export class TypedApiClient {
    */
   async cliUpsync(data: PushRequest): Promise<PushResponse> {
     try {
-      const response = await this.client.post<PushResponse>('/api/v1/cli/upsync', data);
-      return response.data;
+      const response = await this.client.post('/api/v1/cli/upsync', data);
+      
+      // Handle wrapped response format
+      if (response.data.success === true && response.data.data) {
+        return response.data.data as PushResponse;
+      }
+      
+      // Handle direct response format (legacy)
+      return response.data as PushResponse;
     } catch (error) {
       throw this.handleError(error);
     }
