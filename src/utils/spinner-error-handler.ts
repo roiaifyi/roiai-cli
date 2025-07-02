@@ -30,7 +30,6 @@ export class SpinnerErrorHandler {
     const finalMessage = message || `Operation failed: ${errorMessage}`;
     
     spinner.fail(finalMessage);
-    logger.error(finalMessage, error);
     
     if (verbose && error instanceof Error && error.stack) {
       logger.error(chalk.red('\nError details:'), error.stack);
@@ -44,14 +43,10 @@ export class SpinnerErrorHandler {
   /**
    * Handle authentication errors specifically
    */
-  static handleAuthError(spinner: Ora, error?: unknown): void {
+  static handleAuthError(spinner: Ora, _error?: unknown): void {
     spinner.fail('Authentication failed');
     logger.info(chalk.yellow('\nPlease check your API token and try again.'));
     logger.info(chalk.yellow('You may need to run \'roiai cc login\' to refresh your credentials.'));
-    
-    if (error) {
-      logger.error('Authentication error', error);
-    }
     
     process.exit(1);
   }
@@ -63,7 +58,6 @@ export class SpinnerErrorHandler {
     const errorMessage = SpinnerErrorHandler.getErrorMessage(error);
     spinner.fail(`Network error: ${errorMessage}`);
     logger.info(chalk.yellow('\nPlease check your internet connection and try again.'));
-    logger.error('Network error', error);
   }
 
   /**
