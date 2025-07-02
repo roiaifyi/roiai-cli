@@ -235,6 +235,16 @@ describe('Push Command Integration Tests', () => {
     // Reset database - this will handle initialization if needed
     await resetTestDatabase();
     
+    // Disconnect and recreate prisma client after reset
+    await prisma.$disconnect();
+    prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: `file:${TEST_DB_PATH}`
+        }
+      }
+    });
+    
     // Reset mock server mode
     setMockServerMode('none');
     
@@ -277,7 +287,7 @@ describe('Push Command Integration Tests', () => {
       fs.writeFileSync(path.join(TEST_DATA_DIR, 'user_info.json'), JSON.stringify(userInfo));
       
       const output = runCli('cc push');
-      expect(output).toContain('Please login first');
+      expect(output).toContain('Authentication required to push data');
     });
   });
 

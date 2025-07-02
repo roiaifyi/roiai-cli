@@ -18,7 +18,8 @@ describe('Sync Command BDD Tests', () => {
       const output = execSync(`node ${cliPath} cc sync`, {
         env: {
           ...process.env,
-          NODE_CONFIG: JSON.stringify(testConfig)
+          NODE_CONFIG: JSON.stringify(testConfig),
+          DATABASE_URL: `file:${TEST_DB_PATH}`
         },
         encoding: 'utf8'
       });
@@ -33,6 +34,10 @@ describe('Sync Command BDD Tests', () => {
   
   beforeEach(async () => {
     await resetTestDatabase();
+    
+    // Small delay to ensure database is fully initialized
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     createTestConfig();
     // Create anonymous user info for sync tests
     createTestUserInfo({

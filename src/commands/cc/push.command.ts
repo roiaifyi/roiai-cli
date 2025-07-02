@@ -69,22 +69,26 @@ export function createPushCommand() {
         if (!authCheck.valid) {
           spinner.fail('Authentication check failed');
           
-          logger.error(chalk.red('\n❌ Authentication Error Details:'));
-          logger.error(chalk.white(authCheck.error || 'Unknown error'));
+          console.error(chalk.red('\n❌ Authentication Error Details:'));
+          console.error(chalk.white(authCheck.error || 'Unknown error'));
           
           // Add helpful next steps based on error type
           if (authCheck.error?.includes('Network error') || 
               authCheck.error?.includes('Cannot connect') ||
               authCheck.error?.includes('Cannot find')) {
-            logger.info(chalk.yellow('\n💡 Troubleshooting tips:'));
-            logger.info(chalk.gray('  1. Check your internet connection'));
-            logger.info(chalk.gray('  2. Verify the API URL in your configuration'));
-            logger.info(chalk.gray('  3. Try accessing the server directly in a browser'));
-            logger.info(chalk.gray('  4. Check if you\'re behind a corporate firewall/proxy'));
+            console.log(chalk.yellow('\n💡 Troubleshooting tips:'));
+            console.log(chalk.gray('  1. Check your internet connection'));
+            console.log(chalk.gray('  2. Verify the API URL in your configuration'));
+            console.log(chalk.gray('  3. Try accessing the server directly in a browser'));
+            console.log(chalk.gray('  4. Check if you\'re behind a corporate firewall/proxy'));
           } else if (authCheck.error?.includes('Invalid') || 
                      authCheck.error?.includes('expired')) {
-            logger.info(chalk.yellow('\n🔑 To fix this issue:'));
-            logger.info(chalk.green('  roiai cc login'));
+            console.log(chalk.yellow('\n🔑 Your authentication has expired or is invalid.'));
+            console.log(chalk.yellow('\nTo fix this issue:'));
+            console.log(chalk.white('  1. Run: ') + chalk.green('roiai cc login'));
+            console.log(chalk.white('  2. Enter your credentials'));
+            console.log(chalk.white('  3. Try the push command again'));
+            console.log(chalk.dim('\nIf you don\'t have an account yet, create one at ') + chalk.cyan('https://roiAI.fyi'));
           }
           
           process.exit(1);

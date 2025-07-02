@@ -64,22 +64,26 @@ function createPushCommand() {
                 const authCheck = await pushService.checkAuthentication();
                 if (!authCheck.valid) {
                     spinner.fail('Authentication check failed');
-                    logger_1.logger.error(chalk_1.default.red('\n❌ Authentication Error Details:'));
-                    logger_1.logger.error(chalk_1.default.white(authCheck.error || 'Unknown error'));
+                    console.error(chalk_1.default.red('\n❌ Authentication Error Details:'));
+                    console.error(chalk_1.default.white(authCheck.error || 'Unknown error'));
                     // Add helpful next steps based on error type
                     if (authCheck.error?.includes('Network error') ||
                         authCheck.error?.includes('Cannot connect') ||
                         authCheck.error?.includes('Cannot find')) {
-                        logger_1.logger.info(chalk_1.default.yellow('\n💡 Troubleshooting tips:'));
-                        logger_1.logger.info(chalk_1.default.gray('  1. Check your internet connection'));
-                        logger_1.logger.info(chalk_1.default.gray('  2. Verify the API URL in your configuration'));
-                        logger_1.logger.info(chalk_1.default.gray('  3. Try accessing the server directly in a browser'));
-                        logger_1.logger.info(chalk_1.default.gray('  4. Check if you\'re behind a corporate firewall/proxy'));
+                        console.log(chalk_1.default.yellow('\n💡 Troubleshooting tips:'));
+                        console.log(chalk_1.default.gray('  1. Check your internet connection'));
+                        console.log(chalk_1.default.gray('  2. Verify the API URL in your configuration'));
+                        console.log(chalk_1.default.gray('  3. Try accessing the server directly in a browser'));
+                        console.log(chalk_1.default.gray('  4. Check if you\'re behind a corporate firewall/proxy'));
                     }
                     else if (authCheck.error?.includes('Invalid') ||
                         authCheck.error?.includes('expired')) {
-                        logger_1.logger.info(chalk_1.default.yellow('\n🔑 To fix this issue:'));
-                        logger_1.logger.info(chalk_1.default.green('  roiai cc login'));
+                        console.log(chalk_1.default.yellow('\n🔑 Your authentication has expired or is invalid.'));
+                        console.log(chalk_1.default.yellow('\nTo fix this issue:'));
+                        console.log(chalk_1.default.white('  1. Run: ') + chalk_1.default.green('roiai cc login'));
+                        console.log(chalk_1.default.white('  2. Enter your credentials'));
+                        console.log(chalk_1.default.white('  3. Try the push command again'));
+                        console.log(chalk_1.default.dim('\nIf you don\'t have an account yet, create one at ') + chalk_1.default.cyan('https://roiAI.fyi'));
                     }
                     process.exit(1);
                 }

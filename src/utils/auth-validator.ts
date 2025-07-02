@@ -2,7 +2,6 @@ import { Ora } from 'ora';
 import chalk from 'chalk';
 import { UserService } from '../services/user.service';
 import { SpinnerErrorHandler } from './spinner-error-handler';
-import { logger } from './logger';
 
 export class AuthValidator {
   /**
@@ -26,8 +25,16 @@ export class AuthValidator {
     
     // Check authentication
     if (!userService.isAuthenticated()) {
-      const message = customErrorMessage || 'Please login first using \'roiai cc login\' to push data';
-      spinner.fail(message);
+      if (customErrorMessage) {
+        spinner.fail(customErrorMessage);
+      } else {
+        spinner.fail('Authentication required to push data');
+        console.log(chalk.yellow('\n🔐 To use the push feature:'));
+        console.log(chalk.white('  1. Create a free account at ') + chalk.cyan('https://roiAI.fyi'));
+        console.log(chalk.white('  2. Verify your email address'));
+        console.log(chalk.white('  3. Login using: ') + chalk.green('roiai cc login'));
+        console.log(chalk.dim('\nYour usage data will be securely synced to the roiAI platform'));
+      }
       process.exit(1);
     }
     
@@ -88,9 +95,9 @@ export class AuthValidator {
    */
   static displayAuthStatus(isAuthenticated: boolean, email?: string): void {
     if (isAuthenticated && email) {
-      logger.info(`Authentication: ${chalk.green(`Logged in as ${email}`)}`);
+      console.log(`Authentication: ${chalk.green(`Logged in as ${email}`)}`);
     } else {
-      logger.info(`Authentication: ${chalk.red('Not logged in')}`);
+      console.log(`Authentication: ${chalk.red('Not logged in')}`);
     }
   }
 
@@ -102,9 +109,13 @@ export class AuthValidator {
     operation: string = 'operation'
   ): void {
     if (SpinnerErrorHandler.isAuthError(error)) {
-      logger.error(chalk.red(`\n🚫 Authentication failed during ${operation}!`));
-      logger.info(chalk.yellow('Your API token may have expired or been revoked.'));
-      logger.info(chalk.yellow('Please run \'roiai cc login\' to refresh your credentials and try again.'));
+      console.error(chalk.red(`\n🚫 Authentication failed during ${operation}!`));
+      console.log(chalk.yellow('Your API token may have expired or been revoked.'));
+      console.log(chalk.yellow('\n📝 To fix this:'));
+      console.log(chalk.white('  1. Run: ') + chalk.green('roiai cc login'));
+      console.log(chalk.white('  2. Enter your credentials'));
+      console.log(chalk.white('  3. Try the push command again'));
+      console.log(chalk.dim('\nIf you don\'t have an account yet, create one at ') + chalk.cyan('https://roiAI.fyi'));
       process.exit(1);
     }
   }
