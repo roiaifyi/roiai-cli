@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 
 // Set test environment
 process.env.NODE_ENV = 'test';
@@ -18,11 +17,17 @@ global.console = {
   debug: console.debug,
 } as Console;
 
-export const TEST_DB_PATH = path.join(os.tmpdir(), `test-roiai-${process.pid}.db`);
-export const TEST_CONFIG_PATH = path.join(os.tmpdir(), `test-config-${process.pid}.json`);
-export const TEST_DATA_DIR = path.join(os.tmpdir(), `test-data-${process.pid}`);
+// Use local tmp directory for all test files
+const tmpDir = path.join(process.cwd(), 'tmp');
+
+export const TEST_DB_PATH = path.join(tmpDir, `test-roiai-${process.pid}.db`);
+export const TEST_CONFIG_PATH = path.join(tmpDir, `test-config-${process.pid}.json`);
+export const TEST_DATA_DIR = path.join(tmpDir, `test-data-${process.pid}`);
 
 beforeAll(async () => {
+  // Ensure tmp directory exists
+  fs.mkdirSync(tmpDir, { recursive: true });
+  
   // Create test directories
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
   
@@ -34,10 +39,15 @@ beforeAll(async () => {
   // Set up test database
   process.env.DATABASE_URL = `file:${TEST_DB_PATH}`;
   
+  console.log(`Setting up test database at ${TEST_DB_PATH}...`);
+  
   // Create the database schema using push instead of migrate
   execSync('npx prisma db push --force-reset --skip-generate', {
-    env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` }
+    env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` },
+    stdio: 'inherit'
   });
+  
+  console.log('Test database setup complete');
 });
 
 afterAll(async () => {
