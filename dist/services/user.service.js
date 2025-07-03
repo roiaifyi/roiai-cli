@@ -10,7 +10,6 @@ const promises_1 = __importDefault(require("fs/promises"));
 const database_1 = require("../database");
 const config_1 = require("../config");
 const machine_service_1 = require("./machine.service");
-const path_utils_1 = require("../utils/path-utils");
 const file_system_utils_1 = require("../utils/file-system-utils");
 class UserService {
     userInfo = null;
@@ -28,7 +27,7 @@ class UserService {
                 const machineInfo = await this.machineService.loadMachineInfo();
                 // Convert StoredUserInfo to internal UserInfo format
                 this.userInfo = {
-                    anonymousId: `anon-${machineInfo.machineId}`,
+                    anonymousId: `${config_1.configManager.get().user?.anonymousIdPrefix || 'anon-'}${machineInfo.machineId}`,
                     clientMachineId: machineInfo.machineId,
                     auth: {
                         userId: fileContent.user.id,
@@ -56,7 +55,7 @@ class UserService {
         const machineInfo = await this.machineService.loadMachineInfo();
         const machineId = machineInfo.machineId;
         return {
-            anonymousId: `anon-${machineId}`,
+            anonymousId: `${config_1.configManager.get().user?.anonymousIdPrefix || 'anon-'}${machineId}`,
             clientMachineId: machineId
         };
     }
@@ -179,7 +178,7 @@ class UserService {
         const config = config_1.configManager.get().user;
         // Check if we have a full path (for testing or custom configs)
         if (config?.infoPath) {
-            return path_utils_1.PathUtils.resolvePath(config.infoPath);
+            return file_system_utils_1.FileSystemUtils.resolvePath(config.infoPath);
         }
         // Otherwise use filename in app directory
         const filename = config?.infoFilename || 'user_info.json';

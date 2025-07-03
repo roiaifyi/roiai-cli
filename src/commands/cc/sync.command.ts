@@ -1,8 +1,8 @@
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { db, prisma } from '../../database';
 import { UserService } from '../../services/user.service';
 import { SyncService } from '../../services/sync.service';
-import { ErrorHandler } from '../../utils/error-handler';
 
 export const syncCommand = new Command('sync')
   .description('Sync Claude Code raw data to local database')
@@ -20,7 +20,8 @@ export const syncCommand = new Command('sync')
       });
 
     } catch (error) {
-      ErrorHandler.handleAsyncError(error, 'Sync');
+      console.error(chalk.red(`\n✖ Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      process.exit(1);
     } finally {
       await db.disconnect();
     }

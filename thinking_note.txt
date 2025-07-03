@@ -1,0 +1,71 @@
+[2025-07-03 10:30] Code Duplication Analysis
+
+# Code Duplication Patterns Found in roiai-cli
+
+## 1. API Response Wrapper Handling (High Priority)
+In TypedApiClient, there's repetitive pattern for handling wrapped responses:
+- Lines 54-56, 73-75, 92-94, 111-113 all check for `response.data.success === true && response.data.data`
+- This could be extracted into a single method like `unwrapResponse(response)`
+
+## 2. Error Handling in API Client (High Priority)
+In TypedApiClient.handleError (lines 125-183):
+- Duplicate error construction logic for wrapped vs legacy format (lines 138-150 vs 156-170)
+- Could be refactored into a single error factory method
+
+## 3. Percentage Calculation (Medium Priority)
+Multiple places calculate percentages with the same pattern:
+- FormatterUtils.formatPercentage
+- Several inline calculations in push.command.ts and display-utils.ts
+- All use pattern: `(value / total) * 100`
+
+## 4. Spinner Error Handling (Medium Priority)
+Pattern of try-catch with spinner.fail appears in multiple command files:
+- login.command.ts
+- logout.command.ts
+- push.command.ts
+- All wrapped by SpinnerErrorHandler but still have similar patterns
+
+## 5. Configuration Access (Low Priority)
+Pattern `configManager.get()` followed by accessing nested properties:
+- machine.service.ts lines 13, 19
+- user.service.ts
+- index.ts
+- Could benefit from typed configuration getters
+
+## 6. Validation with Error Throwing (Medium Priority)
+Pattern of `if (!value) throw new Error(...)` appears frequently:
+- push.service.ts lines 34, 39, 44
+- user.service.ts line 75
+- Similar validation patterns could be extracted
+
+## 7. Database Aggregation Queries (High Priority)
+In aggregation.service.ts, very similar patterns for:
+- recalculateSessionAggregates (lines 21-59)
+- recalculateProjectAggregates (lines 61-113)
+- recalculateMachineAggregates (lines 115-150)
+All follow pattern: groupBy -> batch update with Promise.all
+
+## 8. JSON File Operations (Already Addressed)
+FileSystemUtils already consolidates most file operations, but some services still have:
+- Direct fs operations that could use FileSystemUtils
+- Similar try-catch patterns around file reading
+
+## 9. Display Formatting (Medium Priority)
+Chalk formatting with similar patterns across multiple files:
+- Success messages: chalk.green with check emoji
+- Error messages: chalk.red with X emoji
+- Info messages: chalk.cyan with info emoji
+
+## 10. Database Query Patterns (Medium Priority)
+Similar prisma query patterns with includes:
+- push.service.ts
+- batch-processor.ts
+- aggregation.service.ts
+All have similar include structures for related entities
+
+## Recommendations:
+1. Create ResponseWrapper utility for API responses
+2. Extract common validation patterns into ValidationUtils methods
+3. Create DatabaseQueryBuilder for common query patterns
+4. Enhance FormatterUtils with more display formatting methods
+5. Consider creating a ConfigAccessor with typed methods

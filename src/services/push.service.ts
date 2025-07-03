@@ -13,6 +13,7 @@ import { createApiClient, TypedApiClient } from "../api/typed-client";
 import { logger } from "../utils/logger";
 import { configManager } from "../config";
 import { ConfigHelper } from "../utils/config-helper";
+import { ValidationUtils } from "../utils/validation-utils";
 import { ErrorFormatter } from "../utils/error-formatter";
 
 export class PushService {
@@ -30,19 +31,19 @@ export class PushService {
     this.prisma = prisma;
     this.config = config;
 
-    if (!userService) {
-      throw new Error("PushService requires UserService for authentication");
-    }
+    const messages = configManager.get().messages;
+    
+    ValidationUtils.requireNonNull(userService, messages?.push?.requiresAuth || "PushService requires UserService for authentication");
 
-    const apiToken = userService.getApiToken();
-    if (!apiToken) {
-      throw new Error("No API token available. Please login first.");
-    }
+    const apiToken = ValidationUtils.requireNonNull(
+      userService.getApiToken(),
+      messages?.auth?.noToken || "No API token available. Please login first."
+    );
 
-    this.authenticatedUserId = userService.getAuthenticatedUserId();
-    if (!this.authenticatedUserId) {
-      throw new Error("No authenticated user ID available");
-    }
+    this.authenticatedUserId = ValidationUtils.requireNonNull(
+      userService.getAuthenticatedUserId(),
+      messages?.auth?.noUserId || "No authenticated user ID available"
+    );
 
     const apiConfig = configManager.getApiConfig();
     this.apiClient = createApiClient(apiConfig.baseUrl, apiToken);
@@ -135,7 +136,8 @@ export class PushService {
     // Get authenticated user ID for namespace
     const authenticatedUserId = this.authenticatedUserId;
     if (!authenticatedUserId) {
-      throw new Error("Cannot push without authentication");
+      const messages = configManager.get().messages;
+      throw new Error(messages?.push?.cannotPushWithoutAuth || "Cannot push without authentication");
     }
 
 

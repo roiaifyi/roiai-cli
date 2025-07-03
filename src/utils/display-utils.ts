@@ -11,6 +11,34 @@ export interface TableColumn {
 
 export class DisplayUtils {
   /**
+   * Format success message with emoji and color
+   */
+  static success(message: string): string {
+    return chalk.green(`✅ ${message}`);
+  }
+  
+  /**
+   * Format error message with emoji and color
+   */
+  static error(message: string): string {
+    return chalk.red(`❌ ${message}`);
+  }
+  
+  /**
+   * Format info message with emoji and color
+   */
+  static info(message: string): string {
+    return chalk.cyan(`ℹ️  ${message}`);
+  }
+  
+  /**
+   * Format warning message with emoji and color
+   */
+  static warning(message: string): string {
+    return chalk.yellow(`⚠️  ${message}`);
+  }
+
+  /**
    * Format a number with color based on its context
    */
   static formatNumber(

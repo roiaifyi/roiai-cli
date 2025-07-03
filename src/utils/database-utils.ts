@@ -5,6 +5,18 @@ export class DatabaseUtils {
   private static readonly UUID_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
   
   /**
+   * Execute a database operation with automatic connection management
+   */
+  static async withDatabase<T>(operation: (prisma: PrismaClient) => Promise<T>): Promise<T> {
+    const prisma = new PrismaClient();
+    try {
+      return await operation(prisma);
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+  
+  /**
    * Upsert a user with consistent UUID generation
    */
   static async upsertUser(

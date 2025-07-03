@@ -1,11 +1,14 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.syncCommand = void 0;
 const commander_1 = require("commander");
+const chalk_1 = __importDefault(require("chalk"));
 const database_1 = require("../../database");
 const user_service_1 = require("../../services/user.service");
 const sync_service_1 = require("../../services/sync.service");
-const error_handler_1 = require("../../utils/error-handler");
 exports.syncCommand = new commander_1.Command('sync')
     .description('Sync Claude Code raw data to local database')
     .option('-f, --force', 'Force full resync (clear existing data)')
@@ -21,7 +24,8 @@ exports.syncCommand = new commander_1.Command('sync')
         });
     }
     catch (error) {
-        error_handler_1.ErrorHandler.handleAsyncError(error, 'Sync');
+        console.error(chalk_1.default.red(`\n✖ Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        process.exit(1);
     }
     finally {
         await database_1.db.disconnect();

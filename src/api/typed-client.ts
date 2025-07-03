@@ -44,19 +44,25 @@ export class TypedApiClient {
   }
 
   /**
+   * Unwrap API response from server's standard format
+   */
+  private unwrapResponse<T>(response: any): T {
+    // Handle wrapped response format
+    if (response.data?.success === true && response.data.data) {
+      return response.data.data as T;
+    }
+    
+    // Handle direct response format (legacy)
+    return response.data as T;
+  }
+
+  /**
    * CLI Login
    */
   async cliLogin(data: CliLoginRequest): Promise<CliLoginResponse> {
     try {
       const response = await this.client.post('/api/v1/cli/login', data);
-      
-      // Handle wrapped response format
-      if (response.data.success === true && response.data.data) {
-        return response.data.data as CliLoginResponse;
-      }
-      
-      // Handle direct response format (legacy)
-      return response.data as CliLoginResponse;
+      return this.unwrapResponse<CliLoginResponse>(response);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -68,14 +74,7 @@ export class TypedApiClient {
   async cliLogout(): Promise<SuccessResponse> {
     try {
       const response = await this.client.post('/api/v1/cli/logout');
-      
-      // Handle wrapped response format
-      if (response.data.success === true && response.data.data) {
-        return response.data.data as SuccessResponse;
-      }
-      
-      // Return the wrapper itself if it matches SuccessResponse
-      return response.data as SuccessResponse;
+      return this.unwrapResponse<SuccessResponse>(response);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -87,14 +86,7 @@ export class TypedApiClient {
   async cliHealthCheck(): Promise<HealthCheckResponse> {
     try {
       const response = await this.client.get('/api/v1/cli/health');
-      
-      // Handle wrapped response format
-      if (response.data.success === true && response.data.data) {
-        return response.data.data as HealthCheckResponse;
-      }
-      
-      // Handle direct response format (legacy)
-      return response.data as HealthCheckResponse;
+      return this.unwrapResponse<HealthCheckResponse>(response);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -106,17 +98,29 @@ export class TypedApiClient {
   async cliUpsync(data: PushRequest): Promise<PushResponse> {
     try {
       const response = await this.client.post('/api/v1/cli/upsync', data);
-      
-      // Handle wrapped response format
-      if (response.data.success === true && response.data.data) {
-        return response.data.data as PushResponse;
-      }
-      
-      // Handle direct response format (legacy)
-      return response.data as PushResponse;
+      return this.unwrapResponse<PushResponse>(response);
     } catch (error) {
       throw this.handleError(error);
     }
+  }
+
+  /**
+   * Create a properly formatted API error
+   */
+  private createApiError(errorData: any, statusCode: number): Error {
+    const error = new Error(errorData.message || 'API request failed');
+    (error as any).code = errorData.code;
+    (error as any).statusCode = statusCode;
+    
+    if (errorData.details) {
+      (error as any).details = errorData.details;
+    }
+    
+    if (errorData.errors && errorData.code === 'VALIDATION_ERROR') {
+      (error as any).errors = errorData.errors;
+    }
+    
+    return error;
   }
 
   /**
@@ -125,56 +129,25 @@ export class TypedApiClient {
   private handleError(error: unknown): Error {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<components['schemas']['Error'] | ValidationError>;
+      const statusCode = axiosError.response?.status || 0;
       
       if (axiosError.response?.data) {
         const responseData = axiosError.response.data as any;
         
         // Check if it's wrapped in success/error format
         if (responseData.success === false && responseData.error) {
-          const errorData = responseData.error;
-          
-          // Check if it's a validation error
-          if (errorData.code === 'VALIDATION_ERROR' && errorData.errors) {
-            const validationError = new Error(errorData.message);
-            (validationError as any).code = errorData.code;
-            (validationError as any).errors = errorData.errors;
-            (validationError as any).statusCode = axiosError.response.status;
-            return validationError;
-          }
-          
-          // Standard error from wrapped response
-          const apiError = new Error(errorData.message || 'API request failed');
-          (apiError as any).code = errorData.code;
-          (apiError as any).details = errorData.details;
-          (apiError as any).statusCode = axiosError.response.status;
-          return apiError;
+          return this.createApiError(responseData.error, statusCode);
         }
         
         // Legacy error format (direct error object)
-        const errorData = responseData;
-        
-        // Check if it's a validation error
-        if ('errors' in errorData && errorData.code === 'VALIDATION_ERROR') {
-          const validationError = new Error(errorData.message);
-          (validationError as any).code = errorData.code;
-          (validationError as any).errors = errorData.errors;
-          (validationError as any).statusCode = axiosError.response.status;
-          return validationError;
-        }
-        
-        // Standard error
-        const apiError = new Error(errorData.message || 'API request failed');
-        (apiError as any).code = errorData.code;
-        (apiError as any).details = errorData.details;
-        (apiError as any).statusCode = axiosError.response.status;
-        return apiError;
+        return this.createApiError(responseData, statusCode);
       }
       
       // Network or other axios errors
       const message = axiosError.message || 'Network error';
       const networkError = new Error(message);
       (networkError as any).code = 'NETWORK_ERROR';
-      (networkError as any).statusCode = axiosError.response?.status || 0;
+      (networkError as any).statusCode = statusCode;
       return networkError;
     }
     

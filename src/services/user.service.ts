@@ -5,7 +5,6 @@ import { UserInfo, StoredUserInfo } from '../models/types';
 import { prisma } from '../database';
 import { configManager } from '../config';
 import { MachineService } from './machine.service';
-import { PathUtils } from '../utils/path-utils';
 import { FileSystemUtils } from '../utils/file-system-utils';
 
 export class UserService {
@@ -29,7 +28,7 @@ export class UserService {
         
         // Convert StoredUserInfo to internal UserInfo format
         this.userInfo = {
-          anonymousId: `anon-${machineInfo.machineId}`,
+          anonymousId: `${configManager.get().user?.anonymousIdPrefix || 'anon-'}${machineInfo.machineId}`,
           clientMachineId: machineInfo.machineId,
           auth: {
             userId: fileContent.user.id,
@@ -59,7 +58,7 @@ export class UserService {
     const machineId = machineInfo.machineId;
 
     return {
-      anonymousId: `anon-${machineId}`,
+      anonymousId: `${configManager.get().user?.anonymousIdPrefix || 'anon-'}${machineId}`,
       clientMachineId: machineId
     };
   }
@@ -204,7 +203,7 @@ export class UserService {
     
     // Check if we have a full path (for testing or custom configs)
     if (config?.infoPath) {
-      return PathUtils.resolvePath(config.infoPath);
+      return FileSystemUtils.resolvePath(config.infoPath);
     }
     
     // Otherwise use filename in app directory

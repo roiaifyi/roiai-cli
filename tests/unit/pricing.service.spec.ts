@@ -65,6 +65,17 @@ describe('PricingService BDD Tests', () => {
       pricingCacheTimeout: 3600000,
       cacheDurationDefault: 5
     });
+    jest.spyOn(configManager, 'get').mockReturnValue({
+      pricing: {
+        syntheticModels: ['claude-3-5-sonnet-20241022:reasoning', 'o1', 'o1-mini', 'o1-preview'],
+        modelIdMappings: {}
+      },
+      claudeCode: {
+        pricingUrl: 'https://example.com/pricing.json',
+        pricingCacheTimeout: 3600000,
+        cacheDurationDefault: 5
+      }
+    } as any);
     
     // Mock logger to prevent console output
     const logger = require('../../src/utils/logger').logger;

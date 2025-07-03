@@ -13,7 +13,7 @@ const user_service_1 = require("../../services/user.service");
 const sync_service_1 = require("../../services/sync.service");
 const config_1 = require("../../config");
 const auth_validator_1 = require("../../utils/auth-validator");
-const database_manager_1 = require("../../utils/database-manager");
+const database_utils_1 = require("../../utils/database-utils");
 const config_helper_1 = require("../../utils/config-helper");
 const progress_display_1 = require("../../utils/progress-display");
 const spinner_error_handler_1 = require("../../utils/spinner-error-handler");
@@ -29,7 +29,7 @@ function createPushCommand() {
         .option('-s, --skip-sync', 'Skip sync before push')
         .action(async (options) => {
         const spinner = (0, ora_1.default)('Initializing push...').start();
-        await database_manager_1.DatabaseManager.withDatabase(async (prisma) => {
+        await database_utils_1.DatabaseUtils.withDatabase(async (prisma) => {
             try {
                 // Initialize user service and check authentication
                 const userService = new user_service_1.UserService();

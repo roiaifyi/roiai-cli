@@ -1,7 +1,19 @@
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 
 export class FileSystemUtils {
+  static resolvePath(inputPath: string): string {
+    if (inputPath.startsWith('~')) {
+      return path.join(os.homedir(), inputPath.slice(1));
+    }
+    return path.resolve(inputPath);
+  }
+
+  static expandHomeDirectory(inputPath: string): string {
+    return this.resolvePath(inputPath);
+  }
+
   static async ensureDirectoryExists(filePath: string): Promise<void> {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
   }

@@ -73,6 +73,14 @@ describe('PricingService', () => {
     };
     
     mockConfigManager.getClaudeCodeConfig.mockReturnValue(mockConfig);
+    mockConfigManager.get.mockReturnValue({
+      pricing: {
+        syntheticModels: ['claude-3-5-sonnet-20241022:reasoning', 'o1', 'o1-mini', 'o1-preview'],
+        modelIdMappings: {},
+        defaultFallbackModel: 'claude-sonnet-3.5'
+      },
+      claudeCode: mockConfig
+    } as any);
     
     // Mock logger methods
     mockLogger.debug.mockImplementation(() => {});

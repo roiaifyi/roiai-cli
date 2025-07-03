@@ -106,8 +106,10 @@ describe('Push Command Integration Tests', () => {
     }, 5000);
 
     // Create authenticated user info
+    const config = require('config');
+    const anonymousIdPrefix = config.get('user.anonymousIdPrefix');
     const userInfo = {
-      anonymousId: 'anon-test-machine',
+      anonymousId: `${anonymousIdPrefix}test-machine`,
       clientMachineId: 'test-machine',
       auth: {
         userId: '550e8400-e29b-41d4-a716-446655440000',  // Valid UUID

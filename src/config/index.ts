@@ -13,6 +13,7 @@ export interface Config {
   user?: {
     infoFilename?: string;  // Just the filename, stored in app.dataDir
     infoPath?: string;      // Full path (for testing or custom locations)
+    anonymousIdPrefix?: string;  // Prefix for anonymous user IDs
   };
   claudeCode: {
     rawDataPath: string;
@@ -61,6 +62,8 @@ export interface Config {
     maxErrorsDisplayed: number;
     maxSessionsShown: number;
     progressBarWidth?: number;
+    sessionIdLength?: number;
+    messageIdLength?: number;
     progressBar?: {
       filled?: string;
       empty?: string;
@@ -113,6 +116,8 @@ export interface Config {
   };
   pricing?: {
     syntheticModels?: string[];
+    defaultFallbackModel?: string;
+    modelIdMappings?: { [key: string]: string };
   };
   errorHandling?: {
     patterns?: {
@@ -127,6 +132,15 @@ export interface Config {
     };
     auth?: {
       invalidToken?: string;
+      noToken?: string;
+      noUserId?: string;
+    };
+    push?: {
+      requiresAuth?: string;
+      cannotPushWithoutAuth?: string;
+    };
+    machine?: {
+      noValidInterface?: string;
     };
     httpErrors?: {
       [key: string]: string;

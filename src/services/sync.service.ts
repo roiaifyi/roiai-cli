@@ -177,8 +177,11 @@ export class SyncService {
       
       if (changes.newSessions.length > 0) {
         logger.info(`   ${chalk.green('+')} New sessions: ${chalk.cyan(changes.newSessions.length)} session(s)`);
-        if (changes.newSessions.length <= 5) {
-          logger.info(`     ${chalk.gray(changes.newSessions.map((s: string) => s.substring(0, 8) + '...').join(', '))}`);
+        const displayConfig = configManager.get().display;
+        const maxSessions = displayConfig?.maxSessionsShown || 5;
+        const sessionIdLength = displayConfig?.sessionIdLength || 8;
+        if (changes.newSessions.length <= maxSessions) {
+          logger.info(`     ${chalk.gray(changes.newSessions.map((s: string) => s.substring(0, sessionIdLength) + '...').join(', '))}`);
         }
       }
       

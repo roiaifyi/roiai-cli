@@ -4,7 +4,6 @@ import crypto from 'crypto';
 import { MachineInfo } from '../models/types';
 import { configManager } from '../config';
 import { FileSystemUtils } from '../utils/file-system-utils';
-import { PathUtils } from '../utils/path-utils';
 
 export class MachineService {
   private machineInfo: MachineInfo | null = null;
@@ -20,7 +19,7 @@ export class MachineService {
     const config = configManager.get().app;
     const dataDir = config.dataDir;
     
-    return PathUtils.resolvePath(dataDir);
+    return FileSystemUtils.resolvePath(dataDir);
   }
 
   async loadMachineInfo(): Promise<MachineInfo> {

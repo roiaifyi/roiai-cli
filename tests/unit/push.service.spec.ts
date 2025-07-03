@@ -61,6 +61,18 @@ describe('PushService', () => {
         push: '/api/v1/data/upsync'
       }
     });
+    configManager.get = jest.fn().mockReturnValue({
+      messages: {
+        push: {
+          requiresAuth: 'PushService requires UserService for authentication',
+          cannotPushWithoutAuth: 'Cannot push without authentication'
+        },
+        auth: {
+          noToken: 'No API token available. Please login first.',
+          noUserId: 'No authenticated user ID available'
+        }
+      }
+    });
     
     // Create mock UserService
     mockUserService = {

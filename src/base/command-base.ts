@@ -1,6 +1,6 @@
 import ora, { Ora } from 'ora';
 import { UserService } from '../services/user.service';
-import { ErrorHandler } from '../utils/error-handler';
+import { SpinnerErrorHandler } from '../utils/spinner-error-handler';
 
 export abstract class CommandBase {
   protected userService: UserService;
@@ -31,13 +31,16 @@ export abstract class CommandBase {
       await this.initializeServices();
       return await operation();
     } catch (error) {
-      ErrorHandler.handleCommandError(error, this.spinner);
+      if (this.spinner) {
+        SpinnerErrorHandler.handleError(this.spinner, error, undefined, { exit: false });
+      }
+      throw error;
     }
   }
 
   protected requireAuthentication(): void {
     if (!this.userService.isAuthenticated()) {
-      throw ErrorHandler.createAuthenticationError();
+      throw new Error('User is not authenticated. Please run `roiai cc login` first.');
     }
   }
 

@@ -7,7 +7,7 @@ import { SyncService } from '../../services/sync.service';
 import { configManager } from '../../config';
 import { PushOptions } from '../../models/push.types';
 import { AuthValidator } from '../../utils/auth-validator';
-import { DatabaseManager } from '../../utils/database-manager';
+import { DatabaseUtils } from '../../utils/database-utils';
 import { ConfigHelper } from '../../utils/config-helper';
 import { ProgressDisplay } from '../../utils/progress-display';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
@@ -25,7 +25,7 @@ export function createPushCommand() {
     .action(async (options: PushOptions) => {
       const spinner = ora('Initializing push...').start();
       
-      await DatabaseManager.withDatabase(async (prisma) => {
+      await DatabaseUtils.withDatabase(async (prisma) => {
         try {
         // Initialize user service and check authentication
         const userService = new UserService();

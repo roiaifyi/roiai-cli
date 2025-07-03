@@ -22,28 +22,29 @@ export class PricingService {
 
   private initializeModelMapping(): void {
     // Map various model IDs to their base pricing categories
-    const mappings = {
-      // Opus 4 variants
+    const config = configManager.get();
+    const modelIdMappings = config.pricing?.modelIdMappings || {};
+
+    for (const [variant, base] of Object.entries(modelIdMappings)) {
+      this.modelMapping.set(variant, base as string);
+    }
+    
+    // Additional Opus 4 and Sonnet 4 mappings not in config
+    const additionalMappings = {
       "claude-opus-4-20250514": "claude-opus-4",
       "anthropic.claude-v4": "claude-opus-4",
-
-      // Sonnet 4 variants
       "claude-sonnet-4-20250514": "claude-sonnet-4",
       "anthropic.claude-3-5-sonnet-20250625-v2:0": "claude-sonnet-4",
-
-      // Sonnet 3.5 variants
-      "claude-3-5-sonnet-20241022": "claude-sonnet-3.5",
       "claude-3.5-sonnet": "claude-sonnet-3.5",
       "anthropic.claude-3-5-sonnet-20241022-v2:0": "claude-sonnet-3.5",
-
-      // Haiku variants
-      "claude-3-5-haiku-20241022": "claude-haiku-3.5",
       "claude-3.5-haiku": "claude-haiku-3.5",
       "anthropic.claude-3-5-haiku-20241022-v1:0": "claude-haiku-3.5",
     };
-
-    for (const [variant, base] of Object.entries(mappings)) {
-      this.modelMapping.set(variant, base);
+    
+    for (const [variant, base] of Object.entries(additionalMappings)) {
+      if (!this.modelMapping.has(variant)) {
+        this.modelMapping.set(variant, base);
+      }
     }
   }
 

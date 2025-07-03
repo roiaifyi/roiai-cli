@@ -4,7 +4,7 @@ import { UserService } from '../../services/user.service';
 import { configManager } from '../../config';
 import { EndpointResolver } from '../../utils/endpoint-resolver';
 import Table from 'cli-table3';
-import { DatabaseManager } from '../../utils/database-manager';
+import { DatabaseUtils } from '../../utils/database-utils';
 import { QueryHelper } from '../../utils/query-helper';
 import { ConfigHelper } from '../../utils/config-helper';
 import { FormatterUtils } from '../../utils/formatter-utils';
@@ -14,7 +14,7 @@ export function createPushStatusCommand() {
     .description('Show push synchronization status')
     .option('-v, --verbose', 'Show detailed statistics')
     .action(async (options) => {
-      await DatabaseManager.withDatabase(async (prisma) => {
+      await DatabaseUtils.withDatabase(async (prisma) => {
         try {
         const pushConfig = configManager.getPushConfig();
         
