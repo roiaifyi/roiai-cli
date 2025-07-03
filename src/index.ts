@@ -6,6 +6,16 @@ import { ccCommand } from './commands/cc';
 import { logger, LogLevel } from './utils/logger';
 import { configManager } from './config';
 
+// Log environment and configuration info on startup
+const environment = process.env.NODE_ENV || 'default';
+console.log(chalk.gray(`Running in ${environment} mode`));
+
+// Warn if NODE_ENV is not set in production-like environments
+if (!process.env.NODE_ENV && process.argv[0].includes('node')) {
+  console.log(chalk.yellow('ℹ️  NODE_ENV is not set. Using default configuration.'));
+  console.log(chalk.yellow('   For production, set NODE_ENV=production'));
+}
+
 const program = new Command();
 
 // Set up the main CLI
@@ -22,7 +32,14 @@ program
 
     // Validate configuration on startup
     try {
-      configManager.get();
+      const config = configManager.get();
+      
+      // Log API configuration in verbose mode
+      if (thisCommand.opts().verbose) {
+        logger.debug(`API Base URL: ${config.api.baseUrl}`);
+        logger.debug(`Login endpoint: ${config.api.baseUrl}${config.api.endpoints.login}`);
+        logger.debug(`Push endpoint: ${config.api.baseUrl}${config.api.endpoints.push}`);
+      }
     } catch (error: any) {
       logger.error('Configuration error:', error.message);
       process.exit(1);

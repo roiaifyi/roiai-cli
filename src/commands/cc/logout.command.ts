@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import { UserService } from '../../services/user.service';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 import { createApiClient } from '../../api/typed-client';
-import { configManager } from '../../config';
+import { ApiUrlResolver } from '../../utils/api-url-resolver';
 
 export function createLogoutCommand(): Command {
   const command = new Command('logout');
@@ -33,8 +33,8 @@ export function createLogoutCommand(): Command {
           try {
             spinner.text = 'Revoking API key on server...';
             
-            const apiConfig = configManager.getApiConfig();
-            const apiClient = createApiClient(apiConfig.baseUrl, apiToken);
+            const apiUrl = ApiUrlResolver.getApiUrl(command);
+            const apiClient = createApiClient(apiUrl, apiToken);
             
             await apiClient.cliLogout();
             

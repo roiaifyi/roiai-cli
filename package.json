@@ -1,10 +1,11 @@
 {
-  "name": "roiai-cli",
+  "name": "roiai",
   "version": "1.0.0",
-  "description": "CLI tool for managing AI service usage data",
+  "description": "CLI tool for tracking and managing AI service usage and costs",
   "main": "dist/index.js",
   "bin": {
-    "roiai": "./dist/index.js"
+    "roiai": "./dist/index.js",
+    "roiai-production": "./bin/roiai-production"
   },
   "directories": {
     "test": "tests"
@@ -13,6 +14,8 @@
     "build": "tsc",
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
     "start": "node dist/index.js",
+    "start:production": "NODE_ENV=production node dist/index.js",
+    "start:development": "NODE_ENV=development node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
@@ -24,33 +27,44 @@
     "test:coverage": "jest --coverage",
     "prepublishOnly": "npm run build && npm run prisma:generate",
     "postinstall": "prisma generate",
-    "generate:api": "node scripts/generate-api.js"
+    "generate:api": "node scripts/generate-api.js",
+    "version:patch": "npm version patch",
+    "version:minor": "npm version minor",
+    "version:major": "npm version major",
+    "release": "npm run build && npm publish",
+    "release:dry": "npm run build && npm publish --dry-run"
   },
   "keywords": [
     "cli",
     "claude",
     "ai",
     "usage",
-    "tracking"
+    "tracking",
+    "cost",
+    "analytics",
+    "roiai"
   ],
-  "author": "Your Name <your.email@example.com>",
+  "author": "roiAI <support@roiai.fyi>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/roiai-cli.git"
+    "url": "https://github.com/roiai/roiai-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/roiai-cli/issues"
+    "url": "https://github.com/roiai/roiai-cli/issues"
   },
-  "homepage": "https://github.com/yourusername/roiai-cli#readme",
+  "homepage": "https://roiai.fyi",
   "engines": {
     "node": ">=18.0.0"
   },
   "files": [
     "dist/**/*",
+    "bin/**/*",
     "prisma/**/*",
     "config/default.json",
+    "config/production.json",
     "config/local.example.json",
+    "docs/configuration.md",
     "pricing-data.json",
     "README.md",
     "LICENSE"

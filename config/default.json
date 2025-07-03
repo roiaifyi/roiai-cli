@@ -31,7 +31,7 @@
     "idSubstringLength": 16
   },
   "api": {
-    "baseUrl": "https://api.roiai.com",
+    "baseUrl": "https://api.roiai.fyi",
     "endpoints": {
       "login": "/api/v1/cli/login",
       "push": "/api/v1/cli/upsync"

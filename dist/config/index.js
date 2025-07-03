@@ -9,9 +9,12 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 class ConfigManager {
     config;
+    environment;
     constructor() {
         this.config = config_1.default;
+        this.environment = process.env.NODE_ENV || 'default';
         this.validateConfig();
+        this.logConfigurationSource();
     }
     validateConfig() {
         // Validate app config
@@ -36,6 +39,24 @@ class ConfigManager {
         // Validate cache timeout
         if (this.config.claudeCode.pricingCacheTimeout < 0) {
             throw new Error('Pricing cache timeout must be >= 0');
+        }
+        // Validate API configuration
+        if (!this.config.api?.baseUrl) {
+            throw new Error('API base URL is required in configuration');
+        }
+        // Validate that base URL is a valid URL
+        try {
+            new URL(this.config.api.baseUrl);
+        }
+        catch (error) {
+            throw new Error(`Invalid API base URL: ${this.config.api.baseUrl}`);
+        }
+    }
+    logConfigurationSource() {
+        // Only log in development or when explicitly debugging
+        if (this.environment === 'development' || process.env.DEBUG_CONFIG) {
+            console.log(`Configuration loaded for environment: ${this.environment}`);
+            console.log(`API endpoint: ${this.config.api.baseUrl}`);
         }
     }
     get() {

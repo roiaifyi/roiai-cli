@@ -19,15 +19,16 @@ const progress_display_1 = require("../../utils/progress-display");
 const spinner_error_handler_1 = require("../../utils/spinner-error-handler");
 const formatter_utils_1 = require("../../utils/formatter-utils");
 const error_formatter_1 = require("../../utils/error-formatter");
+const api_url_resolver_1 = require("../../utils/api-url-resolver");
 function createPushCommand() {
-    return new commander_1.Command('push')
+    const command = new commander_1.Command('push')
         .description('Push local usage data to remote server')
         .option('-b, --batch-size <number>', 'Messages per batch', parseInt)
         .option('-d, --dry-run', 'Preview what would be pushed without actually pushing')
         .option('-f, --force', 'Reset retry count for failed records and retry')
         .option('-v, --verbose', 'Show detailed progress')
         .option('-s, --skip-sync', 'Skip sync before push')
-        .action(async (options) => {
+        .action(async function (options) {
         const spinner = (0, ora_1.default)('Initializing push...').start();
         await database_utils_1.DatabaseUtils.withDatabase(async (prisma) => {
             try {
@@ -57,7 +58,8 @@ function createPushCommand() {
                     spinner.start('Initializing push...');
                 }
                 const pushConfig = config_1.configManager.getPushConfig();
-                const pushService = new push_service_1.PushService(prisma, pushConfig, userService);
+                const apiUrl = api_url_resolver_1.ApiUrlResolver.getApiUrl(this);
+                const pushService = new push_service_1.PushService(prisma, pushConfig, userService, apiUrl);
                 // Check authentication before proceeding
                 spinner.start('Verifying authentication...');
                 const authCheck = await pushService.checkAuthentication();
@@ -261,6 +263,7 @@ function createPushCommand() {
             }
         });
     });
+    return command;
 }
 // Keep the old command for backward compatibility
 exports.pushCommand = createPushCommand();

@@ -1,52 +1,62 @@
 # Source files
 src/
-*.ts
-!dist/**/*.d.ts
-
-# Development files
-.git/
-.gitignore
-node_modules/
-*.log
-.env
-.env.*
-
-# Test files
 tests/
 coverage/
-jest.config.js
-*.test.ts
-*.spec.ts
+.github/
+scripts/
 
-# Config files (except defaults)
+# Development config
 config/local.json
-config/*.local.json
+config/test.json
+config/local.example.json
+config/user_info.example.json
+
+# Development files
 tsconfig.json
+jest.config.js
 nodemon.json
+.eslintrc*
+.prettierrc*
+thinking_note.txt
+demo-push.js
+clean-reporter.js
+run-tests.sh
 
-# Database files
-prisma/dev.db
-prisma/dev.db-journal
-prisma/migrations/
+# Local data
+claude_raw_data/
+tmp/
+*.log
+*.db
+!prisma/schema.prisma
 
-# IDE files
+# Build artifacts
+*.tsbuildinfo
+.turbo/
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Documentation source
-docs/
-*.md
-!README.md
-
-# Build artifacts
-*.tsbuildinfo
-
-# OS files
 .DS_Store
-Thumbs.db
 
-# Temporary files
-tmp/
-temp/
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+CHANGELOG.md
+CONFIGURATION.md
+CLAUDE.md
+
+# CI/CD
+.github/
+.circleci/
+.travis.yml
+
+# Misc
+.env*
+.editorconfig
+Makefile

@@ -7,8 +7,7 @@ import { createLogoutCommand } from './logout.command';
 
 export const ccCommand = new Command('cc')
   .description('Claude Code usage tracking commands')
-  .helpOption(false)
-  .addHelpText('after', '\nRun \'roiai cc --help\' for more information on Claude Code commands.')
+  .option('--api-url <url>', 'Override API server URL')
   .addCommand(syncCommand)
   .addCommand(pushCommand)
   .addCommand(pushStatusCommand)

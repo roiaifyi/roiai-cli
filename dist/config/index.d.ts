@@ -147,8 +147,10 @@ export interface Config {
 }
 declare class ConfigManager {
     private config;
+    private environment;
     constructor();
     private validateConfig;
+    private logConfigurationSource;
     get(): Config;
     getClaudeCodeConfig(): {
         rawDataPath: string;

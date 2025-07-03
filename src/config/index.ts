@@ -150,10 +150,13 @@ export interface Config {
 
 class ConfigManager {
   private config: Config;
+  private environment: string;
 
   constructor() {
     this.config = config as unknown as Config;
+    this.environment = process.env.NODE_ENV || 'default';
     this.validateConfig();
+    this.logConfigurationSource();
   }
 
   private validateConfig(): void {
@@ -184,6 +187,26 @@ class ConfigManager {
     // Validate cache timeout
     if (this.config.claudeCode.pricingCacheTimeout < 0) {
       throw new Error('Pricing cache timeout must be >= 0');
+    }
+
+    // Validate API configuration
+    if (!this.config.api?.baseUrl) {
+      throw new Error('API base URL is required in configuration');
+    }
+    
+    // Validate that base URL is a valid URL
+    try {
+      new URL(this.config.api.baseUrl);
+    } catch (error) {
+      throw new Error(`Invalid API base URL: ${this.config.api.baseUrl}`);
+    }
+  }
+
+  private logConfigurationSource(): void {
+    // Only log in development or when explicitly debugging
+    if (this.environment === 'development' || process.env.DEBUG_CONFIG) {
+      console.log(`Configuration loaded for environment: ${this.environment}`);
+      console.log(`API endpoint: ${this.config.api.baseUrl}`);
     }
   }
 

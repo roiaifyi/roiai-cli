@@ -1,0 +1,49 @@
+{
+  "app": {
+    "name": "roiai-cli",
+    "version": "1.0.0",
+    "dataDir": "~/.roiai",
+    "logDir": "./tmp",
+    "debug": false,
+    "displayConfig": {
+      "showModel": true,
+      "showTimestamp": true,
+      "showEmoji": true,
+      "showPercentages": true
+    }
+  },
+  "api": {
+    "baseUrl": "https://api.roiai.fyi",
+    "timeout": 30000,
+    "retryLimit": 3,
+    "retryDelay": 1000,
+    "healthCheckInterval": 300000,
+    "endpoints": {
+      "login": "/api/v1/cli/login",
+      "logout": "/api/v1/cli/logout",
+      "upsync": "/api/v1/cli/upsync",
+      "health": "/api/v1/cli/health"
+    }
+  },
+  "database": {
+    "path": "~/.roiai/data.db",
+    "logQueries": false
+  },
+  "cc": {
+    "claudeConfigPath": "~/Library/Application Support/Claude",
+    "projectSubdir": "projects",
+    "scanIntervalMs": 5000
+  },
+  "sync": {
+    "batchSize": 1000,
+    "processTimeout": 120000,
+    "maxRetries": 3,
+    "delayBetweenRetries": 2000
+  },
+  "push": {
+    "batchSize": 500,
+    "maxRetries": 5,
+    "retryDelay": 2000,
+    "showProgress": true
+  }
+}

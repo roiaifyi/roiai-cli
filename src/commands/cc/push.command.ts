@@ -13,16 +13,17 @@ import { ProgressDisplay } from '../../utils/progress-display';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 import { FormatterUtils } from '../../utils/formatter-utils';
 import { ErrorFormatter } from '../../utils/error-formatter';
+import { ApiUrlResolver } from '../../utils/api-url-resolver';
 
 export function createPushCommand() {
-  return new Command('push')
+  const command = new Command('push')
     .description('Push local usage data to remote server')
     .option('-b, --batch-size <number>', 'Messages per batch', parseInt)
     .option('-d, --dry-run', 'Preview what would be pushed without actually pushing')
     .option('-f, --force', 'Reset retry count for failed records and retry')
     .option('-v, --verbose', 'Show detailed progress')
     .option('-s, --skip-sync', 'Skip sync before push')
-    .action(async (options: PushOptions) => {
+    .action(async function(this: Command, options: PushOptions) {
       const spinner = ora('Initializing push...').start();
       
       await DatabaseUtils.withDatabase(async (prisma) => {
@@ -58,8 +59,9 @@ export function createPushCommand() {
         }
         
         const pushConfig = configManager.getPushConfig();
+        const apiUrl = ApiUrlResolver.getApiUrl(this);
 
-        const pushService = new PushService(prisma, pushConfig, userService);
+        const pushService = new PushService(prisma, pushConfig, userService, apiUrl);
         
         // Check authentication before proceeding
         spinner.start('Verifying authentication...');
@@ -319,6 +321,8 @@ export function createPushCommand() {
         }
       });
     });
+  
+  return command;
 }
 
 // Keep the old command for backward compatibility

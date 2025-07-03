@@ -26,7 +26,8 @@ export class PushService {
   constructor(
     prisma: PrismaClient,
     config: PushConfig,
-    userService: UserService
+    userService: UserService,
+    apiUrl?: string
   ) {
     this.prisma = prisma;
     this.config = config;
@@ -45,8 +46,8 @@ export class PushService {
       messages?.auth?.noUserId || "No authenticated user ID available"
     );
 
-    const apiConfig = configManager.getApiConfig();
-    this.apiClient = createApiClient(apiConfig.baseUrl, apiToken);
+    const baseUrl = apiUrl || configManager.getApiConfig().baseUrl;
+    this.apiClient = createApiClient(baseUrl, apiToken);
   }
 
   /**

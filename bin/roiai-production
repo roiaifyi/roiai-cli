@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+
+// Production wrapper script that ensures NODE_ENV is set
+process.env.NODE_ENV = 'production';
+
+// Import and run the main CLI
+require('../dist/index.js');

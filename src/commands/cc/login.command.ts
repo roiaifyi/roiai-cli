@@ -8,6 +8,7 @@ import { MachineService } from '../../services/machine.service';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 import { createApiClient, CliLoginRequest } from '../../api/typed-client';
 import { configManager } from '../../config';
+import { ApiUrlResolver } from '../../utils/api-url-resolver';
 
 export function createLoginCommand(): Command {
   const command = new Command('login');
@@ -96,9 +97,9 @@ export function createLoginCommand(): Command {
         const machineInfo = await machineService.loadMachineInfo();
         
         try {
-          // Create typed API client
-          const apiConfig = configManager.getApiConfig();
-          const apiClient = createApiClient(apiConfig.baseUrl);
+          // Create typed API client with URL override support
+          const apiUrl = ApiUrlResolver.getApiUrl(command);
+          const apiClient = createApiClient(apiUrl);
           
           // Build typed login request
           const loginRequest: CliLoginRequest = {
@@ -158,7 +159,7 @@ export function createLoginCommand(): Command {
             try {
               spinner.text = 'Revoking previous API key...';
               
-              const revokeApiClient = createApiClient(apiConfig.baseUrl, oldApiToken);
+              const revokeApiClient = createApiClient(apiUrl, oldApiToken);
               await revokeApiClient.cliLogout();
               // If we get here, logout succeeded
             } catch (error) {

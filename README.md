@@ -1,19 +1,17 @@
 # roiai
 
-CLI tool for managing AI service usage data, starting with Claude Code tracking.
+CLI tool for tracking and managing AI service usage and costs. Currently supports Claude Code with more AI services coming soon.
 
 ## Installation
 
-### From npm (Recommended)
-
 ```bash
-npm install -g roiai-cli
+npm install -g roiai
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/roiai-cli.git
+git clone https://github.com/roiai/roiai-cli.git
 cd roiai-cli
 npm install
 npm run build
@@ -44,7 +42,20 @@ npm link
    # Edit ~/.claude/user_info.json with your details
    ```
 
-See [CONFIGURATION.md](CONFIGURATION.md) for detailed configuration options.
+### Production Configuration
+
+For production environments, ensure you set the NODE_ENV:
+
+```bash
+# Using environment variable
+NODE_ENV=production roiai cc sync
+
+# Or install globally and use the production script
+npm install -g roiai
+NODE_ENV=production roiai cc push
+```
+
+See [Configuration Guide](docs/configuration.md) for detailed configuration options and environment setup.
 
 ## Usage
 
@@ -60,6 +71,21 @@ roiai cc sync --force
 
 # Use custom data path
 roiai cc sync --path /path/to/claude_raw_data
+```
+
+### Using Custom API Server
+
+You can override the API server URL for any command using the `--api-url` option:
+
+```bash
+# Login to a different server
+roiai cc --api-url https://staging.api.roiai.fyi login
+
+# Push to a custom server
+roiai cc --api-url https://custom.server.com push
+
+# Check status on alternative server
+roiai cc --api-url https://dev.api.roiai.fyi push-status
 ```
 
 ### Push to Remote
