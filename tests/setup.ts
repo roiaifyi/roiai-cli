@@ -6,6 +6,9 @@ import * as path from 'path';
 // Set test environment
 process.env.NODE_ENV = 'test';
 
+// Suppress Prisma logs during tests
+process.env.PRISMA_HIDE_UPDATE_MESSAGE = 'true';
+
 // Mock console methods to reduce noise during tests
 global.console = {
   ...console,
@@ -39,15 +42,20 @@ beforeAll(async () => {
   // Set up test database
   process.env.DATABASE_URL = `file:${TEST_DB_PATH}`;
   
-  console.log(`Setting up test database at ${TEST_DB_PATH}...`);
+  // Only log in verbose mode
+  if (process.env.VERBOSE_TESTS) {
+    console.log(`Setting up test database at ${TEST_DB_PATH}...`);
+  }
   
   // Create the database schema using push instead of migrate
   execSync('npx prisma db push --force-reset --skip-generate', {
     env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` },
-    stdio: 'inherit'
+    stdio: process.env.VERBOSE_TESTS ? 'inherit' : 'pipe'
   });
   
-  console.log('Test database setup complete');
+  if (process.env.VERBOSE_TESTS) {
+    console.log('Test database setup complete');
+  }
 });
 
 afterAll(async () => {
@@ -119,6 +127,7 @@ export async function resetTestDatabase() {
 export async function ensureDatabaseInitialized() {
   // Create the database schema using push
   execSync('npx prisma db push --force-reset --skip-generate', {
-    env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` }
+    env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` },
+    stdio: process.env.VERBOSE_TESTS ? 'inherit' : 'pipe'
   });
 }

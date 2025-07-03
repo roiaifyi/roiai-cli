@@ -27,7 +27,7 @@ describe('PushService Integration Tests', () => {
     timeout: 5000
   };
 
-  beforeAll((done) => {
+  beforeAll(async () => {
     // Start the mock server as a separate process
     const mockServerPath = path.join(__dirname, '../helpers/mock-server.js');
     mockServerProcess = spawn('node', [mockServerPath], {
@@ -39,21 +39,29 @@ describe('PushService Integration Tests', () => {
     });
     
     // Wait for server to be ready
-    mockServerProcess.on('message', (msg: any) => {
-      if (msg.type === 'ready') {
-        done();
-      }
+    await new Promise<void>((resolve, reject) => {
+      mockServerProcess.on('message', (msg: any) => {
+        if (msg.type === 'ready') {
+          resolve();
+        }
+      });
+      
+      // Handle server errors
+      mockServerProcess.stderr?.on('data', (data) => {
+        console.error('Mock server error:', data.toString());
+      });
+      
+      mockServerProcess.on('error', (err) => {
+        console.error('Failed to start mock server:', err);
+        reject(err);
+      });
+      
+      // Timeout after 5 seconds
+      setTimeout(() => reject(new Error('Mock server startup timeout')), 5000);
     });
     
-    // Handle server errors
-    mockServerProcess.stderr?.on('data', (data) => {
-      console.error('Mock server error:', data.toString());
-    });
-    
-    mockServerProcess.on('error', (err) => {
-      console.error('Failed to start mock server:', err);
-      done(err);
-    });
+    // Wait a bit to ensure global setup is complete
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Set up test database
     prisma = new PrismaClient({
@@ -61,7 +69,8 @@ describe('PushService Integration Tests', () => {
         db: {
           url: `file:${TEST_DB_PATH}`
         }
-      }
+      },
+      log: ['error'] // Only log errors
     });
     
     // Create a mock user service
@@ -87,14 +96,9 @@ describe('PushService Integration Tests', () => {
     pushService = new PushService(prisma, pushConfig, userService);
     
     // Override the apiClient to use the correct test endpoint
-    const { createApiClient } = require('../../src/generated/api-client');
+    const { createApiClient } = require('../../src/api/typed-client');
     const testEndpoint = `http://127.0.0.1:${testPort}`;
-    pushService['apiClient'] = createApiClient({
-      baseUrl: testEndpoint,
-      headers: {
-        'Authorization': 'Bearer test-auth-token',
-      }
-    });
+    pushService['apiClient'] = createApiClient(testEndpoint, 'test-auth-token');
   });
 
   afterAll(async () => {
@@ -118,20 +122,26 @@ describe('PushService Integration Tests', () => {
   beforeEach(async () => {
     await resetTestDatabase();
     setMockServerMode('none');
+    // Ensure we have a fresh database connection
+    await prisma.$disconnect();
+    await prisma.$connect();
+    // Small delay to ensure database is fully ready
+    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   // Helper to create test data
   const createTestData = async (messageCount: number = 10, retryCount: number = 0) => {
+    const testId = Date.now().toString(); // Unique ID for this test run
     const user = await prisma.user.create({
       data: {
-        id: 'test-user',
+        id: `test-user-${testId}`,
         email: 'test@example.com'
       }
     });
 
     const machine = await prisma.machine.create({
       data: {
-        id: 'test-machine',
+        id: `test-machine-${testId}`,
         userId: user.id,
         machineName: 'Test Machine'
       }
@@ -139,7 +149,7 @@ describe('PushService Integration Tests', () => {
 
     const project = await prisma.project.create({
       data: {
-        id: 'test-project',
+        id: `test-project-${testId}`,
         projectName: 'Test Project',
         userId: user.id,
         clientMachineId: machine.id
@@ -148,7 +158,7 @@ describe('PushService Integration Tests', () => {
 
     const session = await prisma.session.create({
       data: {
-        id: 'test-session',
+        id: `test-session-${testId}`,
         projectId: project.id,
         userId: user.id,
         clientMachineId: machine.id
@@ -159,8 +169,8 @@ describe('PushService Integration Tests', () => {
     for (let i = 0; i < messageCount; i++) {
       const message = await prisma.message.create({
         data: {
-          id: `msg-${i}`,
-          messageId: `msg-${i}`,
+          id: `msg-${testId}-${i}`,
+          messageId: `msg-${testId}-${i}`,
           sessionId: session.id,
           projectId: project.id,
           userId: user.id,
@@ -317,11 +327,12 @@ describe('PushService Integration Tests', () => {
 
   describe('Statistics', () => {
     it('should provide accurate push statistics', async () => {
-      await createTestData(20);
+      const { messages } = await createTestData(20);
       
       // Mark some as already synced
+      const messagesToSync = messages.slice(0, 5).map(m => m.messageId);
       await prisma.messageSyncStatus.updateMany({
-        where: { messageId: { in: ['msg-0', 'msg-1', 'msg-2', 'msg-3', 'msg-4'] } },
+        where: { messageId: { in: messagesToSync } },
         data: { syncedAt: new Date() }
       });
       
@@ -351,10 +362,10 @@ describe('PushService Integration Tests', () => {
     });
 
     it('should reset specific messages only', async () => {
-      await createTestData(10, 2);
+      const { messages } = await createTestData(10, 2);
       
       // Reset only specific messages
-      const messageIds = ['msg-0', 'msg-1', 'msg-2'];
+      const messageIds = messages.slice(0, 3).map(m => m.messageId);
       const resetCount = await pushService.resetRetryCount(messageIds);
       expect(resetCount).toBe(3);
       

@@ -7,6 +7,9 @@ export { createTestPrismaClient };
 // Create test configuration
 export function createTestConfig(overrides: any = {}) {
   const config = {
+    app: {
+      dataDir: TEST_DATA_DIR
+    },
     user: {
       infoPath: path.join(TEST_DATA_DIR, 'user_info.json')
     },

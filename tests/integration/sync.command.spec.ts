@@ -99,6 +99,11 @@ describe('Sync Command BDD Tests', () => {
         
         createTestJsonlFile('claude_usage_2024-12-01.jsonl', jsonlEntries, 'project-1');
         
+        // Create anonymous test user info for sync to use
+        createTestUserInfo({
+          auth: null  // Anonymous user only
+        });
+        
         // Update config to point to test data directory
         const testConfig = createTestConfig({
           claudeCode: {
@@ -112,6 +117,9 @@ describe('Sync Command BDD Tests', () => {
         
         // Act
         runSync(testConfig);
+        
+        // Wait a bit for database operations to complete
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         // Assert
         const counts = await countDatabaseRecords();
@@ -246,6 +254,9 @@ describe('Sync Command BDD Tests', () => {
         
         // Act
         runSync(testConfig);
+        
+        // Wait a bit for database operations to complete
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         // Assert
         const counts = await countDatabaseRecords();

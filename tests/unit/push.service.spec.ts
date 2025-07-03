@@ -2,7 +2,7 @@ import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals
 import { PushService } from '../../src/services/push.service';
 import { PrismaClient } from '@prisma/client';
 import { PushConfig, PushRequest, PushResponse } from '../../src/models/push.types';
-import { createApiClient } from '../../src/generated/api-client';
+import { createApiClient } from '../../src/api/typed-client';
 
 // Mock Prisma
 jest.mock('@prisma/client', () => ({
@@ -28,7 +28,7 @@ jest.mock('@prisma/client', () => ({
 }));
 
 // Mock API client
-jest.mock('../../src/generated/api-client');
+jest.mock('../../src/api/typed-client');
 jest.mock('../../src/config');
 
 describe('PushService', () => {
@@ -48,7 +48,8 @@ describe('PushService', () => {
     
     // Mock API client
     mockApiClient = {
-      upsyncData: jest.fn()
+      cliUpsync: jest.fn(),
+      cliHealthCheck: jest.fn()
     };
     (createApiClient as jest.MockedFunction<typeof createApiClient>).mockReturnValue(mockApiClient);
     
@@ -275,37 +276,32 @@ describe('PushService', () => {
         }
       };
 
-      mockApiClient.upsyncData.mockResolvedValue({ 
-        ok: true,
-        status: 200,
-        data: mockResponse 
-      });
+      mockApiClient.cliUpsync.mockResolvedValue(mockResponse);
 
       const result = await pushService.executePush(mockRequest);
 
-      expect(mockApiClient.upsyncData).toHaveBeenCalledWith(mockRequest);
+      expect(mockApiClient.cliUpsync).toHaveBeenCalledWith(mockRequest);
       expect(result).toEqual(mockResponse);
     });
 
     it('should handle server errors', async () => {
       const mockRequest: PushRequest = {} as any;
 
-      mockApiClient.upsyncData.mockResolvedValue({
-        ok: false,
-        status: 400,
-        data: { message: 'Invalid request' }
-      });
+      const error = new Error('Invalid request');
+      (error as any).code = 'VAL_001';
+      (error as any).statusCode = 400;
+      mockApiClient.cliUpsync.mockRejectedValue(error);
 
-      await expect(pushService.executePush(mockRequest)).rejects.toThrow('Push failed: 400 - Invalid request');
+      await expect(pushService.executePush(mockRequest)).rejects.toThrow('Push failed:');
     });
 
     it('should handle network errors', async () => {
       const mockRequest: PushRequest = {} as any;
 
       const error = new Error('Failed to fetch');
-      mockApiClient.upsyncData.mockRejectedValue(error);
+      mockApiClient.cliUpsync.mockRejectedValue(error);
 
-      await expect(pushService.executePush(mockRequest)).rejects.toThrow('Network error: Failed to fetch');
+      await expect(pushService.executePush(mockRequest)).rejects.toThrow('Push failed: Failed to fetch');
     });
   });
 

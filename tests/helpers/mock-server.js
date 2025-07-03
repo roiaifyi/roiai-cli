@@ -24,12 +24,15 @@ app.post('/api/v1/cli/login', (req, res) => {
   // Support token-based auth by checking if password matches known tokens
   if (password === 'valid-token' || (email === 'test@example.com' && password === 'password123')) {
     res.json({
-      user: {
-        id: '123',
-        email: 'test@example.com',
-        username: 'testuser'
-      },
-      api_key: 'roiai_auth-token-123'
+      success: true,
+      data: {
+        user: {
+          id: '123',
+          email: 'test@example.com',
+          username: 'testuser'
+        },
+        api_key: 'roiai_auth-token-123'
+      }
     });
   } else {
     res.status(401).json({ 
@@ -80,17 +83,20 @@ app.get('/api/v1/cli/health', (req, res) => {
     });
   }
   
-  // Return successful health check
+  // Return successful health check (wrapped format)
   res.json({
-    authenticated: true,
-    user: {
-      id: 'test-user-123',
-      email: 'test@example.com',
-      username: 'testuser'
-    },
-    machine: {
-      id: 'test-machine-123',
-      name: 'Test Machine'
+    success: true,
+    data: {
+      authenticated: true,
+      user: {
+        id: 'test-user-123',
+        email: 'test@example.com',
+        username: 'testuser'
+      },
+      machine: {
+        id: 'test-machine-123',
+        name: 'Test Machine'
+      }
     }
   });
 });
@@ -200,56 +206,62 @@ app.post('/api/v1/cli/upsync', (req, res) => {
     const failedMessages = request.messages.slice(halfCount);
     
     return res.json({
+      success: true,
+      data: {
+        syncId: `sync_${Date.now()}`,
+        results: {
+          persisted: {
+            count: halfCount,
+            messageIds: request.messages.slice(0, halfCount).map(m => m.messageId)
+          },
+          deduplicated: {
+            count: 0,
+            messageIds: []
+          },
+          failed: {
+            count: recordCount - halfCount,
+            details: failedMessages.map(m => ({
+              messageId: m.messageId,
+              error: 'Simulated failure',
+              code: 'SYNC_002'
+            }))
+          }
+        },
+        summary: {
+          totalMessages: recordCount,
+          messagesSucceeded: halfCount,
+          messagesFailed: recordCount - halfCount,
+          processingTimeMs: 50
+        }
+      }
+    });
+  }
+  
+  // Default success response (wrapped format)
+  res.json({
+    success: true,
+    data: {
       syncId: `sync_${Date.now()}`,
       results: {
         persisted: {
-          count: halfCount,
-          messageIds: request.messages.slice(0, halfCount).map(m => m.messageId)
+          count: recordCount,
+          messageIds: request.messages.map(m => m.messageId)
         },
         deduplicated: {
           count: 0,
           messageIds: []
         },
         failed: {
-          count: recordCount - halfCount,
-          details: failedMessages.map(m => ({
-            messageId: m.messageId,
-            error: 'Simulated failure',
-            code: 'SYNC_002'
-          }))
+          count: 0,
+          details: []
         }
       },
       summary: {
         totalMessages: recordCount,
-        messagesSucceeded: halfCount,
-        messagesFailed: recordCount - halfCount,
+        messagesSucceeded: recordCount,
+        messagesFailed: 0,
         processingTimeMs: 50
       }
-    });
-  }
-  
-  // Default success response
-  res.json({
-    syncId: `sync_${Date.now()}`,
-    results: {
-      persisted: {
-        count: recordCount,
-        messageIds: request.messages.map(m => m.messageId)
-      },
-      deduplicated: {
-        count: 0,
-        messageIds: []
-      },
-      failed: {
-        count: 0,
-        details: []
-      }
-    },
-    summary: {
-      totalMessages: recordCount,
-      messagesSucceeded: recordCount,
-      messagesFailed: 0,
-      processingTimeMs: 50
     }
   });
 });
