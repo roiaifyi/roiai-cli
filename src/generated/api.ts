@@ -1079,10 +1079,109 @@ export interface components {
             referrer?: string;
         };
     };
-    responses: never;
+    responses: {
+        /** @description Authentication required */
+        UnauthorizedError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /** @example {
+                 *       "success": false,
+                 *       "error": {
+                 *         "code": "AUTH_004",
+                 *         "message": "Authentication required"
+                 *       }
+                 *     } */
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Invalid request data */
+        ValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /** @example {
+                 *       "success": false,
+                 *       "error": {
+                 *         "code": "VAL_001",
+                 *         "message": "Validation failed",
+                 *         "details": {
+                 *           "field": "error message"
+                 *         }
+                 *       }
+                 *     } */
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Too many requests */
+        RateLimitError: {
+            headers: {
+                /** @description Number of seconds until the client can retry */
+                "Retry-After"?: number;
+                /** @description The rate limit ceiling for that endpoint */
+                "X-RateLimit-Limit"?: number;
+                /** @description The number of requests left for the time window */
+                "X-RateLimit-Remaining"?: number;
+                /** @description The time at which the rate limit window resets in ISO 8601 format */
+                "X-RateLimit-Reset"?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                /** @example {
+                 *       "success": false,
+                 *       "error": {
+                 *         "code": "RATE_001",
+                 *         "message": "Too many requests. Please try again later."
+                 *       }
+                 *     } */
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Resource not found */
+        NotFoundError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /** @example {
+                 *       "success": false,
+                 *       "error": {
+                 *         "code": "DB_002",
+                 *         "message": "Resource not found"
+                 *       }
+                 *     } */
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Internal server error */
+        InternalServerError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /** @example {
+                 *       "success": false,
+                 *       "error": {
+                 *         "code": "SRV_001",
+                 *         "message": "An unexpected error occurred"
+                 *       }
+                 *     } */
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+    };
     parameters: never;
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description The rate limit ceiling for that endpoint */
+        "X-RateLimit-Limit": number;
+        /** @description The number of requests left for the time window */
+        "X-RateLimit-Remaining": number;
+        /** @description The time at which the rate limit window resets in ISO 8601 format */
+        "X-RateLimit-Reset": string;
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -1131,6 +1230,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["RateLimitError"];
         };
     };
     signup: {
@@ -1409,7 +1509,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CliLoginResponse"];
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["CliLoginResponse"];
+                    };
                 };
             };
             /** @description Validation error */
@@ -1514,7 +1616,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HealthCheckResponse"];
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["HealthCheckResponse"];
+                    };
                 };
             };
             /** @description Unauthorized - Invalid or missing API key */
@@ -1551,7 +1655,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PushResponse"];
+                    "application/json": components["schemas"]["SuccessResponse"] & {
+                        data?: components["schemas"]["PushResponse"];
+                    };
                 };
             };
             /** @description Invalid request data */

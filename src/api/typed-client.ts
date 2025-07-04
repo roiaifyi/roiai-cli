@@ -41,6 +41,19 @@ export class TypedApiClient {
         ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
       },
     });
+
+    // Add request interceptor for debugging
+    if (process.env.DEBUG_API) {
+      this.client.interceptors.request.use((config) => {
+        console.log('API Request:', {
+          url: config.url,
+          method: config.method,
+          headers: config.headers,
+          data: config.data
+        });
+        return config;
+      });
+    }
   }
 
   /**
