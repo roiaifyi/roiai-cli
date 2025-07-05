@@ -6,8 +6,8 @@ import { createLoginCommand } from './login.command';
 import { createLogoutCommand } from './logout.command';
 
 export const ccCommand = new Command('cc')
-  .description('Claude Code usage tracking commands')
-  .option('--api-url <url>', 'Override API server URL')
+  .description('Claude Code analytics commands - track usage, costs, and sync across machines')
+  .option('--api-url <url>', 'Override API server URL (default: https://api.roiai.fyi)')
   .addCommand(syncCommand)
   .addCommand(pushCommand)
   .addCommand(pushStatusCommand)

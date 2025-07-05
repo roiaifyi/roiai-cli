@@ -34,7 +34,7 @@ class Database {
           url: `file:${absolutePath}`
         }
       },
-      log: ['error', 'warn']
+      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : []
     });
   }
 
@@ -86,7 +86,7 @@ class Database {
       
       // Run migrations deploy (not dev) for production
       execSync(`npx --yes prisma migrate deploy --schema="${schemaPath}"`, {
-        stdio: 'inherit',
+        stdio: 'pipe',  // Suppress Prisma output
         env: {
           ...process.env,
           DATABASE_URL: `file:${absolutePath}`

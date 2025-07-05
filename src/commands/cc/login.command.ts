@@ -14,7 +14,7 @@ export function createLoginCommand(): Command {
   const command = new Command('login');
   
   command
-    .description('Login to push usage data to the server')
+    .description('Login to your roiAI account (create free account at roiai.fyi)')
     .option('-e, --email <email>', 'Email address')
     .option('-p, --password <password>', 'Password')
     .option('-t, --token <token>', 'API token (alternative to email/password)')

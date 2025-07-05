@@ -29,7 +29,7 @@ export class DatabaseUtils {
           url: `file:${absolutePath}`
         }
       },
-      log: ['error', 'warn']
+      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : []
     });
     
     try {

@@ -8,8 +8,8 @@ const push_status_command_1 = require("./push-status.command");
 const login_command_1 = require("./login.command");
 const logout_command_1 = require("./logout.command");
 exports.ccCommand = new commander_1.Command('cc')
-    .description('Claude Code usage tracking commands')
-    .option('--api-url <url>', 'Override API server URL')
+    .description('Claude Code analytics commands - track usage, costs, and sync across machines')
+    .option('--api-url <url>', 'Override API server URL (default: https://api.roiai.fyi)')
     .addCommand(sync_command_1.syncCommand)
     .addCommand(push_command_1.pushCommand)
     .addCommand(push_status_command_1.pushStatusCommand)

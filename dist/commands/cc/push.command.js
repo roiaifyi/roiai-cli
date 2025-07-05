@@ -22,12 +22,12 @@ const error_formatter_1 = require("../../utils/error-formatter");
 const api_url_resolver_1 = require("../../utils/api-url-resolver");
 function createPushCommand() {
     const command = new commander_1.Command('push')
-        .description('Push local usage data to remote server')
-        .option('-b, --batch-size <number>', 'Messages per batch', parseInt)
-        .option('-d, --dry-run', 'Preview what would be pushed without actually pushing')
-        .option('-f, --force', 'Reset retry count for failed records and retry')
-        .option('-v, --verbose', 'Show detailed progress')
-        .option('-s, --skip-sync', 'Skip sync before push')
+        .description('Upload analytics to roiAI cloud (automatically syncs first)')
+        .option('-b, --batch-size <number>', 'Messages per batch (default: 1000)', parseInt)
+        .option('-d, --dry-run', 'Preview what would be pushed without uploading')
+        .option('-f, --force', 'Reset retry count for failed records')
+        .option('-v, --verbose', 'Show detailed progress information')
+        .option('-s, --skip-sync', 'Skip automatic sync, use existing local data')
         .action(async function (options) {
         const spinner = (0, ora_1.default)('Initializing push...').start();
         await database_utils_1.DatabaseUtils.withDatabase(async (prisma) => {

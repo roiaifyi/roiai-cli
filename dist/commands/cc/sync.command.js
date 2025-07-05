@@ -10,9 +10,9 @@ const database_1 = require("../../database");
 const user_service_1 = require("../../services/user.service");
 const sync_service_1 = require("../../services/sync.service");
 exports.syncCommand = new commander_1.Command('sync')
-    .description('Sync Claude Code raw data to local database')
+    .description('Analyze Claude Code usage and store locally (no cloud upload)')
     .option('-f, --force', 'Force full resync (clear existing data)')
-    .option('-p, --path <path>', 'Override raw data path')
+    .option('-p, --path <path>', 'Override Claude Code data path (default: ~/.claude)')
     .action(async (options) => {
     try {
         const userService = new user_service_1.UserService();

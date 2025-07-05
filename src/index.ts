@@ -18,7 +18,14 @@ const packageJson = require('../package.json');
 // Set up the main CLI
 program
   .name('roiai')
-  .description('CLI tool for managing AI service usage data')
+  .description('Analyze your Claude Code usage and costs - locally or across all your development machines.\n\n' +
+    '  Privacy First: Use "roiai cc sync" to analyze data locally without any cloud upload.\n' +
+    '  Multi-Machine: Use "roiai cc push" to consolidate data from all your machines.\n\n' +
+    '  Quick Start:\n' +
+    '    $ roiai cc sync          # Analyze Claude Code usage (local only)\n' +
+    '    $ roiai cc login         # Login to roiAI account\n' +
+    '    $ roiai cc push          # Upload to cloud and view at roiai.fyi\n\n' +
+    '  Learn more at https://roiai.fyi')
   .version(packageJson.version)
   .option('--verbose', 'Enable verbose logging')
   .hook('preAction', (thisCommand) => {
@@ -62,6 +69,18 @@ program
       program.help();
     }
   });
+
+// Add helpful footer information
+program.addHelpText('after', `
+Examples:
+  $ roiai cc sync              # Analyze Claude Code usage locally
+  $ roiai cc login             # Login to roiAI account  
+  $ roiai cc push              # Upload and view at roiai.fyi
+  $ roiai cc push-status       # Check authentication status
+
+Documentation:
+  GitHub: https://github.com/roiaifyi/roiai-cli
+  Website: https://roiai.fyi`);
 
 // Handle unknown commands
 program.on('command:*', () => {

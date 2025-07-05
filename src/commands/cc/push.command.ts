@@ -17,12 +17,12 @@ import { ApiUrlResolver } from '../../utils/api-url-resolver';
 
 export function createPushCommand() {
   const command = new Command('push')
-    .description('Push local usage data to remote server')
-    .option('-b, --batch-size <number>', 'Messages per batch', parseInt)
-    .option('-d, --dry-run', 'Preview what would be pushed without actually pushing')
-    .option('-f, --force', 'Reset retry count for failed records and retry')
-    .option('-v, --verbose', 'Show detailed progress')
-    .option('-s, --skip-sync', 'Skip sync before push')
+    .description('Upload analytics to roiAI cloud (automatically syncs first)')
+    .option('-b, --batch-size <number>', 'Messages per batch (default: 1000)', parseInt)
+    .option('-d, --dry-run', 'Preview what would be pushed without uploading')
+    .option('-f, --force', 'Reset retry count for failed records')
+    .option('-v, --verbose', 'Show detailed progress information')
+    .option('-s, --skip-sync', 'Skip automatic sync, use existing local data')
     .action(async function(this: Command, options: PushOptions) {
       const spinner = ora('Initializing push...').start();
       

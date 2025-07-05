@@ -5,9 +5,9 @@ import { UserService } from '../../services/user.service';
 import { SyncService } from '../../services/sync.service';
 
 export const syncCommand = new Command('sync')
-  .description('Sync Claude Code raw data to local database')
+  .description('Analyze Claude Code usage and store locally (no cloud upload)')
   .option('-f, --force', 'Force full resync (clear existing data)')
-  .option('-p, --path <path>', 'Override raw data path')
+  .option('-p, --path <path>', 'Override Claude Code data path (default: ~/.claude)')
   .action(async (options) => {
     try {
       const userService = new UserService();
