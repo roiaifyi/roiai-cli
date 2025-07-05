@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
+// Ensure Prisma client is generated before any imports that might use it
+import { ensurePrismaClient } from './utils/prisma-check';
+ensurePrismaClient();
+
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { ccCommand } from './commands/cc';
 import { logger, LogLevel } from './utils/logger';
 import { configManager } from './config';
-import { ensurePrismaClient } from './utils/prisma-check';
-
-// Ensure Prisma client is generated (for global installations)
-ensurePrismaClient();
 
 // Log environment and configuration info on startup
 const environment = process.env.NODE_ENV || 'default';
@@ -22,12 +22,15 @@ if (!process.env.NODE_ENV && process.argv[0].includes('node')) {
 
 const program = new Command();
 
+// Get version from package.json
+const packageJson = require('../package.json');
+
 // Set up the main CLI
 program
   .name('roiai')
   .description('CLI tool for managing AI service usage data')
-  .version('1.0.0')
-  .option('-v, --verbose', 'Enable verbose logging')
+  .version(packageJson.version)
+  .option('--verbose', 'Enable verbose logging')
   .hook('preAction', (thisCommand) => {
     // Set logging level based on verbose flag
     if (thisCommand.opts().verbose) {

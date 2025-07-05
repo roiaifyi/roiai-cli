@@ -53,5 +53,33 @@ class Database {
   }
 }
 
-export const db = Database.getInstance();
-export const prisma = db.getClient();
+// Lazy initialization to avoid loading Prisma before it's generated
+let _db: Database | null = null;
+let _prisma: PrismaClient | null = null;
+
+export const getDb = (): Database => {
+  if (!_db) {
+    _db = Database.getInstance();
+  }
+  return _db;
+};
+
+export const getPrisma = (): PrismaClient => {
+  if (!_prisma) {
+    _prisma = getDb().getClient();
+  }
+  return _prisma;
+};
+
+// For backward compatibility
+export const db = new Proxy({} as Database, {
+  get(_, prop) {
+    return getDb()[prop as keyof Database];
+  }
+});
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_, prop) {
+    return getPrisma()[prop as keyof PrismaClient];
+  }
+});

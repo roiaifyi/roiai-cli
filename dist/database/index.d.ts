@@ -9,6 +9,8 @@ declare class Database {
     disconnect(): Promise<void>;
     clearAllData(): Promise<void>;
 }
+export declare const getDb: () => Database;
+export declare const getPrisma: () => PrismaClient;
 export declare const db: Database;
 export declare const prisma: PrismaClient<import(".prisma/client").Prisma.PrismaClientOptions, never, import("@prisma/client/runtime/library").DefaultArgs>;
 export {};

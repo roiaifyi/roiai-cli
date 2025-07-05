@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.prisma = exports.db = void 0;
+exports.prisma = exports.db = exports.getPrisma = exports.getDb = void 0;
 const client_1 = require("@prisma/client");
 const config_1 = require("../config");
 const path_1 = __importDefault(require("path"));
@@ -50,6 +50,32 @@ class Database {
         await this.prisma.user.deleteMany();
     }
 }
-exports.db = Database.getInstance();
-exports.prisma = exports.db.getClient();
+// Lazy initialization to avoid loading Prisma before it's generated
+let _db = null;
+let _prisma = null;
+const getDb = () => {
+    if (!_db) {
+        _db = Database.getInstance();
+    }
+    return _db;
+};
+exports.getDb = getDb;
+const getPrisma = () => {
+    if (!_prisma) {
+        _prisma = (0, exports.getDb)().getClient();
+    }
+    return _prisma;
+};
+exports.getPrisma = getPrisma;
+// For backward compatibility
+exports.db = new Proxy({}, {
+    get(_, prop) {
+        return (0, exports.getDb)()[prop];
+    }
+});
+exports.prisma = new Proxy({}, {
+    get(_, prop) {
+        return (0, exports.getPrisma)()[prop];
+    }
+});
 //# sourceMappingURL=index.js.map

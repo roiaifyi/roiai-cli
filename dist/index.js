@@ -4,14 +4,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// Ensure Prisma client is generated before any imports that might use it
+const prisma_check_1 = require("./utils/prisma-check");
+(0, prisma_check_1.ensurePrismaClient)();
 const commander_1 = require("commander");
 const chalk_1 = __importDefault(require("chalk"));
 const cc_1 = require("./commands/cc");
 const logger_1 = require("./utils/logger");
 const config_1 = require("./config");
-const prisma_check_1 = require("./utils/prisma-check");
-// Ensure Prisma client is generated (for global installations)
-(0, prisma_check_1.ensurePrismaClient)();
 // Log environment and configuration info on startup
 const environment = process.env.NODE_ENV || 'default';
 console.log(chalk_1.default.gray(`Running in ${environment} mode`));
@@ -21,12 +21,14 @@ if (!process.env.NODE_ENV && process.argv[0].includes('node')) {
     console.log(chalk_1.default.yellow('   For production, set NODE_ENV=production'));
 }
 const program = new commander_1.Command();
+// Get version from package.json
+const packageJson = require('../package.json');
 // Set up the main CLI
 program
     .name('roiai')
     .description('CLI tool for managing AI service usage data')
-    .version('1.0.0')
-    .option('-v, --verbose', 'Enable verbose logging')
+    .version(packageJson.version)
+    .option('--verbose', 'Enable verbose logging')
     .hook('preAction', (thisCommand) => {
     // Set logging level based on verbose flag
     if (thisCommand.opts().verbose) {
