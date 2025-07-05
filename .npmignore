@@ -26,8 +26,18 @@ run-tests.sh
 claude_raw_data/
 tmp/
 *.log
+
+# Database files
 *.db
-!prisma/schema.prisma
+*.db-journal
+*.db-wal
+*.db-shm
+prisma/*.db
+prisma/*.db-journal
+prisma/tmp/
+prisma/dev.db
+prisma/dev.db.backup
+prisma/test*.db
 
 # Build artifacts
 *.tsbuildinfo

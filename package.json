@@ -50,10 +50,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/roiai/roiai-cli.git"
+    "url": "https://github.com/roiaifyi/roiai-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/roiai/roiai-cli/issues"
+    "url": "https://github.com/roiaifyi/roiai-cli/issues"
   },
   "homepage": "https://roiai.fyi",
   "engines": {
@@ -62,7 +62,8 @@
   "files": [
     "dist/**/*",
     "bin/**/*",
-    "prisma/**/*",
+    "prisma/schema.prisma",
+    "prisma/migrations/**/*",
     "config/default.json",
     "config/production.json",
     "config/local.example.json",
