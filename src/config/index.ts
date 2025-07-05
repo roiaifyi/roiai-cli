@@ -1,5 +1,6 @@
 import config from 'config';
 import path from 'path';
+import os from 'os';
 
 export interface Config {
   app: {
@@ -166,6 +167,11 @@ class ConfigManager {
     
     if (!this.config.app?.machineInfoFilename) {
       throw new Error('Machine info filename is required in configuration');
+    }
+    
+    // Handle tilde expansion for raw data path
+    if (this.config.claudeCode.rawDataPath.startsWith('~/')) {
+      this.config.claudeCode.rawDataPath = path.join(os.homedir(), this.config.claudeCode.rawDataPath.slice(2));
     }
     
     // Ensure paths are absolute

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.configManager = void 0;
 const config_1 = __importDefault(require("config"));
 const path_1 = __importDefault(require("path"));
+const os_1 = __importDefault(require("os"));
 class ConfigManager {
     config;
     environment;
@@ -22,6 +23,10 @@ class ConfigManager {
         }
         if (!this.config.app?.machineInfoFilename) {
             throw new Error('Machine info filename is required in configuration');
+        }
+        // Handle tilde expansion for raw data path
+        if (this.config.claudeCode.rawDataPath.startsWith('~/')) {
+            this.config.claudeCode.rawDataPath = path_1.default.join(os_1.default.homedir(), this.config.claudeCode.rawDataPath.slice(2));
         }
         // Ensure paths are absolute
         if (!path_1.default.isAbsolute(this.config.claudeCode.rawDataPath)) {
