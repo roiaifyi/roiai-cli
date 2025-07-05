@@ -153,9 +153,20 @@ export class SyncService {
       const costAfterSync = userStatsAfterSync ? Number(userStatsAfterSync.totalCost) : 0;
       const incrementalCost = costAfterSync - costBeforeSync;
 
+      // Check for pending sync items before showing results
+      let pendingSync = 0;
+      try {
+        pendingSync = await this.prisma.messageSyncStatus.count({
+          where: { syncedAt: null }
+        });
+      } catch (error) {
+        // Silently ignore if we can't count pending items
+        logger.debug('Failed to count pending sync items:', error);
+      }
+
       // Show detailed results only if not quiet
       if (!options.quiet) {
-        this.showSyncResults(result, changes, hasNewData, incrementalCost, duration);
+        await this.showSyncResults(result, changes, hasNewData, incrementalCost, duration, pendingSync);
       }
 
       return {
@@ -180,7 +191,8 @@ export class SyncService {
     changes: any,
     hasNewData: boolean,
     incrementalCost: number,
-    duration: number
+    duration: number,
+    pendingSync: number
   ): Promise<void> {
     // Show incremental changes
     if (hasNewData && (changes.newMessages > 0 || changes.newProjects.length > 0 || changes.newSessions.length > 0)) {
@@ -314,11 +326,7 @@ export class SyncService {
       logger.debug('Failed to display user stats:', error);
     }
 
-    // Check for pending sync items
-    const pendingSync = await this.prisma.messageSyncStatus.count({
-      where: { syncedAt: null }
-    });
-    
+    // Show pending sync status
     if (pendingSync > 0) {
       logger.info(`\n${chalk.yellow('⚠️')}  ${pendingSync} records pending upload. Run ${chalk.bold('roiai cc push')} to sync with remote server.`);
     }
