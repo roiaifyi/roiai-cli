@@ -4,9 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// Ensure Prisma client is generated before any imports that might use it
-const prisma_check_1 = require("./utils/prisma-check");
-(0, prisma_check_1.ensurePrismaClient)();
 const commander_1 = require("commander");
 const chalk_1 = __importDefault(require("chalk"));
 const cc_1 = require("./commands/cc");

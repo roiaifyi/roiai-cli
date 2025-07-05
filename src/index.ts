@@ -1,9 +1,5 @@
 #!/usr/bin/env node
 
-// Ensure Prisma client is generated before any imports that might use it
-import { ensurePrismaClient } from './utils/prisma-check';
-ensurePrismaClient();
-
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { ccCommand } from './commands/cc';
