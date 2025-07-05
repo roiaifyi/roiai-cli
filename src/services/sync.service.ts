@@ -238,18 +238,19 @@ export class SyncService {
     }
 
     // Show aggregated user stats
-    const userStatsService = new UserStatsService(this.prisma, this.userService);
-    const userStats = await userStatsService.getAggregatedStats();
-    if (userStats) {
-      DisplayUtils.sectionHeader('User Stats', '👤');
-      
-      const stats = {
-        '📁 Projects': userStats.totalProjects,
-        '💬 Sessions': userStats.totalSessions,
-        '📝 Messages': userStats.totalMessages
-      };
-      
-      DisplayUtils.displayKeyValue(stats, {
+    try {
+      const userStatsService = new UserStatsService(this.prisma, this.userService);
+      const userStats = await userStatsService.getAggregatedStats();
+      if (userStats) {
+        DisplayUtils.sectionHeader('User Stats', '👤');
+        
+        const stats = {
+          '📁 Projects': userStats.totalProjects,
+          '💬 Sessions': userStats.totalSessions,
+          '📝 Messages': userStats.totalMessages
+        };
+        
+        DisplayUtils.displayKeyValue(stats, {
         formatters: {
           '📁 Projects': (v) => chalk.cyan(v),
           '💬 Sessions': (v) => chalk.cyan(v),
@@ -307,6 +308,10 @@ export class SyncService {
       }
       
       logger.info(`${chalk.bold('💵 Total Cost:')} ${chalk.bold.green(FormatterUtils.formatCurrency(Number(userStats.totalCost)))}`);
+    }
+    } catch (error) {
+      // Silently skip stats display if there's an error
+      logger.debug('Failed to display user stats:', error);
     }
 
     // Check for pending sync items
