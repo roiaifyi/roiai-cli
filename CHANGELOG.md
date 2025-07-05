@@ -7,11 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2025-01-05
+
 ### Added
 - Enhanced authentication error handling with NetworkErrorHandler utility
 - Detailed error diagnostics for network failures (DNS, connection refused, timeouts)
 - User-friendly troubleshooting tips in error messages
 - Suppressed stack traces in production mode for cleaner output
+- Comprehensive release process documentation
+- Automated release workflow with GitHub Actions
+- Release preparation script for pre-flight checks
+- Production deployment checklist
+- Version bump automation support
+
+### Improved
+- User experience with cleaner error messages
+- Authentication flow with better guidance
+- Re-login support allowing credential updates
+- API response handling with proper unwrapping
+
+### Fixed
+- Duplicate error messages in SpinnerErrorHandler
+- Debug logging showing technical details to users
+- API client response wrapper handling
 
 ## [1.0.0] - 2024-12-28
 

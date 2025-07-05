@@ -45,10 +45,10 @@ tmp/
 .gitignore
 .gitattributes
 
-# Documentation
-docs/
-CHANGELOG.md
-CONFIGURATION.md
+# Documentation sources (keeping only essential docs)
+docs/npm-publishing.md
+docs/release-process.md
+docs/deployment-checklist.md
 CLAUDE.md
 
 # CI/CD

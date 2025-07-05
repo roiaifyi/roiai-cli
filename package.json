@@ -31,6 +31,8 @@
     "version:patch": "npm version patch",
     "version:minor": "npm version minor",
     "version:major": "npm version major",
+    "prepare-release": "./scripts/prepare-release.sh",
+    "generate-release-notes": "node scripts/release-notes.js",
     "release": "npm run build && npm publish",
     "release:dry": "npm run build && npm publish --dry-run"
   },
