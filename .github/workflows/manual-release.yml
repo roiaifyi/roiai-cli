@@ -1,4 +1,4 @@
-name: Manual Release
+name: Bump Version and Tag
 
 on:
   workflow_dispatch:
@@ -16,18 +16,17 @@ on:
         description: 'Custom version (only used if version_type is custom)'
         required: false
         type: string
-      skip_tests:
-        description: 'Skip tests'
+      create_release:
+        description: 'Create release after tagging'
         required: false
         type: boolean
         default: false
 
 jobs:
-  release:
+  bump-and-tag:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
     
     steps:
       - name: Checkout code
@@ -40,25 +39,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma client
-        run: npm run prisma:generate
-
-      - name: Run tests
-        if: ${{ !inputs.skip_tests }}
-        run: npm test
-
-      - name: Build project
-        run: npm run build
 
       - name: Get current version
         id: current_version
@@ -87,6 +72,14 @@ jobs:
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
           
+          # Create CHANGELOG.md if it doesn't exist
+          if [ ! -f CHANGELOG.md ]; then
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+          fi
+          
           # Create a temporary file with the new section
           echo -e "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n## [Unreleased]\n\n## [$NEW_VERSION] - $DATE\n" > temp_changelog.md
           
@@ -94,7 +87,7 @@ jobs:
           if grep -q "## \[Unreleased\]" CHANGELOG.md; then
             sed -n '/## \[Unreleased\]/,/## \[/{/## \[Unreleased\]/d; /## \[/d; p;}' CHANGELOG.md >> temp_changelog.md
           else
-            echo "### Added" >> temp_changelog.md
+            echo "### Changed" >> temp_changelog.md
             echo "- See commit history for changes" >> temp_changelog.md
             echo "" >> temp_changelog.md
           fi
@@ -107,75 +100,53 @@ jobs:
           # Replace the original file
           mv temp_changelog.md CHANGELOG.md
 
-      - name: Generate release notes
-        id: release_notes
-        run: |
-          # Get the previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          
-          # Generate release notes
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
-          echo "## What's Changed" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          
-          if [ -z "$PREVIOUS_TAG" ]; then
-            echo "Initial release of roiai-cli" >> $GITHUB_OUTPUT
-          else
-            git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> $GITHUB_OUTPUT
-          fi
-          
-          echo "" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          
-          # Store previous tag for later use
-          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
-
       - name: Commit version bump
         run: |
           git add package.json package-lock.json CHANGELOG.md
-          git commit -m "chore: release v${{ steps.new_version.outputs.version }}"
+          git commit -m "chore: bump version to ${{ steps.new_version.outputs.version }}"
 
       - name: Create and push tag
+        id: create_tag
         run: |
-          git tag -a "v${{ steps.new_version.outputs.version }}" -m "Release v${{ steps.new_version.outputs.version }}"
+          TAG="v${{ steps.new_version.outputs.version }}"
+          git tag -a "$TAG" -m "Version ${{ steps.new_version.outputs.version }}"
           git push origin main
-          git push origin "v${{ steps.new_version.outputs.version }}"
-
-      - name: Publish to NPM
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.new_version.outputs.version }}
-          release_name: Release v${{ steps.new_version.outputs.version }}
-          body: |
-            ## Installation
-            
-            ```bash
-            npm install -g roiai@${{ steps.new_version.outputs.version }}
-            ```
-            
-            ${{ steps.release_notes.outputs.RELEASE_NOTES }}
-            
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.release_notes.outputs.previous_tag }}...v${{ steps.new_version.outputs.version }}
-          draft: false
-          prerelease: false
+          git push origin "$TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Summary
         run: |
-          echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Version Bump Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version**: ${{ steps.current_version.outputs.version }} → ${{ steps.new_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Type**: ${{ inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **NPM Package**: [roiai@${{ steps.new_version.outputs.version }}](https://www.npmjs.com/package/roiai/v/${{ steps.new_version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Release**: [v${{ steps.new_version.outputs.version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.new_version.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ steps.create_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "1. Verify the NPM package is published correctly" >> $GITHUB_STEP_SUMMARY
-          echo "2. Test installation: \`npm install -g roiai@${{ steps.new_version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. Update any documentation if needed" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ inputs.create_release }}" == "true" ]; then
+            echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+            echo "The release workflow will be triggered automatically for tag ${{ steps.create_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+            echo "To create a release from this tag:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Go to Actions → Release from Tag" >> $GITHUB_STEP_SUMMARY
+            echo "2. Run workflow with tag: ${{ steps.create_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Trigger release workflow
+        if: inputs.create_release == true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'release-from-tag.yml',
+              ref: 'main',
+              inputs: {
+                tag: '${{ steps.create_tag.outputs.tag }}',
+                skip_tests: 'false'
+              }
+            })
+            console.log('Triggered release workflow for tag ${{ steps.create_tag.outputs.tag }}')
+          github-token: ${{ secrets.GITHUB_TOKEN }}

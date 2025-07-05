@@ -1,0 +1,176 @@
+name: Release from Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.23)'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip tests'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+      - name: Validate tag format
+        run: |
+          if [[ ! "${{ inputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid tag format. Expected format: v1.2.3"
+            exit 1
+          fi
+
+      - name: Checkout code at tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify tag exists
+        run: |
+          if ! git rev-parse "${{ inputs.tag }}" >/dev/null 2>&1; then
+            echo "Error: Tag ${{ inputs.tag }} does not exist"
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION="${{ inputs.tag }}"
+          VERSION=${VERSION#v}  # Remove 'v' prefix
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify package.json version matches tag
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${{ steps.get_version.outputs.version }}"
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: package.json version ($PACKAGE_VERSION) does not match tag version ($TAG_VERSION)"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Run tests
+        if: ${{ !inputs.skip_tests }}
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+      - name: Check if already published
+        id: check_npm
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if npm view roiai@$VERSION version 2>/dev/null; then
+            echo "published=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Version $VERSION is already published to NPM" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "published=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to NPM
+        if: steps.check_npm.outputs.published == 'false'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # Get the previous tag
+          CURRENT_TAG="${{ inputs.tag }}"
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 $CURRENT_TAG^ 2>/dev/null || echo "")
+          
+          # Generate release notes
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          echo "## What's Changed" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "Initial release of roiai-cli" >> $GITHUB_OUTPUT
+          else
+            git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..$CURRENT_TAG >> $GITHUB_OUTPUT
+          fi
+          
+          echo "" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          # Store previous tag for later use
+          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if GitHub release exists
+        id: check_release
+        run: |
+          if gh release view "${{ inputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check_release.outputs.exists == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ inputs.tag }}
+          release_name: Release ${{ inputs.tag }}
+          body: |
+            ## Installation
+            
+            ```bash
+            npm install -g roiai@${{ steps.get_version.outputs.version }}
+            ```
+            
+            ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+            
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.release_notes.outputs.previous_tag }}...${{ inputs.tag }}
+          draft: false
+          prerelease: false
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag**: ${{ inputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_npm.outputs.published }}" == "false" ]; then
+            echo "- **NPM Package**: [roiai@${{ steps.get_version.outputs.version }}](https://www.npmjs.com/package/roiai/v/${{ steps.get_version.outputs.version }}) ✅ Published" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **NPM Package**: [roiai@${{ steps.get_version.outputs.version }}](https://www.npmjs.com/package/roiai/v/${{ steps.get_version.outputs.version }}) ⚠️ Already published" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.check_release.outputs.exists }}" == "false" ]; then
+            echo "- **GitHub Release**: [Release ${{ inputs.tag }}](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.tag }}) ✅ Created" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **GitHub Release**: [Release ${{ inputs.tag }}](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.tag }}) ⚠️ Already exists" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Verify the NPM package is published correctly" >> $GITHUB_STEP_SUMMARY
+          echo "2. Test installation: \`npm install -g roiai@${{ steps.get_version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Update any documentation if needed" >> $GITHUB_STEP_SUMMARY
