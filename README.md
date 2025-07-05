@@ -15,22 +15,22 @@ npm install -g roiai
 ## Quick Start
 
 ### Local-Only Usage (No Cloud)
+
 ```bash
 # Just sync - all data stays on your machine
 roiai cc sync
 ```
 
 ### Full Cloud Analytics (Recommended for Multi-Machine Users)
+
 1. **Login to your roiAI account (use same account on all machines):**
    ```bash
    roiai cc login
    ```
-   
 2. **Push to cloud (automatically syncs and uploads):**
    ```bash
    roiai cc push
    ```
-   
 3. **View your consolidated analytics at [roiai.fyi](https://roiai.fyi)**
    - See usage across all your machines in one dashboard
    - Analyze costs by project, model, and time period
@@ -74,7 +74,7 @@ roiai cc push --skip-sync
 
 ## Support
 
-- Issues: https://github.com/roiai/roiai-cli/issues
+- Issues: https://github.com/roiaifyi/roiai-cli/issues
 - Website: https://roiai.fyi
 
 ## License
