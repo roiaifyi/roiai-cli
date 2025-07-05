@@ -1,6 +1,5 @@
 import config from 'config';
 import path from 'path';
-import fs from 'fs';
 
 export interface Config {
   app: {

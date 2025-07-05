@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.configManager = void 0;
 const config_1 = __importDefault(require("config"));
 const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
 class ConfigManager {
     config;
     environment;
@@ -28,10 +27,8 @@ class ConfigManager {
         if (!path_1.default.isAbsolute(this.config.claudeCode.rawDataPath)) {
             this.config.claudeCode.rawDataPath = path_1.default.resolve(process.cwd(), this.config.claudeCode.rawDataPath);
         }
-        // Check if Claude raw data path exists
-        if (!fs_1.default.existsSync(this.config.claudeCode.rawDataPath)) {
-            throw new Error(`Claude raw data path does not exist: ${this.config.claudeCode.rawDataPath}`);
-        }
+        // Don't check if Claude raw data path exists here - it should be checked at runtime
+        // when the sync command is run, not at startup
         // Validate pricing URL
         if (!this.config.claudeCode.pricingUrl) {
             throw new Error('Pricing URL is required in configuration');
