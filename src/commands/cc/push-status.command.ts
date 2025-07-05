@@ -14,7 +14,7 @@ export function createPushStatusCommand() {
   const command = new Command('push-status')
     .description('Show push synchronization status')
     .option('-v, --verbose', 'Show detailed statistics')
-    .action(async function(this: Command, options) {
+    .action(async (options) => {
       await DatabaseUtils.withDatabase(async (prisma) => {
         try {
         const pushConfig = configManager.getPushConfig();
@@ -157,7 +157,7 @@ export function createPushStatusCommand() {
         }
         
         console.log(chalk.bold('\n⚙️  Configuration\n'));
-        const apiUrl = ApiUrlResolver.getApiUrl(this);
+        const apiUrl = ApiUrlResolver.getApiUrl(command);
         console.log(`API URL: ${apiUrl}`);
         console.log(`Endpoint: ${EndpointResolver.getPushEndpoint()}`);
         console.log(`Authentication: ${isAuthenticated ? chalk.green('Logged in') : chalk.red('Not logged in')}`);
