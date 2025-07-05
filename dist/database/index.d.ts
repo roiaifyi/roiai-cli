@@ -5,6 +5,8 @@ declare class Database {
     private constructor();
     static getInstance(): Database;
     getClient(): PrismaClient;
+    ensureInitialized(): Promise<void>;
+    private runMigrationsAsync;
     connect(): Promise<void>;
     disconnect(): Promise<void>;
     clearAllData(): Promise<void>;

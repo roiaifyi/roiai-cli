@@ -9,6 +9,7 @@ const config_1 = require("../config");
 const path_1 = __importDefault(require("path"));
 const os_1 = __importDefault(require("os"));
 const fs_1 = __importDefault(require("fs"));
+const child_process_1 = require("child_process");
 class Database {
     prisma;
     static instance;
@@ -44,6 +45,53 @@ class Database {
     }
     getClient() {
         return this.prisma;
+    }
+    async ensureInitialized() {
+        try {
+            // Try to query the users table to check if database is initialized
+            await this.prisma.user.findFirst();
+        }
+        catch (error) {
+            if (error.message && error.message.includes('does not exist')) {
+                // Tables don't exist, run migrations
+                await this.runMigrationsAsync();
+            }
+            else {
+                // Some other error, re-throw
+                throw error;
+            }
+        }
+    }
+    async runMigrationsAsync() {
+        try {
+            console.log('Setting up database for first time use...');
+            // Find the schema path relative to the package
+            const schemaPath = path_1.default.join(__dirname, '../../prisma/schema.prisma');
+            if (!fs_1.default.existsSync(schemaPath)) {
+                throw new Error('Prisma schema not found');
+            }
+            // Get the absolute database path
+            let dbPath = config_1.configManager.getDatabaseConfig().path;
+            if (dbPath.startsWith('~/')) {
+                dbPath = path_1.default.join(os_1.default.homedir(), dbPath.slice(2));
+            }
+            const absolutePath = path_1.default.isAbsolute(dbPath)
+                ? dbPath
+                : path_1.default.resolve(process.cwd(), dbPath);
+            // Run migrations deploy (not dev) for production
+            (0, child_process_1.execSync)(`npx --yes prisma migrate deploy --schema="${schemaPath}"`, {
+                stdio: 'inherit',
+                env: {
+                    ...process.env,
+                    DATABASE_URL: `file:${absolutePath}`
+                }
+            });
+            console.log('✓ Database setup complete');
+        }
+        catch (error) {
+            console.error('Failed to set up database:', error.message);
+            throw error;
+        }
     }
     async connect() {
         await this.prisma.$connect();

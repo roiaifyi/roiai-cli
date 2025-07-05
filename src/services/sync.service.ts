@@ -41,6 +41,9 @@ export class SyncService {
     const startTime = Date.now();
 
     try {
+      // Ensure database is initialized
+      await db.ensureInitialized();
+      
       // Initialize services
       const pricingService = new PricingService();
       const jsonlService = new JSONLService(pricingService, this.userService);

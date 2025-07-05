@@ -3,6 +3,7 @@ import { configManager } from '../config';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import { execSync } from 'child_process';
 
 class Database {
   private prisma: PrismaClient;
@@ -46,6 +47,57 @@ class Database {
 
   getClient(): PrismaClient {
     return this.prisma;
+  }
+  
+  async ensureInitialized(): Promise<void> {
+    try {
+      // Try to query the users table to check if database is initialized
+      await this.prisma.user.findFirst();
+    } catch (error: any) {
+      if (error.message && error.message.includes('does not exist')) {
+        // Tables don't exist, run migrations
+        await this.runMigrationsAsync();
+      } else {
+        // Some other error, re-throw
+        throw error;
+      }
+    }
+  }
+  
+  private async runMigrationsAsync(): Promise<void> {
+    try {
+      console.log('Setting up database for first time use...');
+      
+      // Find the schema path relative to the package
+      const schemaPath = path.join(__dirname, '../../prisma/schema.prisma');
+      
+      if (!fs.existsSync(schemaPath)) {
+        throw new Error('Prisma schema not found');
+      }
+      
+      // Get the absolute database path
+      let dbPath = configManager.getDatabaseConfig().path;
+      if (dbPath.startsWith('~/')) {
+        dbPath = path.join(os.homedir(), dbPath.slice(2));
+      }
+      const absolutePath = path.isAbsolute(dbPath) 
+        ? dbPath 
+        : path.resolve(process.cwd(), dbPath);
+      
+      // Run migrations deploy (not dev) for production
+      execSync(`npx --yes prisma migrate deploy --schema="${schemaPath}"`, {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          DATABASE_URL: `file:${absolutePath}`
+        }
+      });
+      
+      console.log('✓ Database setup complete');
+    } catch (error: any) {
+      console.error('Failed to set up database:', error.message);
+      throw error;
+    }
   }
 
   async connect(): Promise<void> {
