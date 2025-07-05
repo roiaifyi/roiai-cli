@@ -7,7 +7,7 @@ This project uses GitHub Actions for continuous integration and release manageme
 ### CI (`ci.yml`)
 - **Trigger**: On push to main/develop branches and on pull requests
 - **Purpose**: Run tests and ensure code quality
-- **Matrix**: Tests on Node.js 18.x and 20.x
+- **Node.js Version**: 20.x
 - **Steps**:
   1. Install dependencies
   2. Generate Prisma client
