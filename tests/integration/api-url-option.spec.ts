@@ -44,14 +44,20 @@ describe('--api-url option integration tests', () => {
     it('should display custom API URL in configuration', async () => {
       const customUrl = 'https://staging.api.roiai.fyi';
       
+      // Create a minimal config that includes user info path
+      const testConfig = {
+        database: { path: testDbPath },
+        user: { infoPath: path.join(testDataDir, 'user_info.json') },
+        logging: { level: 'error' }
+      };
+      
       const { stdout } = await execAsync(
-        `NODE_ENV=test node ${cliPath} cc --api-url ${customUrl} push-status`,
+        `node ${cliPath} cc --api-url ${customUrl} push-status`,
         {
           env: {
             ...process.env,
-            DATABASE_URL: `file:${testDbPath}`,
-            NODE_ENV: 'test',
-            APP_DATA_DIR: testDataDir
+            NODE_CONFIG: JSON.stringify(testConfig),
+            NODE_ENV: 'test'
           }
         }
       );
@@ -65,14 +71,20 @@ describe('--api-url option integration tests', () => {
     it('should inherit --api-url from parent command', async () => {
       const parentUrl = 'https://parent.api.com';
       
+      // Create a minimal config that includes user info path
+      const testConfig = {
+        database: { path: testDbPath },
+        user: { infoPath: path.join(testDataDir, 'user_info.json') },
+        logging: { level: 'error' }
+      };
+      
       const { stdout } = await execAsync(
-        `NODE_ENV=test node ${cliPath} cc --api-url ${parentUrl} push-status`,
+        `node ${cliPath} cc --api-url ${parentUrl} push-status`,
         {
           env: {
             ...process.env,
-            DATABASE_URL: `file:${testDbPath}`,
-            NODE_ENV: 'test',
-            APP_DATA_DIR: testDataDir
+            NODE_CONFIG: JSON.stringify(testConfig),
+            NODE_ENV: 'test'
           }
         }
       );
