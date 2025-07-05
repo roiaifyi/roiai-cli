@@ -12,6 +12,8 @@ Analyze your Claude Code usage and costs - locally or across all your developmen
 npm install -g roiai
 ```
 
+**Note**: On first run after installation, roiai will automatically set up the necessary database components. This is a one-time process that takes just a few seconds.
+
 ## Quick Start
 
 ### Local-Only Usage (No Cloud)

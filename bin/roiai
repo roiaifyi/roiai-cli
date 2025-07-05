@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 // Set NODE_CONFIG_DIR to the package's config directory
+// When installed globally, __dirname will be in the global node_modules
 const configDir = path.join(__dirname, '..', 'config');
 process.env.NODE_CONFIG_DIR = configDir;
 
@@ -10,9 +12,6 @@ process.env.NODE_CONFIG_DIR = configDir;
 process.env.NODE_CONFIG = JSON.stringify({
   NODE_CONFIG_DIR: configDir
 });
-
-// Production wrapper script that ensures NODE_ENV is set
-process.env.NODE_ENV = 'production';
 
 // Import and run the main CLI
 require('../dist/index.js');

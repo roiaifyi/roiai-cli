@@ -5,6 +5,10 @@ import chalk from 'chalk';
 import { ccCommand } from './commands/cc';
 import { logger, LogLevel } from './utils/logger';
 import { configManager } from './config';
+import { ensurePrismaClient } from './utils/prisma-check';
+
+// Ensure Prisma client is generated (for global installations)
+ensurePrismaClient();
 
 // Log environment and configuration info on startup
 const environment = process.env.NODE_ENV || 'default';

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2025-01-05
+
+### Fixed
+- Global installation ENOTEMPTY error by removing postinstall script
+- Prisma client generation now happens on first run instead of during installation
+- Reduced package size from 200KB+ to 119KB
+
+### Changed
+- Moved Prisma client generation from postinstall to runtime
+- Added automatic Prisma client generation check on startup
+
 ## [1.0.1] - 2025-01-05
 
 ### Added

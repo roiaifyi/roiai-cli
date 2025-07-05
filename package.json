@@ -1,10 +1,10 @@
 {
   "name": "roiai",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "CLI tool for tracking and managing AI service usage and costs",
   "main": "dist/index.js",
   "bin": {
-    "roiai": "./dist/index.js",
+    "roiai": "./bin/roiai",
     "roiai-production": "./bin/roiai-production"
   },
   "directories": {
@@ -26,7 +26,6 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "prepublishOnly": "npm run build && npm run prisma:generate",
-    "postinstall": "prisma generate",
     "generate:api": "node scripts/generate-api.js",
     "version:patch": "npm version patch",
     "version:minor": "npm version minor",

@@ -72,6 +72,12 @@ export class SyncService {
       // Get data path
       const dataPath = options.path || configManager.getClaudeCodeConfig().rawDataPath;
       
+      // Check if Claude raw data path exists
+      const fs = await import('fs');
+      if (!fs.existsSync(dataPath)) {
+        throw new Error(`Claude Code data directory not found: ${dataPath}\n\nPlease ensure Claude Code Desktop is installed and has been used at least once.`);
+      }
+      
       // Inform user about sync speed (only if not quiet)
       if (!options.quiet && needsFullRecalc) {
         const messages = ConfigHelper.getSyncMessages();

@@ -174,10 +174,8 @@ class ConfigManager {
       this.config.claudeCode.rawDataPath = path.resolve(process.cwd(), this.config.claudeCode.rawDataPath);
     }
 
-    // Check if Claude raw data path exists
-    if (!fs.existsSync(this.config.claudeCode.rawDataPath)) {
-      throw new Error(`Claude raw data path does not exist: ${this.config.claudeCode.rawDataPath}`);
-    }
+    // Don't check if Claude raw data path exists here - it should be checked at runtime
+    // when the sync command is run, not at startup
     
     // Validate pricing URL
     if (!this.config.claudeCode.pricingUrl) {

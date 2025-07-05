@@ -9,6 +9,9 @@ const chalk_1 = __importDefault(require("chalk"));
 const cc_1 = require("./commands/cc");
 const logger_1 = require("./utils/logger");
 const config_1 = require("./config");
+const prisma_check_1 = require("./utils/prisma-check");
+// Ensure Prisma client is generated (for global installations)
+(0, prisma_check_1.ensurePrismaClient)();
 // Log environment and configuration info on startup
 const environment = process.env.NODE_ENV || 'default';
 console.log(chalk_1.default.gray(`Running in ${environment} mode`));
