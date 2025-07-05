@@ -77,9 +77,8 @@ export class SyncService {
       
       // Handle tilde expansion
       const os = await import('os');
-      const path = await import('path');
       if (dataPath.startsWith('~/')) {
-        dataPath = path.join(os.homedir(), dataPath.slice(2));
+        dataPath = dataPath.replace(/^~/, os.homedir());
       }
       
       // Check if Claude raw data path exists
