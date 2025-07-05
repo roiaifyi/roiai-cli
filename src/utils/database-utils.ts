@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { v5 as uuidv5 } from 'uuid';
+import { configManager } from '../config';
+import path from 'path';
+import os from 'os';
 
 export class DatabaseUtils {
   private static readonly UUID_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
@@ -8,7 +11,27 @@ export class DatabaseUtils {
    * Execute a database operation with automatic connection management
    */
   static async withDatabase<T>(operation: (prisma: PrismaClient) => Promise<T>): Promise<T> {
-    const prisma = new PrismaClient();
+    let dbPath = configManager.getDatabaseConfig().path;
+    
+    // Handle tilde expansion
+    if (dbPath.startsWith('~/')) {
+      dbPath = path.join(os.homedir(), dbPath.slice(2));
+    }
+    
+    // Ensure absolute path
+    const absolutePath = path.isAbsolute(dbPath) 
+      ? dbPath 
+      : path.resolve(process.cwd(), dbPath);
+    
+    const prisma = new PrismaClient({
+      datasources: {
+        db: {
+          url: `file:${absolutePath}`
+        }
+      },
+      log: ['error', 'warn']
+    });
+    
     try {
       return await operation(prisma);
     } finally {

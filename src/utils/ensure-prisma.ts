@@ -27,8 +27,14 @@ export function ensurePrismaClient(): void {
   try {
     // Try to import and test the client
     const { PrismaClient } = require('@prisma/client');
-    // Just try to instantiate - if it throws, we'll catch it
-    new PrismaClient();
+    // Just try to instantiate with a dummy URL - if it throws, we'll catch it
+    new PrismaClient({
+      datasources: {
+        db: {
+          url: 'file:./test.db'
+        }
+      }
+    });
   } catch (error: any) {
     if (error.message.includes('did not initialize yet')) {
       console.log(chalk.yellow('First time setup: Generating Prisma client...'));

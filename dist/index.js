@@ -12,14 +12,6 @@ const config_1 = require("./config");
 const ensure_prisma_1 = require("./utils/ensure-prisma");
 // Ensure Prisma client is generated before any operations
 (0, ensure_prisma_1.ensurePrismaClient)();
-// Log environment and configuration info on startup
-const environment = process.env.NODE_ENV || 'default';
-console.log(chalk_1.default.gray(`Running in ${environment} mode`));
-// Warn if NODE_ENV is not set in production-like environments
-if (!process.env.NODE_ENV && process.argv[0].includes('node')) {
-    console.log(chalk_1.default.yellow('ℹ️  NODE_ENV is not set. Using default configuration.'));
-    console.log(chalk_1.default.yellow('   For production, set NODE_ENV=production'));
-}
 const program = new commander_1.Command();
 // Get version from package.json
 const packageJson = require('../package.json');
