@@ -4,14 +4,14 @@
     "machineInfoFilename": "machine_info.json"
   },
   "database": {
-    "path": "./prisma/dev.db"
+    "path": "~/.roiai/roiai.db"
   },
   "user": {
     "infoFilename": "user_info.json",
     "anonymousIdPrefix": "anon-"
   },
   "claudeCode": {
-    "rawDataPath": "./claude_raw_data",
+    "rawDataPath": "~/.claude",
     "pricingUrl": "https://raw.githubusercontent.com/alansparrow/ai-models-pricing/main/claude/pricing-data.json",
     "pricingCacheTimeout": 3600000,
     "cacheDurationDefault": 5,

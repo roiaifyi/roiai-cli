@@ -70,7 +70,14 @@ export class SyncService {
       const needsFullRecalc = !useIncremental || options.force;
       
       // Get data path
-      const dataPath = options.path || configManager.getClaudeCodeConfig().rawDataPath;
+      let dataPath = options.path || configManager.getClaudeCodeConfig().rawDataPath;
+      
+      // Handle tilde expansion
+      const os = await import('os');
+      const path = await import('path');
+      if (dataPath.startsWith('~/')) {
+        dataPath = path.join(os.homedir(), dataPath.slice(2));
+      }
       
       // Check if Claude raw data path exists
       const fs = await import('fs');

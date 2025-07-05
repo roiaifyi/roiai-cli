@@ -7,14 +7,26 @@ exports.prisma = exports.db = exports.getPrisma = exports.getDb = void 0;
 const client_1 = require("@prisma/client");
 const config_1 = require("../config");
 const path_1 = __importDefault(require("path"));
+const os_1 = __importDefault(require("os"));
+const fs_1 = __importDefault(require("fs"));
 class Database {
     prisma;
     static instance;
     constructor() {
-        const dbPath = config_1.configManager.getDatabaseConfig().path;
+        let dbPath = config_1.configManager.getDatabaseConfig().path;
+        // Handle tilde expansion
+        if (dbPath.startsWith('~/')) {
+            dbPath = path_1.default.join(os_1.default.homedir(), dbPath.slice(2));
+        }
+        // Ensure absolute path
         const absolutePath = path_1.default.isAbsolute(dbPath)
             ? dbPath
             : path_1.default.resolve(process.cwd(), dbPath);
+        // Ensure directory exists
+        const dbDir = path_1.default.dirname(absolutePath);
+        if (!fs_1.default.existsSync(dbDir)) {
+            fs_1.default.mkdirSync(dbDir, { recursive: true });
+        }
         this.prisma = new client_1.PrismaClient({
             datasources: {
                 db: {

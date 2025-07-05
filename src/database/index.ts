@@ -1,16 +1,31 @@
 import { PrismaClient } from '@prisma/client';
 import { configManager } from '../config';
 import path from 'path';
+import os from 'os';
+import fs from 'fs';
 
 class Database {
   private prisma: PrismaClient;
   private static instance: Database;
 
   private constructor() {
-    const dbPath = configManager.getDatabaseConfig().path;
+    let dbPath = configManager.getDatabaseConfig().path;
+    
+    // Handle tilde expansion
+    if (dbPath.startsWith('~/')) {
+      dbPath = path.join(os.homedir(), dbPath.slice(2));
+    }
+    
+    // Ensure absolute path
     const absolutePath = path.isAbsolute(dbPath) 
       ? dbPath 
       : path.resolve(process.cwd(), dbPath);
+    
+    // Ensure directory exists
+    const dbDir = path.dirname(absolutePath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
     
     this.prisma = new PrismaClient({
       datasources: {
