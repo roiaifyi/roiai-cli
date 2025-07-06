@@ -1,6 +1,6 @@
 {
   "name": "roiai",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "CLI tool for tracking and managing AI service usage and costs",
   "main": "dist/index.js",
   "bin": {
