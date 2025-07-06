@@ -1,5 +1,5 @@
-import { Prisma, MessageWriter } from '@prisma/client';
-import { prisma } from '../database';
+import { Prisma, MessageWriter, PrismaClient } from '@prisma/client';
+import { getPrisma } from '../database';
 import { logger } from '../utils/logger';
 import { ConfigHelper } from '../utils/config-helper';
 
@@ -32,9 +32,17 @@ export class BatchProcessor {
   private messageBuffer: BatchMessage[] = [];
   private existingMessageIds: Set<string> = new Set();
   private readonly batchSize: number;
+  private prismaClient: PrismaClient | null = null;
 
   constructor(batchSize?: number) {
     this.batchSize = batchSize || ConfigHelper.getProcessing().defaultBatchSize;
+  }
+
+  private async getPrismaClient(): Promise<PrismaClient> {
+    if (!this.prismaClient) {
+      this.prismaClient = await getPrisma();
+    }
+    return this.prismaClient;
   }
 
   /**
@@ -42,7 +50,8 @@ export class BatchProcessor {
    */
   async loadExistingMessageIds(projectId?: string): Promise<void> {
     const where = projectId ? { projectId } : {};
-    const existingMessages = await prisma.message.findMany({
+    const prismaClient = await this.getPrismaClient();
+    const existingMessages = await prismaClient.message.findMany({
       where,
       select: { messageId: true }
     });
@@ -87,7 +96,8 @@ export class BatchProcessor {
         const messageChunk = this.messageBuffer.slice(i, i + CHUNK_SIZE);
         
         try {
-          await prisma.$transaction(async (tx) => {
+          const prismaClient = await this.getPrismaClient();
+          await prismaClient.$transaction(async (tx) => {
             // Insert messages with sync status using nested create
             for (const message of messageChunk) {
               await tx.message.create({
@@ -110,7 +120,8 @@ export class BatchProcessor {
           // If chunk fails, process messages individually to maximize success
           for (const message of messageChunk) {
             try {
-              await prisma.$transaction(async (tx) => {
+              const prismaClient = await this.getPrismaClient();
+          await prismaClient.$transaction(async (tx) => {
                 // Check if message already exists
                 const existing = await tx.message.findUnique({
                   where: { messageId: message.messageId }
@@ -174,7 +185,8 @@ export class BatchProcessor {
       const batch = sessionIds.slice(i, i + BATCH_SIZE);
       
       // Check which sessions exist in this batch
-      const existingSessions = await prisma.session.findMany({
+      const prismaClient = await this.getPrismaClient();
+      const existingSessions = await prismaClient.session.findMany({
         where: { id: { in: batch } },
         select: { id: true }
       });
@@ -185,7 +197,8 @@ export class BatchProcessor {
       // Create new sessions with individual error handling
       for (const sessionId of newSessions) {
         try {
-          await prisma.session.create({
+          const prismaClient = await this.getPrismaClient();
+          await prismaClient.session.create({
             data: {
               id: sessionId,
               projectId,
@@ -213,7 +226,8 @@ export class BatchProcessor {
    * Calculate and update aggregates efficiently
    */
   async updateAggregatesForProject(projectId: string): Promise<void> {
-    await prisma.$executeRaw`
+    const prismaClient = await this.getPrismaClient();
+    await prismaClient.$executeRaw`
       UPDATE sessions s
       SET 
         total_messages = subq.message_count,
@@ -239,7 +253,7 @@ export class BatchProcessor {
     `;
 
     // Update project aggregates
-    await prisma.$executeRaw`
+    await prismaClient.$executeRaw`
       UPDATE projects p
       SET 
         total_sessions = (SELECT COUNT(*) FROM sessions WHERE project_id = ${projectId}),

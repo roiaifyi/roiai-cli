@@ -5,11 +5,37 @@ import os from 'os';
 import fs from 'fs';
 import { execSync } from 'child_process';
 
+// Delay PrismaClient import until needed
+let PrismaClientConstructor: typeof PrismaClient | null = null;
+
+async function loadPrismaClient(): Promise<typeof PrismaClient> {
+  if (!PrismaClientConstructor) {
+    const module = await import('@prisma/client');
+    PrismaClientConstructor = module.PrismaClient;
+  }
+  return PrismaClientConstructor;
+}
+
 class Database {
-  private prisma: PrismaClient;
+  private prisma: PrismaClient | null = null;
   private static instance: Database;
 
   private constructor() {
+    // Defer initialization until getClient is called
+  }
+
+  static getInstance(): Database {
+    if (!Database.instance) {
+      Database.instance = new Database();
+    }
+    return Database.instance;
+  }
+
+  async initializePrisma(): Promise<void> {
+    if (this.prisma) return;
+
+    const PrismaClientClass = await loadPrismaClient();
+    
     let dbPath = configManager.getDatabaseConfig().path;
     
     // Handle tilde expansion
@@ -28,7 +54,7 @@ class Database {
       fs.mkdirSync(dbDir, { recursive: true });
     }
     
-    this.prisma = new PrismaClient({
+    this.prisma = new PrismaClientClass({
       datasources: {
         db: {
           url: `file:${absolutePath}`
@@ -38,21 +64,16 @@ class Database {
     });
   }
 
-  static getInstance(): Database {
-    if (!Database.instance) {
-      Database.instance = new Database();
-    }
-    return Database.instance;
-  }
-
-  getClient(): PrismaClient {
-    return this.prisma;
+  async getClient(): Promise<PrismaClient> {
+    await this.initializePrisma();
+    return this.prisma!;
   }
   
   async ensureInitialized(): Promise<void> {
+    const client = await this.getClient();
     try {
       // Try to query the users table to check if database is initialized
-      await this.prisma.user.findFirst();
+      await client.user.findFirst();
     } catch (error: any) {
       if (error.message && error.message.includes('does not exist')) {
         // Tables don't exist, run migrations
@@ -84,6 +105,31 @@ class Database {
         ? dbPath 
         : path.resolve(process.cwd(), dbPath);
       
+      // Check if prisma binary is available first
+      try {
+        execSync('npx --yes prisma --version', {
+          stdio: 'ignore',
+          cwd: path.join(__dirname, '../..'),
+        });
+      } catch {
+        // Try to use the prisma from node_modules if npx fails
+        const prismaBinPath = path.join(__dirname, '../../node_modules/.bin/prisma');
+        if (fs.existsSync(prismaBinPath)) {
+          // Use the local prisma binary directly
+          execSync(`"${prismaBinPath}" migrate deploy --schema="${schemaPath}"`, {
+            stdio: 'pipe',
+            env: {
+              ...process.env,
+              DATABASE_URL: `file:${absolutePath}`
+            }
+          });
+          console.log('✓ Database setup complete');
+          return;
+        } else {
+          throw new Error('Prisma CLI not found. Please run: npm install prisma@^6.10.0');
+        }
+      }
+      
       // Run migrations deploy (not dev) for production
       execSync(`npx --yes prisma migrate deploy --schema="${schemaPath}"`, {
         stdio: 'pipe',  // Suppress Prisma output
@@ -96,33 +142,43 @@ class Database {
       console.log('✓ Database setup complete');
     } catch (error: any) {
       console.error('Failed to set up database:', error.message);
+      if (error.message.includes('ENOENT')) {
+        console.error('\nIt appears the Prisma CLI is not installed.');
+        console.error('Please try running:');
+        console.error('  npm install prisma@^6.10.0');
+        console.error('  npx prisma generate');
+        console.error('  npx prisma migrate deploy');
+      }
       throw error;
     }
   }
 
   async connect(): Promise<void> {
-    await this.prisma.$connect();
+    const client = await this.getClient();
+    await client.$connect();
   }
 
   async disconnect(): Promise<void> {
-    await this.prisma.$disconnect();
+    if (this.prisma) {
+      await this.prisma.$disconnect();
+    }
   }
 
   async clearAllData(): Promise<void> {
+    const client = await this.getClient();
     // Delete in reverse order of dependencies
-    await this.prisma.messageSyncStatus.deleteMany();
-    await this.prisma.fileStatus.deleteMany();
-    await this.prisma.message.deleteMany();
-    await this.prisma.session.deleteMany();
-    await this.prisma.project.deleteMany();
-    await this.prisma.machine.deleteMany();
-    await this.prisma.user.deleteMany();
+    await client.messageSyncStatus.deleteMany();
+    await client.fileStatus.deleteMany();
+    await client.message.deleteMany();
+    await client.session.deleteMany();
+    await client.project.deleteMany();
+    await client.machine.deleteMany();
+    await client.user.deleteMany();
   }
 }
 
 // Lazy initialization to avoid loading Prisma before it's generated
 let _db: Database | null = null;
-let _prisma: PrismaClient | null = null;
 
 export const getDb = (): Database => {
   if (!_db) {
@@ -131,22 +187,31 @@ export const getDb = (): Database => {
   return _db;
 };
 
-export const getPrisma = (): PrismaClient => {
-  if (!_prisma) {
-    _prisma = getDb().getClient();
-  }
-  return _prisma;
+// Async version that ensures client is loaded
+export const getPrisma = async (): Promise<PrismaClient> => {
+  const database = getDb();
+  return database.getClient();
 };
 
-// For backward compatibility
+// For backward compatibility - create proxy that handles async loading
 export const db = new Proxy({} as Database, {
   get(_, prop) {
-    return getDb()[prop as keyof Database];
+    const database = getDb();
+    const value = database[prop as keyof Database];
+    if (typeof value === 'function') {
+      return value.bind(database);
+    }
+    return value;
   }
 });
 
+// Create a proxy that throws helpful error for synchronous access
 export const prisma = new Proxy({} as PrismaClient, {
   get(_, prop) {
-    return getPrisma()[prop as keyof PrismaClient];
+    throw new Error(
+      `Direct access to prisma.${String(prop)} is not available. ` +
+      `Please use 'await getPrisma()' to get the PrismaClient instance first, ` +
+      `then access the property: const client = await getPrisma(); await client.${String(prop)}(...)`
+    );
   }
 });

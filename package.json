@@ -85,7 +85,6 @@
     "jest": "^30.0.0",
     "nodemon": "^3.1.10",
     "openapi-typescript": "^7.8.0",
-    "prisma": "^6.10.0",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
@@ -99,6 +98,7 @@
     "config": "^4.0.0",
     "node-fetch": "^2.7.0",
     "ora": "^5.4.1",
+    "prisma": "^6.10.0",
     "prompts": "^2.4.2",
     "uuid": "^11.1.0"
   }

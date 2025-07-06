@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { db, prisma } from '../../database';
+import { db, getPrisma } from '../../database';
 import { UserService } from '../../services/user.service';
 import { SyncService } from '../../services/sync.service';
 
@@ -10,8 +10,9 @@ export const syncCommand = new Command('sync')
   .option('-p, --path <path>', 'Override Claude Code data path (default: ~/.claude)')
   .action(async (options) => {
     try {
+      const prismaClient = await getPrisma();
       const userService = new UserService();
-      const syncService = new SyncService(prisma, userService);
+      const syncService = new SyncService(prismaClient, userService);
       
       await syncService.sync({
         force: options.force,

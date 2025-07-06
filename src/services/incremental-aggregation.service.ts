@@ -1,10 +1,18 @@
-import { prisma } from '../database';
+import { getPrisma } from '../database';
 import { PrismaClient } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 export class IncrementalAggregationService {
+  private prismaClient: PrismaClient | null = null;
+
+  private async getPrismaClient(): Promise<PrismaClient> {
+    if (!this.prismaClient) {
+      this.prismaClient = await getPrisma();
+    }
+    return this.prismaClient;
+  }
   /**
    * Update aggregates when a new message is created
    * This should be called within the same transaction as message creation
@@ -23,7 +31,7 @@ export class IncrementalAggregationService {
     },
     tx?: TransactionClient
   ): Promise<void> {
-    const client = tx || prisma;
+    const client = tx || await this.getPrismaClient();
 
     // Update session aggregates
     await client.session.update({
@@ -89,7 +97,7 @@ export class IncrementalAggregationService {
     },
     tx?: TransactionClient
   ): Promise<void> {
-    const client = tx || prisma;
+    const client = tx || await this.getPrismaClient();
 
     // Update project session count
     await client.project.update({
@@ -126,7 +134,7 @@ export class IncrementalAggregationService {
     },
     tx?: TransactionClient
   ): Promise<void> {
-    const client = tx || prisma;
+    const client = tx || await this.getPrismaClient();
 
     // Update machine project count
     await client.machine.update({
@@ -161,7 +169,7 @@ export class IncrementalAggregationService {
     }>,
     tx?: TransactionClient
   ): Promise<void> {
-    const client = tx || prisma;
+    const client = tx || await this.getPrismaClient();
 
     // Group messages by session, project, and user for efficient updates
     const sessionAggregates = new Map<string, any>();
@@ -280,7 +288,8 @@ export class IncrementalAggregationService {
    */
   async shouldUseIncremental(): Promise<boolean> {
     // Check if aggregates are already populated
-    const user = await prisma.user.findFirst({
+    const prismaClient = await this.getPrismaClient();
+    const user = await prismaClient.user.findFirst({
       select: {
         totalMessages: true,
         totalSessions: true,

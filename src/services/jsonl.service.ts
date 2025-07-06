@@ -8,7 +8,7 @@ import {
   ProcessingProgress,
   TokenUsageByModel,
 } from "../models/types";
-import { prisma } from "../database";
+import { getPrisma } from "../database";
 import { PricingService } from "./pricing.service";
 import { UserService } from "./user.service";
 import { BatchProcessor, BatchMessage } from "./batch-processor";
@@ -111,7 +111,8 @@ export class JSONLService {
     const machineId = this.userService.getClientMachineId();
 
     // Ensure user exists
-    await prisma.user.upsert({
+    const prismaClient = await getPrisma();
+    await prismaClient.user.upsert({
       where: { id: userId },
       create: {
         id: userId,
@@ -122,7 +123,7 @@ export class JSONLService {
     });
 
     // Ensure machine exists
-    await prisma.machine.upsert({
+    await prismaClient.machine.upsert({
       where: { id: machineId },
       create: {
         id: machineId,
@@ -199,7 +200,8 @@ export class JSONLService {
       .substring(0, ConfigHelper.getProcessing().idSubstringLength);
 
     // Check if project already exists
-    const existingProject = await prisma.project.findUnique({
+    const prismaClient = await getPrisma();
+    const existingProject = await prismaClient.project.findUnique({
       where: {
         projectName_clientMachineId: {
           projectName,
@@ -210,7 +212,7 @@ export class JSONLService {
 
     const isNewProject = !existingProject;
 
-    const project = await prisma.project.upsert({
+    const project = await prismaClient.project.upsert({
       where: {
         projectName_clientMachineId: {
           projectName,
@@ -411,7 +413,8 @@ export class JSONLService {
 
       // Update file status
       const checksum = await this.calculateFileChecksum(filePath);
-      await prisma.fileStatus.upsert({
+      const prismaClient = await getPrisma();
+      await prismaClient.fileStatus.upsert({
         where: { filePath },
         create: {
           filePath,
@@ -442,7 +445,8 @@ export class JSONLService {
   }
 
   private async checkFileStatus(filePath: string) {
-    return await prisma.fileStatus.findUnique({
+    const prismaClient = await getPrisma();
+    return await prismaClient.fileStatus.findUnique({
       where: { filePath },
     });
   }

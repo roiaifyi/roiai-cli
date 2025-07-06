@@ -2,7 +2,7 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
 import { UserInfo, StoredUserInfo } from '../models/types';
-import { prisma } from '../database';
+import { getPrisma } from '../database';
 import { configManager } from '../config';
 import { MachineService } from './machine.service';
 import { FileSystemUtils } from '../utils/file-system-utils';
@@ -76,7 +76,8 @@ export class UserService {
     }
 
     // Create or update user
-    await prisma.user.upsert({
+    const prismaClient = await getPrisma();
+    await prismaClient.user.upsert({
       where: { id: effectiveUserId },
       create: {
         id: effectiveUserId,
@@ -88,7 +89,7 @@ export class UserService {
     });
 
     // Create or update machine
-    await prisma.machine.upsert({
+    await prismaClient.machine.upsert({
       where: { id: this.userInfo.clientMachineId },
       create: {
         id: this.userInfo.clientMachineId,
@@ -170,7 +171,8 @@ export class UserService {
 
     // Reset sync status for ALL messages when a user logs in
     // This ensures that when switching users, all messages can be re-uploaded
-    await prisma.messageSyncStatus.updateMany({
+    const prismaClient = await getPrisma();
+    await prismaClient.messageSyncStatus.updateMany({
       where: {}, // Update all records
       data: {
         syncedAt: null,

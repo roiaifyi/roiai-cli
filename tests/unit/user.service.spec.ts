@@ -20,7 +20,18 @@ jest.mock('../../src/database', () => ({
     messageSyncStatus: {
       updateMany: jest.fn(() => Promise.resolve({ count: 0 }))
     }
-  }
+  },
+  getPrisma: jest.fn(() => Promise.resolve({
+    user: {
+      upsert: jest.fn()
+    },
+    machine: {
+      upsert: jest.fn()
+    },
+    messageSyncStatus: {
+      updateMany: jest.fn(() => Promise.resolve({ count: 0 }))
+    }
+  }))
 }));
 jest.mock('../../src/config');
 jest.mock('../../src/services/machine.service');
@@ -153,14 +164,22 @@ describe('UserService', () => {
     });
 
     it('should reset all message sync statuses on login', async () => {
-      const { prisma } = require('../../src/database');
+      const database = require('../../src/database');
+      const mockUpdateMany = jest.fn<any, any>().mockResolvedValue({ count: 0 });
+      const mockPrismaClient = {
+        messageSyncStatus: {
+          updateMany: mockUpdateMany
+        }
+      };
+      (database.getPrisma as any).mockResolvedValue(mockPrismaClient);
+      
       mockFs.mkdir.mockResolvedValue(undefined);
       mockFs.writeFile.mockResolvedValue(undefined);
       
       await userService.login('user-123', 'test@example.com', 'token-123');
       
       // Verify that updateMany was called to reset all sync statuses
-      expect(prisma.messageSyncStatus.updateMany).toHaveBeenCalledWith({
+      expect(mockUpdateMany).toHaveBeenCalledWith({
         where: {}, // Should update all records
         data: {
           syncedAt: null,
