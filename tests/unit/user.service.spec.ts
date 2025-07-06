@@ -9,30 +9,24 @@ import { MachineInfo } from '../../src/models/types';
 // Mock dependencies
 jest.mock('fs/promises');
 jest.mock('os');
-jest.mock('../../src/database', () => ({
-  prisma: {
+jest.mock('../../src/database', () => {
+  const mockPrismaClient = {
     user: {
-      upsert: jest.fn()
+      upsert: jest.fn(() => Promise.resolve({}))
     },
     machine: {
-      upsert: jest.fn()
+      upsert: jest.fn(() => Promise.resolve({}))
     },
     messageSyncStatus: {
       updateMany: jest.fn(() => Promise.resolve({ count: 0 }))
     }
-  },
-  getPrisma: jest.fn(() => Promise.resolve({
-    user: {
-      upsert: jest.fn()
-    },
-    machine: {
-      upsert: jest.fn()
-    },
-    messageSyncStatus: {
-      updateMany: jest.fn(() => Promise.resolve({ count: 0 }))
-    }
-  }))
-}));
+  };
+  
+  return {
+    prisma: mockPrismaClient,
+    getPrisma: jest.fn(() => Promise.resolve(mockPrismaClient))
+  };
+});
 jest.mock('../../src/config');
 jest.mock('../../src/services/machine.service');
 
@@ -164,14 +158,8 @@ describe('UserService', () => {
     });
 
     it('should reset all message sync statuses on login', async () => {
-      const database = require('../../src/database');
-      const mockUpdateMany = jest.fn<any, any>().mockResolvedValue({ count: 0 });
-      const mockPrismaClient = {
-        messageSyncStatus: {
-          updateMany: mockUpdateMany
-        }
-      };
-      (database.getPrisma as any).mockResolvedValue(mockPrismaClient);
+      const { getPrisma } = require('../../src/database');
+      const mockPrismaClient = await getPrisma();
       
       mockFs.mkdir.mockResolvedValue(undefined);
       mockFs.writeFile.mockResolvedValue(undefined);
@@ -179,7 +167,7 @@ describe('UserService', () => {
       await userService.login('user-123', 'test@example.com', 'token-123');
       
       // Verify that updateMany was called to reset all sync statuses
-      expect(mockUpdateMany).toHaveBeenCalledWith({
+      expect(mockPrismaClient.messageSyncStatus.updateMany).toHaveBeenCalledWith({
         where: {}, // Should update all records
         data: {
           syncedAt: null,

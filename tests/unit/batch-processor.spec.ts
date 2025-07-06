@@ -3,32 +3,34 @@ import { BatchProcessor, BatchMessage } from '../../src/services/batch-processor
 import { Prisma, MessageWriter } from '@prisma/client';
 
 // Mock Prisma
-const mockPrismaClient = {
-  message: {
-    findMany: jest.fn(),
-    createMany: jest.fn(),
-    findUnique: jest.fn(),
-    create: jest.fn()
-  },
-  messageSyncStatus: {
-    createMany: jest.fn(),
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-    create: jest.fn()
-  },
-  session: {
-    findMany: jest.fn(),
-    createMany: jest.fn(),
-    create: jest.fn()
-  },
-  $transaction: jest.fn(),
-  $executeRaw: jest.fn()
-};
-
-jest.mock('../../src/database', () => ({
-  prisma: mockPrismaClient,
-  getPrisma: jest.fn(() => Promise.resolve(mockPrismaClient))
-}));
+jest.mock('../../src/database', () => {
+  const mockPrismaClient = {
+    message: {
+      findMany: jest.fn(),
+      createMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn()
+    },
+    messageSyncStatus: {
+      createMany: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn()
+    },
+    session: {
+      findMany: jest.fn(),
+      createMany: jest.fn(),
+      create: jest.fn()
+    },
+    $transaction: jest.fn(),
+    $executeRaw: jest.fn()
+  };
+  
+  return {
+    prisma: mockPrismaClient,
+    getPrisma: jest.fn(() => Promise.resolve(mockPrismaClient))
+  };
+});
 
 import { prisma } from '../../src/database';
 
