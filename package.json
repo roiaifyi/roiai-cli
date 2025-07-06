@@ -1,6 +1,6 @@
 {
   "name": "roiai",
-  "version": "1.0.27",
+  "version": "1.0.28",
   "description": "CLI tool for tracking and managing AI service usage and costs",
   "main": "dist/index.js",
   "bin": {
@@ -34,9 +34,9 @@
     "bump:major": "./scripts/bump-version.sh major",
     "bump:dry": "./scripts/bump-version.sh patch --dry-run",
     "bump:auto": "./scripts/bump-version.sh patch --push",
-    "version:patch": "npm version patch",
-    "version:minor": "npm version minor",
-    "version:major": "npm version major",
+    "version:patch": "npm version patch --no-git-tag-version && git add package.json && git commit -m \"chore: release $(node -p \"require('./package.json').version\")\"",
+    "version:minor": "npm version minor --no-git-tag-version && git add package.json && git commit -m \"chore: release $(node -p \"require('./package.json').version\")\"",
+    "version:major": "npm version major --no-git-tag-version && git add package.json && git commit -m \"chore: release $(node -p \"require('./package.json').version\")\"",
     "prepare-release": "./scripts/prepare-release.sh",
     "generate-release-notes": "node scripts/release-notes.js",
     "release": "npm run build && npm publish",
