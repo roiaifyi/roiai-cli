@@ -82,12 +82,12 @@ jobs:
       - name: Generate Prisma client
         run: npm run prisma:generate
 
+      - name: Build project
+        run: npm run build
+
       - name: Run tests
         if: ${{ !inputs.skip_tests }}
         run: npm test
-
-      - name: Build project
-        run: npm run build
 
       - name: Check if already published
         id: check_npm

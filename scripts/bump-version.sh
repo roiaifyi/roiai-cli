@@ -180,10 +180,12 @@ if [ "$NO_GIT" = true ]; then
     NEW_VERSION=$(npm version "$VERSION_TYPE" --no-git-tag-version)
     success "Version bumped to $NEW_VERSION (no git commit)"
 else
-    # Bump version with git commit and tag
-    NEW_VERSION=$(npm version "$VERSION_TYPE" -m "chore: release %s")
+    # Bump version with git commit but NO tag (GitHub Action will create it)
+    NEW_VERSION=$(npm version "$VERSION_TYPE" --no-git-tag-version)
+    git add package.json package-lock.json 2>/dev/null || git add package.json
+    git commit -m "chore: release $NEW_VERSION"
     success "Version bumped to $NEW_VERSION"
-    success "Git commit and tag created"
+    success "Git commit created (tag will be created by GitHub Action)"
 fi
 
 # Update CHANGELOG.md if it exists
@@ -208,8 +210,7 @@ if [ "$AUTO_PUSH" = true ] && [ "$NO_GIT" = false ]; then
     echo ""
     echo "Pushing changes to remote..."
     git push origin main
-    git push origin "v${NEW_VERSION}"
-    success "Changes and tag pushed to remote"
+    success "Changes pushed to remote (GitHub Action will create tag)"
 fi
 
 # Summary
@@ -224,14 +225,14 @@ echo ""
 if [ "$NO_GIT" = false ] && [ "$AUTO_PUSH" = false ]; then
     echo "Next steps:"
     echo "1. Update CHANGELOG.md if needed"
-    echo "2. Push changes: git push origin main --tags"
-    echo "3. The GitHub Action will handle the release"
+    echo "2. Push changes: git push origin main"
+    echo "3. The GitHub Action will create the tag and handle the release"
 elif [ "$NO_GIT" = true ]; then
     echo "Next steps:"
     echo "1. Review the version change in package.json"
     echo "2. Commit when ready: git add package.json && git commit -m \"chore: release $NEW_VERSION\""
-    echo "3. Create tag: git tag -a \"v$NEW_VERSION\" -m \"Release $NEW_VERSION\""
-    echo "4. Push changes: git push origin main --tags"
+    echo "3. Push changes: git push origin main"
+    echo "4. The GitHub Action will create the tag and handle the release"
 fi
 
 echo ""

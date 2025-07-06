@@ -117,7 +117,7 @@ async function main() {
       { title: 'Run tests before bumping', value: 'test', selected: true },
       { title: 'Build project before bumping', value: 'build', selected: true },
       { title: 'Generate Prisma client', value: 'prisma', selected: true },
-      { title: 'Create git commit and tag', value: 'git', selected: true },
+      { title: 'Create git commit (no tag)', value: 'git', selected: true },
       { title: 'Push to remote after bumping', value: 'push', selected: false }
     ]
   });
@@ -147,18 +147,24 @@ async function main() {
     // Bump version
     console.log(chalk.blue('Bumping version...'));
     
-    const gitFlag = options.includes('git') ? '' : '--no-git-tag-version';
+    // Always use --no-git-tag-version since GitHub Action creates tags
     const customFlag = versionType === 'custom' ? newVersion : versionType;
+    execSync(`npm version ${customFlag} --no-git-tag-version`, { stdio: 'pipe' });
     
-    execSync(`npm version ${customFlag} ${gitFlag}`, { stdio: 'pipe' });
-    console.log(chalk.green(`✓ Version bumped to ${newVersion}\n`));
+    // Create git commit if requested
+    if (options.includes('git')) {
+      execSync('git add package.json package-lock.json 2>/dev/null || git add package.json', { stdio: 'pipe' });
+      execSync(`git commit -m "chore: release ${newVersion}"`, { stdio: 'pipe' });
+      console.log(chalk.green(`✓ Version bumped to ${newVersion} with commit\n`));
+    } else {
+      console.log(chalk.green(`✓ Version bumped to ${newVersion} (no commit)\n`));
+    }
 
     // Push if requested
     if (options.includes('push') && options.includes('git')) {
       console.log(chalk.blue('Pushing to remote...'));
       execSync('git push origin main', { stdio: 'pipe' });
-      execSync(`git push origin v${newVersion}`, { stdio: 'pipe' });
-      console.log(chalk.green('✓ Pushed to remote\n'));
+      console.log(chalk.green('✓ Pushed to remote (GitHub Action will create tag)\n'));
     }
 
     // Success message
@@ -170,8 +176,8 @@ async function main() {
     if (options.includes('git') && !options.includes('push')) {
       console.log('Next steps:');
       console.log('1. Update CHANGELOG.md if needed');
-      console.log('2. Push changes: git push origin main --tags');
-      console.log('3. The GitHub Action will handle the release\n');
+      console.log('2. Push changes: git push origin main');
+      console.log('3. The GitHub Action will create the tag and handle the release\n');
     }
 
   } catch (error) {
