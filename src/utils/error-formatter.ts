@@ -3,7 +3,10 @@
  */
 
 import chalk from 'chalk';
-import type { ErrorCode, SyncErrorCode } from '../generated/api-client';
+import type { components } from '../generated/api';
+
+type ErrorCode = components['schemas']['ErrorCode'];
+type SyncErrorCode = components['schemas']['SyncErrorCode'];
 
 export class ErrorFormatter {
   /**

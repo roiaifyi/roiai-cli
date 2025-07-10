@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach, jest, afterEach } from '@jest/globals';
 import { PricingService } from '../../src/services/pricing.service';
-import fetch from 'node-fetch';
-
 // Mock dependencies
-jest.mock('node-fetch');
 jest.mock('../../src/config');
 jest.mock('../../src/utils/logger');
 
-const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+const mockFetch = jest.fn();
+// Mock global fetch
+global.fetch = mockFetch as any;
 
 // Sample pricing data matching the new format
 const mockPricingData = {

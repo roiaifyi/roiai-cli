@@ -13,8 +13,11 @@ import { ApiUrlResolver } from '../../utils/api-url-resolver';
 export function createLoginCommand(): Command {
   const command = new Command('login');
   
+  const signupUrl = configManager.get().app.signupUrl || 'https://roiAI.fyi';
+  const signupDomain = signupUrl.replace(/^https?:\/\//, '').toLowerCase();
+  
   command
-    .description('Login to your roiAI account (create free account at roiai.fyi)')
+    .description(`Login to your roiAI account (create free account at ${signupDomain})`)
     .option('-e, --email <email>', 'Email address')
     .option('-p, --password <password>', 'Password')
     .option('-t, --token <token>', 'API token (alternative to email/password)')
@@ -130,22 +133,7 @@ export function createLoginCommand(): Command {
           // Authenticate with server using typed client
           spinner.text = 'Authenticating with server...';
           
-          // Debug: Log the request
-          if (options.verbose) {
-            console.log(chalk.dim('\nLogin request:'), {
-              email: loginRequest.email,
-              username: loginRequest.username,
-              hasPassword: !!loginRequest.password,
-              machineInfo: loginRequest.machine_info
-            });
-          }
-          
           const loginResponse = await apiClient.cliLogin(loginRequest);
-          
-          // Debug: Log the response
-          if (options.verbose) {
-            console.log(chalk.dim('\nLogin response:'), loginResponse);
-          }
           
           // Extract user and API key from typed response
           const { user, api_key } = loginResponse;
@@ -196,7 +184,8 @@ export function createLoginCommand(): Command {
             switch (error.code) {
               case 'AUTH_001':
                 spinner.fail('Invalid credentials. Please check your email/username and password.');
-                console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
+                const signupUrl = configManager.get().app.signupUrl || 'https://roiAI.fyi';
+                console.log(chalk.cyan(`\nDon't have an account? Create one at ${signupUrl}`));
                 process.exit(1);
                 break;
               case 'VAL_001':
@@ -218,9 +207,11 @@ export function createLoginCommand(): Command {
                 // Show account creation hint for auth-related errors
                 if (error.message && error.message.toLowerCase().includes('email not verified')) {
                   console.log(chalk.yellow('\nPlease check your email to verify your account.'));
-                  console.log(chalk.cyan('Need a new account? Create one at https://roiAI.fyi'));
+                  const signupUrl2 = configManager.get().app.signupUrl || 'https://roiAI.fyi';
+                  console.log(chalk.cyan(`Need a new account? Create one at ${signupUrl2}`));
                 } else {
-                  console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
+                  const signupUrl = configManager.get().app.signupUrl || 'https://roiAI.fyi';
+                console.log(chalk.cyan(`\nDon't have an account? Create one at ${signupUrl}`));
                 }
                 process.exit(1);
             }
@@ -228,7 +219,8 @@ export function createLoginCommand(): Command {
             SpinnerErrorHandler.handleError(spinner, error, 'Authentication endpoint not found. Please check your server configuration.');
           } else {
             spinner.fail('Login failed');
-            console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
+            const signupUrl3 = configManager.get().app.signupUrl || 'https://roiAI.fyi';
+            console.log(chalk.cyan(`\nDon't have an account? Create one at ${signupUrl3}`));
             process.exit(1);
           }
         }
@@ -243,7 +235,8 @@ export function createLoginCommand(): Command {
           console.error(chalk.dim('\nError details:'), error);
         }
         
-        console.log(chalk.cyan('\nDon\'t have an account? Create one at https://roiAI.fyi'));
+        const signupUrl4 = configManager.get().app.signupUrl || 'https://roiAI.fyi';
+        console.log(chalk.cyan(`\nDon't have an account? Create one at ${signupUrl4}`));
         process.exit(1);
       }
     });

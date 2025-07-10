@@ -6,6 +6,7 @@ export interface Config {
   app: {
     dataDir: string;              // Base directory for app data (e.g., ~/.roiai)
     machineInfoFilename: string;  // Filename for machine info
+    signupUrl?: string;           // URL for account signup
   };
   database: {
     path: string;
@@ -150,11 +151,9 @@ export interface Config {
 
 class ConfigManager {
   private config: Config;
-  private environment: string;
 
   constructor() {
     this.config = config as unknown as Config;
-    this.environment = process.env.NODE_ENV || 'default';
     this.validateConfig();
     this.logConfigurationSource();
   }
@@ -206,11 +205,7 @@ class ConfigManager {
   }
 
   private logConfigurationSource(): void {
-    // Only log in development or when explicitly debugging
-    if (this.environment === 'development' || process.env.DEBUG_CONFIG) {
-      console.log(`Configuration loaded for environment: ${this.environment}`);
-      console.log(`API endpoint: ${this.config.api.baseUrl}`);
-    }
+    // Configuration logging removed - no longer needed
   }
 
   get(): Config {

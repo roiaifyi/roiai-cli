@@ -1,15 +1,15 @@
 import { describe, expect, test, jest, beforeEach, afterEach } from '@jest/globals';
-import fetch from 'node-fetch';
 import { PricingService, PricingCache } from '../../src/services/pricing.service';
 import { configManager } from '../../src/config';
 import { logger } from '../../src/utils/logger';
 
 // Mock dependencies
-jest.mock('node-fetch');
 jest.mock('../../src/config');
 jest.mock('../../src/utils/logger');
 
-const mockFetch = fetch as jest.MockedFunction<typeof fetch>;
+const mockFetch = jest.fn();
+// Mock global fetch
+global.fetch = mockFetch as any;
 const mockConfigManager = configManager as jest.Mocked<typeof configManager>;
 const mockLogger = logger as jest.Mocked<typeof logger>;
 

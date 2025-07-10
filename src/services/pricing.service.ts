@@ -1,4 +1,3 @@
-import fetch from "node-fetch";
 import { PricingData } from "../models/types";
 import { configManager } from "../config";
 import { logger } from "../utils/logger";
@@ -27,24 +26,6 @@ export class PricingService {
 
     for (const [variant, base] of Object.entries(modelIdMappings)) {
       this.modelMapping.set(variant, base as string);
-    }
-    
-    // Additional Opus 4 and Sonnet 4 mappings not in config
-    const additionalMappings = {
-      "claude-opus-4-20250514": "claude-opus-4",
-      "anthropic.claude-v4": "claude-opus-4",
-      "claude-sonnet-4-20250514": "claude-sonnet-4",
-      "anthropic.claude-3-5-sonnet-20250625-v2:0": "claude-sonnet-4",
-      "claude-3.5-sonnet": "claude-sonnet-3.5",
-      "anthropic.claude-3-5-sonnet-20241022-v2:0": "claude-sonnet-3.5",
-      "claude-3.5-haiku": "claude-haiku-3.5",
-      "anthropic.claude-3-5-haiku-20241022-v1:0": "claude-haiku-3.5",
-    };
-    
-    for (const [variant, base] of Object.entries(additionalMappings)) {
-      if (!this.modelMapping.has(variant)) {
-        this.modelMapping.set(variant, base);
-      }
     }
   }
 
@@ -303,10 +284,8 @@ export class PricingService {
 
   isSyntheticModel(modelId: string): boolean {
     // Models that don't count toward usage
-    const syntheticModels = [
-      "claude-3-5-sonnet-20241022-concept",
-      "claude-3-5-sonnet-20241022-thinking",
-    ];
+    const config = configManager.get();
+    const syntheticModels = config.pricing?.syntheticModels || [];
     return syntheticModels.includes(modelId);
   }
 

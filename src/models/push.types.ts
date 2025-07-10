@@ -1,21 +1,21 @@
-// Re-export generated types from OpenAPI spec
-export {
-  PushRequest,
-  PushResponse,
-  MessageEntity,
-  MachineEntity,
-  ProjectEntity,
-  SessionEntity,
-  UserEntity,
-  SyncFailureDetail,
-  SyncErrorCode,
-  ValidationError,
-  Error as ApiError,
-  HealthCheckResponse,
-  SuccessResponse,
-  ErrorResponse,
-  ErrorCode,
-} from '../generated/api-client';
+// Import and re-export generated types from OpenAPI spec
+import type { components } from '../generated/api';
+
+export type PushRequest = components['schemas']['PushRequest'];
+export type PushResponse = components['schemas']['PushResponse'];
+export type MessageEntity = components['schemas']['MessageEntity'];
+export type MachineEntity = components['schemas']['MachineEntity'];
+export type ProjectEntity = components['schemas']['ProjectEntity'];
+export type SessionEntity = components['schemas']['SessionEntity'];
+export type UserEntity = components['schemas']['UserEntity'];
+export type SyncFailureDetail = components['schemas']['SyncFailureDetail'];
+export type SyncErrorCode = components['schemas']['SyncErrorCode'];
+export type ValidationError = components['schemas']['ValidationError'];
+export type ApiError = components['schemas']['Error'];
+export type HealthCheckResponse = components['schemas']['HealthCheckResponse'];
+export type SuccessResponse = components['schemas']['SuccessResponse'];
+export type ErrorResponse = components['schemas']['ErrorResponse'];
+export type ErrorCode = components['schemas']['ErrorCode'];
 
 export interface PushOptions {
   batchSize: number;
@@ -32,7 +32,7 @@ export interface PushConfig {
 }
 
 export interface EntityMaps {
-  machines: Map<string, import('../generated/api-client').MachineEntity>;
-  projects: Map<string, import('../generated/api-client').ProjectEntity>;
-  sessions: Map<string, import('../generated/api-client').SessionEntity>;
+  machines: Map<string, MachineEntity>;
+  projects: Map<string, ProjectEntity>;
+  sessions: Map<string, SessionEntity>;
 }

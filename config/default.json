@@ -1,7 +1,8 @@
 {
   "app": {
     "dataDir": "~/.roiai",
-    "machineInfoFilename": "machine_info.json"
+    "machineInfoFilename": "machine_info.json",
+    "signupUrl": "https://roiAI.fyi"
   },
   "database": {
     "path": "~/.roiai/roiai.db"
@@ -111,6 +112,8 @@
   "pricing": {
     "syntheticModels": [
       "claude-3-5-sonnet-20241022:reasoning",
+      "claude-3-5-sonnet-20241022-concept",
+      "claude-3-5-sonnet-20241022-thinking",
       "o1",
       "o1-mini",
       "o1-preview"
@@ -129,7 +132,15 @@
       "claude-instant-1.2": "claude-instant-1",
       "claude-3-5-sonnet-20241022:reasoning": "claude-sonnet-3.5",
       "claude-3-5-sonnet-20241022-concept": "claude-sonnet-3.5",
-      "claude-3-5-sonnet-20241022-thinking": "claude-sonnet-3.5"
+      "claude-3-5-sonnet-20241022-thinking": "claude-sonnet-3.5",
+      "claude-opus-4-20250514": "claude-opus-4",
+      "anthropic.claude-v4": "claude-opus-4",
+      "claude-sonnet-4-20250514": "claude-sonnet-4",
+      "anthropic.claude-3-5-sonnet-20250625-v2:0": "claude-sonnet-4",
+      "claude-3.5-sonnet": "claude-sonnet-3.5",
+      "anthropic.claude-3-5-sonnet-20241022-v2:0": "claude-sonnet-3.5",
+      "claude-3.5-haiku": "claude-haiku-3.5",
+      "anthropic.claude-3-5-haiku-20241022-v1:0": "claude-haiku-3.5"
     }
   },
   "errorHandling": {
