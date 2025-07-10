@@ -26,6 +26,17 @@ export class FormatterUtils {
   }
 
   /**
+   * Calculates percentage as a rounded number
+   * @param value The numerator
+   * @param total The denominator
+   * @returns Percentage as a number (0-100)
+   */
+  static calculatePercentage(value: number, total: number): number {
+    if (total === 0) return 0;
+    return Math.round((value / total) * 100);
+  }
+
+  /**
    * Extracts error message from unknown error type
    * @param error The error object
    * @returns Error message string

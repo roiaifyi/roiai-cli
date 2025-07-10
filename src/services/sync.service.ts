@@ -108,12 +108,8 @@ export class SyncService {
           const now = Date.now();
           // Update based on configured interval to avoid too frequent updates
           if (now - lastProgressUpdate > ConfigHelper.getDisplay().progressUpdateInterval) {
-            const projectProgress = progress.totalProjects > 0 
-              ? Math.round((progress.processedProjects / progress.totalProjects) * 100)
-              : 0;
-            const fileProgress = progress.totalFiles > 0 
-              ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
-              : 0;
+            const projectProgress = FormatterUtils.calculatePercentage(progress.processedProjects, progress.totalProjects);
+            const fileProgress = FormatterUtils.calculatePercentage(progress.processedFiles, progress.totalFiles);
             
             const progressText = `Processing: Project ${progress.processedProjects + 1}/${progress.totalProjects} (${projectProgress}%) | ` +
                                `File ${progress.processedFiles + 1}/${progress.totalFiles} (${fileProgress}%)`;

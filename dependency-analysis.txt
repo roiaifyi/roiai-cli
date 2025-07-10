@@ -1,0 +1,35 @@
+[2025-07-10 - Dependency Analysis]
+
+# Dependency Usage Analysis for roiai-cli
+
+## Regular Dependencies Analysis:
+
+### USED Dependencies:
+1. @prisma/client - ✓ Used throughout for database operations
+2. axios - ✓ Used in api/typed-client.ts for HTTP requests
+3. chalk - ✓ Used for terminal color formatting in multiple files
+4. cli-table3 - ✓ Used for displaying tables in terminal output
+5. commander - ✓ Used for CLI command parsing
+6. config - ✓ Used for configuration management
+7. ora - ✓ Used for spinner/loading indicators
+8. prompts - ✓ Used for interactive CLI prompts
+9. uuid - ✓ Used for generating unique identifiers
+
+### Special Case:
+- prisma - ✓ Used as CLI tool in npm scripts (prisma:generate, prisma:migrate, prisma:studio)
+  This is the Prisma CLI needed for database migrations and schema management
+
+## DevDependencies Analysis:
+
+### UNUSED DevDependencies:
+- express - ❌ Not used anywhere in the codebase (checked src/, tests/, scripts/)
+  This is odd for a CLI tool and should be removed
+
+### USED DevDependencies:
+- @types/uuid - ✓ TypeScript types for uuid package
+- @types/prompts - ✓ TypeScript types for prompts package  
+- @types/config - ✓ TypeScript types for config package
+
+## Recommendations:
+1. Remove `express` from devDependencies as it's not used anywhere
+2. All other dependencies are actively used and necessary

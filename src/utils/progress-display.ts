@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { ConfigHelper } from './config-helper';
+import { FormatterUtils } from './formatter-utils';
 
 export class ProgressDisplay {
   private static get PROGRESS_BAR_WIDTH() {
@@ -38,7 +39,7 @@ export class ProgressDisplay {
       width = this.PROGRESS_BAR_WIDTH
     } = options;
     
-    const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+    const percent = FormatterUtils.calculatePercentage(current, total);
     const progressBar = this.generateProgressBar(percent, width);
     
     let output = `[${progressBar}]`;
@@ -71,7 +72,7 @@ export class ProgressDisplay {
       failed?: number;
     }
   ): string {
-    const percent = totalCount > 0 ? Math.round((processedCount / totalCount) * 100) : 0;
+    const percent = FormatterUtils.calculatePercentage(processedCount, totalCount);
     const progressBar = this.generateProgressBar(percent);
     
     let output = `[${progressBar}] ${percent}% - Batch ${batchNumber}/${totalBatches}`;

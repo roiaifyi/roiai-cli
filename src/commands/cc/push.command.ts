@@ -266,8 +266,8 @@ export function createPushCommand() {
             
             // Update progress for error message
             const errorProcessedCount = processedMessages.size;
-            const errorProgressPercent = eligibleCount > 0 ? Math.round((errorProcessedCount / eligibleCount) * 100) : 0;
-            const errorProgressBar = '█'.repeat(Math.floor(errorProgressPercent / 2)) + '░'.repeat(50 - Math.floor(errorProgressPercent / 2));
+            const errorProgressPercent = FormatterUtils.calculatePercentage(errorProcessedCount, eligibleCount);
+            const errorProgressBar = ProgressDisplay.generateProgressBar(errorProgressPercent);
             
             const errorMessage = SpinnerErrorHandler.getErrorMessage(error);
             // Update spinner text to show error but continue
