@@ -22,9 +22,14 @@ jest.mock('../../src/database', () => {
     }
   };
   
+  const mockDatabase = {
+    ensureInitialized: jest.fn(() => Promise.resolve())
+  };
+  
   return {
     prisma: mockPrismaClient,
-    getPrisma: jest.fn(() => Promise.resolve(mockPrismaClient))
+    getPrisma: jest.fn(() => Promise.resolve(mockPrismaClient)),
+    getDb: jest.fn(() => mockDatabase)
   };
 });
 jest.mock('../../src/config');

@@ -75,6 +75,11 @@ export class UserService {
       throw new Error('Invalid user state: no user ID available');
     }
 
+    // Ensure database is initialized before any operations
+    const { getDb } = await import('../database');
+    const database = getDb();
+    await database.ensureInitialized();
+
     // Create or update user
     const prismaClient = await getPrisma();
     await prismaClient.user.upsert({
@@ -171,6 +176,11 @@ export class UserService {
 
     // Reset sync status for ALL messages when a user logs in
     // This ensures that when switching users, all messages can be re-uploaded
+    // Ensure database is initialized before any operations
+    const { getDb } = await import('../database');
+    const database = getDb();
+    await database.ensureInitialized();
+    
     const prismaClient = await getPrisma();
     await prismaClient.messageSyncStatus.updateMany({
       where: {}, // Update all records
