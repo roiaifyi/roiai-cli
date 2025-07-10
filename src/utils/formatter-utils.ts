@@ -26,16 +26,6 @@ export class FormatterUtils {
   }
 
   /**
-   * Formats a duration in seconds
-   * @param seconds The duration in seconds
-   * @param decimals Number of decimal places (default: 2)
-   * @returns Formatted duration string
-   */
-  static formatSeconds(seconds: number, decimals: number = 2): string {
-    return `${seconds.toFixed(decimals)}s`;
-  }
-
-  /**
    * Extracts error message from unknown error type
    * @param error The error object
    * @returns Error message string
@@ -48,14 +38,5 @@ export class FormatterUtils {
       return error;
     }
     return 'Unknown error';
-  }
-
-  /**
-   * Formats a number with thousands separator
-   * @param value The number to format
-   * @returns Formatted number string
-   */
-  static formatNumber(value: number): string {
-    return value.toLocaleString();
   }
 }

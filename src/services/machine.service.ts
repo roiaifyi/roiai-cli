@@ -1,6 +1,6 @@
 import path from 'path';
 import os from 'os';
-import crypto from 'crypto';
+import { CryptoUtils } from '../utils/crypto-utils';
 import { MachineInfo } from '../models/types';
 import { configManager } from '../config';
 import { FileSystemUtils } from '../utils/file-system-utils';
@@ -110,11 +110,7 @@ export class MachineService {
 
     // Generate machine ID by hashing only MAC address
     // This ensures consistency across OS upgrades on the same hardware
-    const machineId = crypto
-      .createHash('sha256')
-      .update(macAddress)
-      .digest('hex')
-      .substring(0, 16);
+    const machineId = CryptoUtils.sha256(macAddress, 16);
 
     return {
       machineId,

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import readline from "readline";
 import crypto from "crypto";
+import { CryptoUtils } from "../utils/crypto-utils";
 import {
   JSONLEntry,
   ProcessingResult,
@@ -193,11 +194,11 @@ export class JSONLService {
   async ensureProject(projectName: string) {
     const userId = this.userService.getAnonymousId();
     const machineId = this.userService.getClientMachineId();
-    const projectId = crypto
-      .createHash("sha256")
-      .update(`${projectName}:${machineId}`)
-      .digest("hex")
-      .substring(0, ConfigHelper.getProcessing().idSubstringLength);
+    const projectId = CryptoUtils.generateId(
+      [projectName, machineId],
+      ':',
+      ConfigHelper.getProcessing().idSubstringLength
+    );
 
     // Check if project already exists
     const prismaClient = await getPrisma();
