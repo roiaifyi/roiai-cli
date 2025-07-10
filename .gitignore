@@ -10,3 +10,4 @@ coverage/
 .env
 .env.local
 tmp/
+package-lock.json
