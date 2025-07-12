@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { MachineService } from '../../src/services/machine.service';
 import { MachineInfo } from '../../src/models/types';
 import fs from 'fs/promises';

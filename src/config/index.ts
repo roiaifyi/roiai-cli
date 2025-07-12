@@ -119,6 +119,7 @@ export interface Config {
     syntheticModels?: string[];
     defaultFallbackModel?: string;
     modelIdMappings?: { [key: string]: string };
+    defaultPricing?: any; // Pricing data structure
   };
   errorHandling?: {
     patterns?: {

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Command } from 'commander';
 import { ApiUrlResolver } from '../../src/utils/api-url-resolver';
 import { configManager } from '../../src/config';
@@ -21,7 +22,7 @@ describe('ApiUrlResolver', () => {
   describe('getApiUrl', () => {
     it('should return API URL from command option when provided', () => {
       const command = new Command();
-      command.opts = jest.fn().mockReturnValue({ apiUrl: 'https://custom.api.com' });
+      command.opts = jest.fn().mockReturnValue({ apiUrl: 'https://custom.api.com' }) as any;
       
       const result = ApiUrlResolver.getApiUrl(command);
       
@@ -30,10 +31,10 @@ describe('ApiUrlResolver', () => {
 
     it('should check parent commands for API URL option', () => {
       const parentCommand = new Command();
-      parentCommand.opts = jest.fn().mockReturnValue({ apiUrl: 'https://parent.api.com' });
+      parentCommand.opts = jest.fn().mockReturnValue({ apiUrl: 'https://parent.api.com' }) as any;
       
       const childCommand = new Command();
-      childCommand.opts = jest.fn().mockReturnValue({});
+      childCommand.opts = jest.fn().mockReturnValue({}) as any;
       childCommand.parent = parentCommand;
       
       const result = ApiUrlResolver.getApiUrl(childCommand);
@@ -43,7 +44,7 @@ describe('ApiUrlResolver', () => {
 
     it('should return config URL when no command option is provided', () => {
       const command = new Command();
-      command.opts = jest.fn().mockReturnValue({});
+      command.opts = jest.fn().mockReturnValue({}) as any;
       
       const result = ApiUrlResolver.getApiUrl(command);
       
@@ -53,14 +54,14 @@ describe('ApiUrlResolver', () => {
 
     it('should traverse multiple parent levels to find API URL', () => {
       const grandparentCommand = new Command();
-      grandparentCommand.opts = jest.fn().mockReturnValue({ apiUrl: 'https://grandparent.api.com' });
+      grandparentCommand.opts = jest.fn().mockReturnValue({ apiUrl: 'https://grandparent.api.com' }) as any;
       
       const parentCommand = new Command();
-      parentCommand.opts = jest.fn().mockReturnValue({});
+      parentCommand.opts = jest.fn().mockReturnValue({}) as any;
       parentCommand.parent = grandparentCommand;
       
       const childCommand = new Command();
-      childCommand.opts = jest.fn().mockReturnValue({});
+      childCommand.opts = jest.fn().mockReturnValue({}) as any;
       childCommand.parent = parentCommand;
       
       const result = ApiUrlResolver.getApiUrl(childCommand);
