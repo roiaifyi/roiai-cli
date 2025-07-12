@@ -29,7 +29,33 @@ describe('PricingService Simple Tests', () => {
           'o1-preview'
         ],
         modelIdMappings: {},
-        defaultFallbackModel: 'claude-sonnet-3.5'
+        defaultFallbackModel: 'claude-sonnet-3.5',
+        defaultPricing: {
+          metadata: {
+            id: "default",
+            provider: "Anthropic",
+            providerUrl: "https://www.anthropic.com",
+            apiEndpoint: "https://api.anthropic.com",
+            source: "built-in defaults",
+            version: "1.0.0",
+            description: "Default pricing data",
+            currency: "USD",
+            unit: "per token",
+            notes: "Using built-in default pricing"
+          },
+          models: [
+            {
+              modelId: "claude-sonnet-3.5",
+              name: "Claude 3.5 Sonnet",
+              input: 0.000003,
+              output: 0.000015,
+              cache: {
+                '5m': { write: 0.00000375, read: 0.0000003 },
+                '1h': { write: 0.000006, read: 0.0000003 }
+              }
+            }
+          ]
+        }
       },
       claudeCode: {
         pricingUrl: 'https://example.com/pricing.json',

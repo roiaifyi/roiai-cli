@@ -120,62 +120,21 @@ export class PricingService {
   }
 
   private getDefaultPricing(): PricingData {
+    const config = configManager.get();
+    const defaultPricing = config.pricing?.defaultPricing;
+    
+    if (!defaultPricing) {
+      // Fallback if configuration is missing
+      throw new Error('Default pricing configuration not found');
+    }
+    
+    // Add lastUpdated timestamp dynamically
     return {
+      ...defaultPricing,
       metadata: {
-        id: "default",
-        provider: "Anthropic",
-        providerUrl: "https://www.anthropic.com",
-        apiEndpoint: "https://api.anthropic.com",
-        source: "built-in defaults",
-        lastUpdated: new Date().toISOString(),
-        version: "1.0.0",
-        description: "Default pricing data",
-        currency: "USD",
-        unit: "per token",
-        notes: "Using built-in default pricing"
-      },
-      models: [
-        {
-          modelId: "claude-opus-4",
-          name: "Claude Opus 4",
-          input: 0.000015,
-          output: 0.000075,
-          cache: {
-            '5m': { write: 0.00001875, read: 0.0000015 },
-            '1h': { write: 0.00003, read: 0.0000015 }
-          }
-        },
-        {
-          modelId: "claude-sonnet-4",
-          name: "Claude Sonnet 4",
-          input: 0.000003,
-          output: 0.000015,
-          cache: {
-            '5m': { write: 0.00000375, read: 0.0000003 },
-            '1h': { write: 0.000006, read: 0.0000003 }
-          }
-        },
-        {
-          modelId: "claude-sonnet-3.5",
-          name: "Claude 3.5 Sonnet",
-          input: 0.000003,
-          output: 0.000015,
-          cache: {
-            '5m': { write: 0.00000375, read: 0.0000003 },
-            '1h': { write: 0.000006, read: 0.0000003 }
-          }
-        },
-        {
-          modelId: "claude-haiku-3.5",
-          name: "Claude 3.5 Haiku",
-          input: 0.00000025,
-          output: 0.00000125,
-          cache: {
-            '5m': { write: 0.0000003125, read: 0.000000025 },
-            '1h': { write: 0.0000005, read: 0.000000025 }
-          }
-        }
-      ]
+        ...defaultPricing.metadata,
+        lastUpdated: new Date().toISOString()
+      }
     };
   }
 
