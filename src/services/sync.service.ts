@@ -13,6 +13,7 @@ import { logger } from '../utils/logger';
 import { ConfigHelper } from '../utils/config-helper';
 import { DisplayUtils } from '../utils/display-utils';
 import { FormatterUtils } from '../utils/formatter-utils';
+import { SpinnerUtils } from '../utils/spinner-utils';
 
 export interface SyncOptions {
   force?: boolean;
@@ -49,7 +50,7 @@ export class SyncService {
       const jsonlService = new JSONLService(pricingService, this.userService);
 
       // Load pricing data
-      if (spinner) spinner.text = 'Loading pricing data...';
+      SpinnerUtils.update(spinner, 'Loading pricing data...');
       await pricingService.loadPricingData();
 
       // Load user info silently
@@ -62,9 +63,9 @@ export class SyncService {
 
       // Handle force flag
       if (options.force) {
-        if (spinner) spinner.start('Clearing existing data...');
+        SpinnerUtils.update(spinner, 'Clearing existing data...');
         await db.clearAllData();
-        if (spinner) spinner.succeed('Existing data cleared');
+        SpinnerUtils.succeed(spinner, 'Existing data cleared');
       }
 
       // Check if we need to use incremental aggregation
@@ -99,7 +100,7 @@ export class SyncService {
       }
       
       // Start processing
-      if (spinner) spinner.start('Processing Claude Code data...');
+      SpinnerUtils.update(spinner, 'Processing Claude Code data...');
       
       // Set up progress tracking (only if not quiet)
       if (!options.quiet && spinner) {
@@ -123,7 +124,7 @@ export class SyncService {
       const result = await jsonlService.processDirectory(dataPath);
       
       const duration = ((Date.now() - startTime) / 1000);
-      if (spinner) spinner.succeed(`Sync completed in ${duration.toFixed(2)}s`);
+      SpinnerUtils.succeed(spinner, `Sync completed in ${duration.toFixed(2)}s`);
 
       // Check if any new data was processed
       const changes = jsonlService.getIncrementalChanges();
@@ -131,16 +132,16 @@ export class SyncService {
       
       if (needsFullRecalc) {
         // Full recalculation needed for initial sync or force flag
-        if (spinner) spinner.start('Recalculating aggregates...');
+        SpinnerUtils.update(spinner, 'Recalculating aggregates...');
         const aggregationService = new AggregationService(this.prisma);
         await aggregationService.recalculateAllAggregates();
-        if (spinner) spinner.succeed('Aggregates recalculated');
+        SpinnerUtils.succeed(spinner, 'Aggregates recalculated');
       } else if (hasNewData) {
         // Recalculate aggregates for incremental changes
-        if (spinner) spinner.start('Updating aggregates...');
+        SpinnerUtils.update(spinner, 'Updating aggregates...');
         const aggregationService = new AggregationService(this.prisma);
         await aggregationService.recalculateAllAggregates();
-        if (spinner) spinner.succeed('Aggregates updated');
+        SpinnerUtils.succeed(spinner, 'Aggregates updated');
       }
 
       // Calculate incremental cost
@@ -176,7 +177,7 @@ export class SyncService {
       };
 
     } catch (error) {
-      if (spinner) spinner.fail('Sync failed');
+      SpinnerUtils.fail(spinner, 'Sync failed');
       logger.error('Sync error:', error);
       throw error;
     }
