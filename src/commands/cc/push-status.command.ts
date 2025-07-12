@@ -8,6 +8,7 @@ import { DatabaseUtils } from '../../utils/database-utils';
 import { QueryHelper } from '../../utils/query-helper';
 import { ConfigHelper } from '../../utils/config-helper';
 import { FormatterUtils } from '../../utils/formatter-utils';
+import { AuthValidator } from '../../utils/auth-validator';
 import { ApiUrlResolver } from '../../utils/api-url-resolver';
 
 export function createPushStatusCommand() {
@@ -145,10 +146,9 @@ export function createPushStatusCommand() {
         
         // Configuration status
         const userService = new UserService();
-        let isAuthenticated = false;
+        let authStatus = { isAuthenticated: false, email: undefined as string | undefined };
         try {
-          await userService.loadUserInfo();
-          isAuthenticated = userService.isAuthenticated();
+          authStatus = await AuthValidator.checkAuthentication(userService);
         } catch (error) {
           // In test environment, user info might not be available
           if (process.env.NODE_ENV !== 'test') {
@@ -160,7 +160,7 @@ export function createPushStatusCommand() {
         const apiUrl = ApiUrlResolver.getApiUrl(command);
         console.log(`API URL: ${apiUrl}`);
         console.log(`Endpoint: ${EndpointResolver.getPushEndpoint()}`);
-        console.log(`Authentication: ${isAuthenticated ? chalk.green('Logged in') : chalk.red('Not logged in')}`);
+        AuthValidator.displayAuthStatus(authStatus.isAuthenticated, authStatus.email);
         console.log(`Batch Size: ${pushConfig.batchSize}`);
         console.log(`Max Retries: ${pushConfig.maxRetries}`);
         console.log(`Timeout: ${pushConfig.timeout}ms`);
@@ -168,7 +168,7 @@ export function createPushStatusCommand() {
         // Next steps
         if (stats.unsynced > 0) {
           console.log(chalk.bold('\n💡 Next Steps\n'));
-          if (!isAuthenticated) {
+          if (!authStatus.isAuthenticated) {
             console.log(chalk.yellow('1. Create a free account at ') + chalk.cyan('https://roiAI.fyi'));
             console.log(chalk.yellow('2. Verify your email address'));
             console.log(chalk.yellow('3. Login with: ') + chalk.green('roiai cc login'));
@@ -179,7 +179,7 @@ export function createPushStatusCommand() {
           
           const needsForce = stats.retryDistribution.some(r => r.retryCount >= pushConfig.maxRetries);
           if (needsForce) {
-            console.log(`${!isAuthenticated ? '5' : '2'}. Use ${chalk.cyan('roiai cc push --force')} to retry failed messages`);
+            console.log(`${!authStatus.isAuthenticated ? '5' : '2'}. Use ${chalk.cyan('roiai cc push --force')} to retry failed messages`);
           }
         }
         

@@ -5,6 +5,7 @@ import { UserService } from '../../services/user.service';
 import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 import { createApiClient } from '../../api/typed-client';
 import { ApiUrlResolver } from '../../utils/api-url-resolver';
+import { AuthValidator } from '../../utils/auth-validator';
 
 export function createLogoutCommand(): Command {
   const command = new Command('logout');
@@ -16,16 +17,16 @@ export function createLogoutCommand(): Command {
       
       try {
         const userService = new UserService();
-        await userService.loadUserInfo();
+        const authStatus = await AuthValidator.checkAuthentication(userService);
         
         // Check if logged in
-        if (!userService.isAuthenticated()) {
+        if (!authStatus.isAuthenticated) {
           spinner.warn('Not currently logged in');
           return;
         }
         
-        const email = userService.getAuthenticatedEmail();
-        const apiToken = userService.getApiToken();
+        const email = authStatus.email;
+        const apiToken = authStatus.apiToken;
         
         // First, try to revoke the API key on the server
         let serverLogoutSuccess = false;

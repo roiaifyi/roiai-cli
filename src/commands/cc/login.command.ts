@@ -9,6 +9,7 @@ import { SpinnerErrorHandler } from '../../utils/spinner-error-handler';
 import { createApiClient, CliLoginRequest } from '../../api/typed-client';
 import { configManager } from '../../config';
 import { ApiUrlResolver } from '../../utils/api-url-resolver';
+import { AuthValidator } from '../../utils/auth-validator';
 
 export function createLoginCommand(): Command {
   const command = new Command('login');
@@ -27,14 +28,14 @@ export function createLoginCommand(): Command {
       
       try {
         const userService = new UserService();
-        await userService.loadUserInfo();
+        const authStatus = await AuthValidator.checkAuthentication(userService);
         
         // Store current credentials if already logged in (for potential logout)
-        const oldApiToken = userService.getApiToken();
-        const oldEmail = userService.getAuthenticatedEmail();
+        const oldApiToken = authStatus.apiToken;
+        const oldEmail = authStatus.email;
         
         // If already logged in, show current status but continue to allow re-login
-        if (userService.isAuthenticated() && oldEmail && !options.token && !options.email && !options.password) {
+        if (authStatus.isAuthenticated && oldEmail && !options.token && !options.email && !options.password) {
           spinner.info(`Currently logged in as ${oldEmail}`);
           console.log(chalk.dim('Proceeding to login with new credentials...\n'));
         }
