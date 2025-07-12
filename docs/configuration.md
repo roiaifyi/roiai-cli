@@ -62,6 +62,17 @@ npm test
 - **Test**: `http://localhost:3456`
 - **Local Override**: `http://localhost:3000` (if config/local.json exists)
 
+### Utility Classes and Configuration
+
+The application uses several utility classes that depend on configuration:
+
+- **ConfigHelper**: Provides type-safe access to all configuration sections
+- **SpinnerUtils**: No configuration required, provides safe spinner operations
+- **AuthValidator**: Uses `errorHandling.patterns.auth` for error detection
+- **SpinnerErrorHandler**: Uses `errorHandling.patterns` for error classification
+- **DisplayUtils**: Uses `display.*` configuration for formatting
+- **NetworkErrorHandler**: Uses `network.*` configuration for error handling
+
 ### API Endpoints
 
 All environments use the same endpoint paths:
@@ -117,6 +128,50 @@ DEBUG_CONFIG=true roiai cc sync
 ### Issue: Can't connect to API
 **Solution**: Verify the api.baseUrl is correct for your environment using verbose mode
 
+## Pricing Configuration
+
+The pricing system has been migrated from hardcoded values to configuration for easier management:
+
+### Pricing Structure
+```json
+{
+  "pricing": {
+    "syntheticModels": [
+      "claude-3-5-sonnet-20241022:reasoning",
+      "o1-mini"
+    ],
+    "defaultFallbackModel": "claude-sonnet-3.5",
+    "modelIdMappings": {
+      "claude-3-5-haiku-20241022": "claude-haiku-3.5",
+      "anthropic.claude-v4": "claude-opus-4"
+    },
+    "defaultPricing": {
+      "metadata": {
+        "currency": "USD",
+        "unit": "per token"
+      },
+      "models": [
+        {
+          "modelId": "claude-opus-4",
+          "name": "Claude Opus 4",
+          "input": 0.000015,
+          "output": 0.000075,
+          "cache": {
+            "5m": { "write": 0.00001875, "read": 0.0000015 },
+            "1h": { "write": 0.00003, "read": 0.0000015 }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+### Key Components:
+- **syntheticModels**: Models excluded from cost calculations
+- **modelIdMappings**: Maps various model ID formats to standardized pricing keys
+- **defaultPricing**: Fallback pricing data when remote pricing fetch fails
+
 ## Configuration File Examples
 
 ### Minimal Production Override
@@ -140,6 +195,10 @@ DEBUG_CONFIG=true roiai cc sync
   },
   "logging": {
     "level": "warn"
+  },
+  "pricing": {
+    "pricingUrl": "https://custom-pricing-endpoint.com/pricing.json",
+    "pricingCacheTimeout": 7200000
   }
 }
 ```
