@@ -1,7 +1,6 @@
 import { Prisma, MessageWriter, PrismaClient } from '@prisma/client';
 import { getPrisma } from '../database';
 import { logger } from '../utils/logger';
-import { ErrorCodeHandler } from '../utils/error-code-handler';
 import { ConfigHelper } from '../utils/config-helper';
 
 export interface BatchMessage {
@@ -209,7 +208,7 @@ export class BatchProcessor {
           });
           createdSessions.add(sessionId);
         } catch (error: any) {
-          if (ErrorCodeHandler.isUniqueConstraintError(error)) {
+          if (error?.code === 'P2002') {
             // Session created by concurrent process - that's fine
             logger.debug(`Session ${sessionId} already exists (concurrent creation)`);
           } else {
