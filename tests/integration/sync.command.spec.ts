@@ -21,7 +21,8 @@ describe('Sync Command BDD Tests', () => {
           NODE_CONFIG: JSON.stringify(testConfig),
           DATABASE_URL: `file:${TEST_DB_PATH}`
         },
-        encoding: 'utf8'
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'] // Suppress all output during tests
       });
       return output;
     } catch (error: any) {

@@ -2,22 +2,26 @@ import { PrismaClient } from '@prisma/client';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { jest, beforeAll, afterAll } from '@jest/globals';
 
 // Set test environment
 process.env.NODE_ENV = 'test';
 
-// Suppress Prisma logs during tests
+// Suppress all Prisma output during tests
 process.env.PRISMA_HIDE_UPDATE_MESSAGE = 'true';
+process.env.PRISMA_CLI_QUERY_ENGINE_TYPE = 'binary';
+process.env.CHECKPOINT_DISABLE = 'true';
 
 // Mock console methods to reduce noise during tests
+const originalConsole = console;
 global.console = {
   ...console,
   log: jest.fn(),
   info: jest.fn(),
   warn: jest.fn(),
-  // Keep error and debug for debugging
-  error: console.error,
-  debug: console.debug,
+  // In non-verbose mode, suppress errors too unless it's a test failure
+  error: process.env.VERBOSE_TESTS ? originalConsole.error : jest.fn(),
+  debug: jest.fn(),
 } as Console;
 
 // Use local tmp directory for all test files
@@ -48,10 +52,28 @@ beforeAll(async () => {
   }
   
   // Create the database schema using push instead of migrate
-  execSync('npx prisma db push --force-reset --skip-generate', {
-    env: { ...process.env, DATABASE_URL: `file:${TEST_DB_PATH}` },
-    stdio: process.env.VERBOSE_TESTS ? 'inherit' : 'pipe'
-  });
+  try {
+    execSync('npx prisma db push --force-reset --skip-generate 2>/dev/null', {
+      env: { 
+        ...process.env, 
+        DATABASE_URL: `file:${TEST_DB_PATH}`,
+        PRISMA_HIDE_UPDATE_MESSAGE: 'true',
+        CHECKPOINT_DISABLE: 'true'
+      },
+      stdio: process.env.VERBOSE_TESTS ? 'inherit' : 'ignore'
+    });
+  } catch (error) {
+    // If redirect fails, fallback to pipe
+    execSync('npx prisma db push --force-reset --skip-generate', {
+      env: { 
+        ...process.env, 
+        DATABASE_URL: `file:${TEST_DB_PATH}`,
+        PRISMA_HIDE_UPDATE_MESSAGE: 'true',
+        CHECKPOINT_DISABLE: 'true'
+      },
+      stdio: process.env.VERBOSE_TESTS ? 'inherit' : ['pipe', 'pipe', 'pipe']
+    });
+  }
   
   if (process.env.VERBOSE_TESTS) {
     console.log('Test database setup complete');

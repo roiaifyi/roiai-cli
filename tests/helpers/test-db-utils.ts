@@ -21,10 +21,11 @@ export async function setupTestDatabase(dbPath: string): Promise<void> {
   execSync('npx prisma db push --force-reset --skip-generate', {
     env: {
       ...process.env,
-      DATABASE_URL: `file:${dbPath}`
+      DATABASE_URL: `file:${dbPath}`,
+      PRISMA_HIDE_UPDATE_MESSAGE: 'true'
     },
     cwd: projectRoot,
-    stdio: 'pipe' // Don't output to console during tests
+    stdio: ['pipe', 'pipe', 'pipe'] // Suppress all output during tests
   });
 }
 
