@@ -146,7 +146,7 @@ export function createPushStatusCommand() {
         
         // Configuration status
         const userService = new UserService();
-        let authStatus = { isAuthenticated: false, email: undefined as string | undefined };
+        let authStatus: { isAuthenticated: boolean; apiToken?: string; email?: string } = { isAuthenticated: false };
         try {
           authStatus = await AuthValidator.checkAuthentication(userService);
         } catch (error) {

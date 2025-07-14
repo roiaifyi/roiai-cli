@@ -38,7 +38,7 @@ export class SyncService {
   ) {}
 
   async sync(options: SyncOptions = {}): Promise<SyncResult> {
-    const spinner = options.quiet ? null : ora('Initializing sync process...').start();
+    const spinner = options.quiet ? undefined : ora('Initializing sync process...').start();
     const startTime = Date.now();
 
     try {
