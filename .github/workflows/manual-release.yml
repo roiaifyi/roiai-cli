@@ -25,9 +25,9 @@ on:
 jobs:
   bump-and-tag:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
+
+    permissions: write-all
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           DATE=$(date +%Y-%m-%d)
-          
+
           # Create CHANGELOG.md if it doesn't exist
           if [ ! -f CHANGELOG.md ]; then
             echo "# Changelog" > CHANGELOG.md
@@ -79,10 +79,10 @@ jobs:
             echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
             echo "" >> CHANGELOG.md
           fi
-          
+
           # Create a temporary file with the new section
           echo -e "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n## [Unreleased]\n\n## [$NEW_VERSION] - $DATE\n" > temp_changelog.md
-          
+
           # Extract content after [Unreleased] and before the next version section
           if grep -q "## \[Unreleased\]" CHANGELOG.md; then
             sed -n '/## \[Unreleased\]/,/## \[/{/## \[Unreleased\]/d; /## \[/d; p;}' CHANGELOG.md >> temp_changelog.md
@@ -91,12 +91,12 @@ jobs:
             echo "- See commit history for changes" >> temp_changelog.md
             echo "" >> temp_changelog.md
           fi
-          
+
           # Add the rest of the changelog if it exists
           if [ -f CHANGELOG.md ] && grep -q "## \[.*\] -" CHANGELOG.md; then
             sed -n '/## \[.*\] -/,$p' CHANGELOG.md >> temp_changelog.md
           fi
-          
+
           # Replace the original file
           mv temp_changelog.md CHANGELOG.md
 
@@ -122,7 +122,7 @@ jobs:
           echo "- **Type**: ${{ inputs.version_type }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tag**: ${{ steps.create_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ inputs.create_release }}" == "true" ]; then
             echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
             echo "The release workflow will be triggered automatically for tag ${{ steps.create_tag.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
