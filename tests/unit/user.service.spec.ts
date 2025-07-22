@@ -1,14 +1,23 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+// Mock os module before any imports that might use it
+jest.mock('os', () => ({
+  hostname: jest.fn(() => 'test-machine'),
+  platform: jest.fn(() => 'darwin'),
+  arch: jest.fn(() => 'x64'),
+  homedir: jest.fn(() => '/home/test'),
+  release: jest.fn(() => '20.0.0'),
+  networkInterfaces: jest.fn(() => ({}))
+}));
+
+// Mock fs/promises before imports
+jest.mock('fs/promises');
+
 import fs from 'fs/promises';
-import os from 'os';
 import { UserService } from '../../src/services/user.service';
 import { configManager } from '../../src/config';
 import { MachineService } from '../../src/services/machine.service';
 import { MachineInfo } from '../../src/models/types';
-
-// Mock dependencies
-jest.mock('fs/promises');
-jest.mock('os');
 jest.mock('../../src/database', () => {
   const mockPrismaClient = {
     user: {
@@ -38,7 +47,6 @@ jest.mock('../../src/services/machine.service');
 describe('UserService', () => {
   let userService: UserService;
   const mockFs = fs as jest.Mocked<typeof fs>;
-  const mockOs = os as jest.Mocked<typeof os>;
   const mockConfigManager = configManager as jest.Mocked<typeof configManager>;
   beforeEach(() => {
     jest.clearAllMocks();
@@ -68,22 +76,24 @@ describe('UserService', () => {
     
     userService = new UserService();
     
-    // Setup os mocks
-    mockOs.hostname.mockReturnValue('test-machine');
-    mockOs.platform.mockReturnValue('darwin');
-    mockOs.arch.mockReturnValue('x64');
-    mockOs.homedir.mockReturnValue('/home/test');
-    mockOs.release.mockReturnValue('20.0.0');
-    
     // Setup config mock
     mockConfigManager.get.mockReturnValue({
       app: { 
         dataDir: '~/.roiai',
         machineInfoFilename: 'machine_info.json'
       },
-      user: { infoFilename: 'user_info.json' },
+      user: { 
+        infoFilename: 'user_info.json',
+        anonymousIdPrefix: 'anon-'
+      },
       database: { path: ':memory:' },
-      claudeCode: {} as any,
+      claudeCode: {
+        rawDataPath: '~/.claude',
+        pricingUrl: 'https://example.com/pricing.json',
+        pricingCacheTimeout: 3600000,
+        cacheDurationDefault: 5,
+        batchSize: 1000
+      },
       api: {
         baseUrl: 'https://api.roiai.com',
         endpoints: {
@@ -91,8 +101,121 @@ describe('UserService', () => {
           push: '/api/v1/data/upsync'
         }
       },
-      push: {} as any,
-      logging: { level: 'info' }
+      push: {
+        batchSize: 1000,
+        maxRetries: 5,
+        timeout: 30000
+      },
+      logging: { level: 'info' },
+      machine: {
+        networkInterfacePriority: ['en', 'eth', 'wlan'],
+        virtualInterfacePrefixes: ['vnic', 'vmnet'],
+        machineIdLength: 16,
+        machineInfoVersion: 2,
+        invalidMacAddress: '00:00:00:00:00:00'
+      },
+      processing: {
+        batchSizes: {
+          default: 1000,
+          transaction: 100,
+          session: 10,
+          aggregation: 100
+        },
+        timeouts: {
+          transaction: 30000
+        },
+        hiddenDirectoryPrefix: '.',
+        idSubstringLength: 16
+      },
+      display: {
+        costPrecision: 4,
+        speedPrecision: 1,
+        durationPrecision: 2,
+        maxErrorsDisplayed: 10,
+        maxSessionsShown: 5,
+        progressBarWidth: 50,
+        sessionIdLength: 8,
+        messageIdLength: 36,
+        progressBar: {
+          filled: '█',
+          empty: '░'
+        },
+        separator: {
+          char: '━',
+          defaultWidth: 40
+        },
+        sectionSeparator: '═',
+        sectionSeparatorWidth: 50,
+        progressUpdateInterval: 100,
+        maxFailedMessagesShown: 5,
+        units: {
+          bytes: ['Bytes', 'KB', 'MB', 'GB', 'TB']
+        },
+        decimals: {
+          bytes: 2
+        },
+        duration: {
+          thresholds: {
+            seconds: 1000,
+            minutes: 60000,
+            hours: 3600000
+          }
+        },
+        bytesBase: 1024
+      },
+      network: {
+        authTimeout: 5000,
+        defaultMaxRetries: 3,
+        backoff: {
+          baseDelay: 1000,
+          maxDelay: 5000
+        },
+        defaultHttpsPort: '443',
+        httpStatusCodes: {
+          ok: 200,
+          unauthorized: 401,
+          forbidden: 403,
+          serverErrorThreshold: 500
+        }
+      },
+      errorHandling: {
+        patterns: {
+          auth: ['401', 'Unauthorized'],
+          network: ['Network error', 'ECONNREFUSED']
+        }
+      },
+      messages: {
+        sync: {
+          firstTime: 'First time sync detected.',
+          forceSync: 'Force sync requested.'
+        },
+        auth: {
+          invalidToken: 'Invalid token',
+          noToken: 'No token',
+          noUserId: 'No user ID'
+        },
+        push: {
+          requiresAuth: 'Auth required',
+          cannotPushWithoutAuth: 'Cannot push'
+        },
+        machine: {
+          noValidInterface: 'No valid interface'
+        },
+        httpErrors: {
+          '401': 'Unauthorized',
+          '403': 'Forbidden',
+          '5xx': 'Server error'
+        }
+      },
+      pricing: {
+        syntheticModels: [],
+        defaultFallbackModel: 'claude-sonnet-3.5',
+        modelIdMappings: {},
+        defaultPricing: {
+          metadata: {},
+          models: []
+        }
+      }
     });
   });
 

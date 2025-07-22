@@ -7,6 +7,10 @@ export class ProgressDisplay {
     return ConfigHelper.getDisplay().progressBarWidth;
   }
   
+  // Animation frames for spinner
+  private static readonly SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  private static spinnerIndex = 0;
+  
   /**
    * Generate a progress bar string
    */
@@ -17,6 +21,33 @@ export class ProgressDisplay {
     const filled = Math.floor((percent / 100) * width);
     const empty = width - filled;
     return filledChar.repeat(filled) + emptyChar.repeat(empty);
+  }
+  
+  /**
+   * Generate an animated progress bar with a moving indicator
+   */
+  static generateAnimatedProgressBar(percent: number, width: number = this.PROGRESS_BAR_WIDTH): string {
+    const display = ConfigHelper.getDisplay();
+    const filledChar = display.progressBarFilled;
+    const emptyChar = display.progressBarEmpty;
+    const filled = Math.floor((percent / 100) * width);
+    const empty = width - filled;
+    
+    // Add animated indicator at the progress edge if not complete
+    if (percent < 100 && filled > 0) {
+      const animatedFilled = filled - 1;
+      const spinnerFrame = this.SPINNER_FRAMES[this.spinnerIndex % this.SPINNER_FRAMES.length];
+      return filledChar.repeat(animatedFilled) + spinnerFrame + emptyChar.repeat(empty);
+    }
+    
+    return filledChar.repeat(filled) + emptyChar.repeat(empty);
+  }
+  
+  /**
+   * Advance the spinner animation
+   */
+  static advanceSpinner(): void {
+    this.spinnerIndex++;
   }
 
   /**
@@ -73,14 +104,15 @@ export class ProgressDisplay {
     }
   ): string {
     const percent = FormatterUtils.calculatePercentage(processedCount, totalCount);
-    const progressBar = this.generateProgressBar(percent);
+    this.advanceSpinner();
+    const progressBar = this.generateAnimatedProgressBar(percent);
     
     let output = `[${progressBar}] ${percent}% - Batch ${batchNumber}/${totalBatches}`;
     
     if (stats) {
-      output += ` (${stats.pushed || 0} pushed`;
+      output += ` (${chalk.green(stats.pushed || 0)} pushed`;
       if (stats.failed) {
-        output += `, ${stats.failed} failed`;
+        output += `, ${chalk.red(stats.failed)} failed`;
       }
       output += ')';
     }

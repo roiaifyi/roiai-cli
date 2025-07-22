@@ -77,6 +77,21 @@ export class JSONLService {
       // Process projects sequentially to avoid race conditions with shared batch processor
       for (let i = 0; i < validProjects.length; i++) {
         const projectDir = validProjects[i];
+        
+        // Update progress before processing project
+        if (this.progressCallback) {
+          this.progressCallback({
+            totalProjects: validProjects.length,
+            processedProjects: i,
+            currentProject: projectDir,
+            totalFiles: 0,
+            processedFiles: 0,
+            currentFile: '',
+            messagesInCurrentFile: 0,
+            processedMessagesInCurrentFile: 0,
+          });
+        }
+        
         const projectResult = await this.processProject(
           path.join(projectsPath, projectDir),
           projectDir,
@@ -157,6 +172,21 @@ export class JSONLService {
       // Process files sequentially to avoid database contention
       for (let i = 0; i < jsonlFiles.length; i++) {
         const file = jsonlFiles[i];
+        
+        // Update progress BEFORE processing file
+        if (this.progressCallback) {
+          this.progressCallback({
+            totalProjects,
+            processedProjects: projectIndex,
+            currentProject: projectName,
+            totalFiles: jsonlFiles.length,
+            processedFiles: i,
+            currentFile: file,
+            messagesInCurrentFile: 0,
+            processedMessagesInCurrentFile: 0,
+          });
+        }
+        
         const fileResult = await this.processJSONLFile(
           path.join(projectPath, file),
           project.id,
@@ -169,7 +199,7 @@ export class JSONLService {
         result.errors.push(...fileResult.errors);
         this.mergeTokenUsage(result.tokenUsageByModel, fileResult.tokenUsageByModel);
 
-        // Update progress
+        // Update progress AFTER processing file
         if (this.progressCallback) {
           this.progressCallback({
             totalProjects,

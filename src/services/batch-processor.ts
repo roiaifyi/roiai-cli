@@ -57,7 +57,7 @@ export class BatchProcessor {
     });
     
     this.existingMessageIds = new Set(existingMessages.map(m => m.messageId));
-    logger.info(`Loaded ${this.existingMessageIds.size} existing message IDs`);
+    logger.debug(`Loaded ${this.existingMessageIds.size} existing message IDs`);
   }
 
   /**
@@ -150,7 +150,7 @@ export class BatchProcessor {
       logger.debug(`Batch processed ${totalMessages} messages, ${successfullyInserted} successful`);
       
     } catch (error) {
-      logger.error(`Batch processing failed: ${error}`);
+      logger.debug(`Batch processing failed: ${error}`);
     } finally {
       // Always clear buffers to prevent stuck state
       this.messageBuffer = [];
@@ -212,7 +212,7 @@ export class BatchProcessor {
             // Session created by concurrent process - that's fine
             logger.debug(`Session ${sessionId} already exists (concurrent creation)`);
           } else {
-            logger.error(`Failed to create session ${sessionId}: ${error}`);
+            logger.debug(`Failed to create session ${sessionId}: ${error}`);
             // Don't throw - continue processing other sessions
           }
         }

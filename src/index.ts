@@ -45,7 +45,7 @@ program
         logger.debug(`Push endpoint: ${config.api.baseUrl}${config.api.endpoints.push}`);
       }
     } catch (error: any) {
-      logger.error('Configuration error:', error.message);
+      console.error(chalk.red('Configuration error:'), error.message);
       process.exit(1);
     }
   });
@@ -63,7 +63,7 @@ program
       if (command) {
         command.help();
       } else {
-        logger.error(`Unknown command: ${commandName}`);
+        console.error(chalk.red(`Unknown command: ${commandName}`));
       }
     } else {
       program.help();
@@ -84,8 +84,8 @@ Documentation:
 
 // Handle unknown commands
 program.on('command:*', () => {
-  logger.error(`Invalid command: ${program.args.join(' ')}`);
-  logger.info(`Run ${chalk.cyan('roiai --help')} for a list of available commands.`);
+  console.error(chalk.red(`Invalid command: ${program.args.join(' ')}`));
+  console.log(`Run ${chalk.cyan('roiai --help')} for a list of available commands.`);
   process.exit(1);
 });
 

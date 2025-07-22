@@ -1,6 +1,5 @@
 import { Ora } from 'ora';
 import chalk from 'chalk';
-import { logger } from './logger';
 import { ConfigHelper } from './config-helper';
 
 export class SpinnerErrorHandler {
@@ -32,7 +31,7 @@ export class SpinnerErrorHandler {
     spinner.fail(finalMessage);
     
     if (verbose && error instanceof Error && error.stack) {
-      logger.error(chalk.red('\nError details:'), error.stack);
+      console.error(chalk.red('\nError details:'), error.stack);
     }
     
     if (exit) {

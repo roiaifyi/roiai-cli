@@ -87,17 +87,17 @@ export class PricingService {
       this.cache.data = this.normalizePricingData(data);
       this.cache.lastFetchTime = Date.now();
       
-      logger.success('Loaded pricing data from remote source');
+      logger.debug('✓ Loaded pricing data from remote source');
     } catch (error) {
-      logger.error('Failed to fetch pricing data:', error);
+      logger.debug('Failed to fetch pricing data:', error);
       
       // If we have cached data, use it even if expired
       if (this.cache.data) {
-        logger.warn('Using expired cache due to fetch failure');
+        logger.debug('Using expired cache due to fetch failure');
       } else {
         // No cache available, use defaults
         this.cache.data = this.getDefaultPricing();
-        logger.warn('Using default pricing data');
+        logger.debug('Using default pricing data');
       }
     }
   }

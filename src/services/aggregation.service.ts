@@ -5,7 +5,7 @@ import { ConfigHelper } from '../utils/config-helper';
 export class AggregationService {
   constructor(private prisma: PrismaClient) {}
   async recalculateAllAggregates(): Promise<void> {
-    logger.info('🔄 Recalculating all aggregates...');
+    logger.debug('🔄 Recalculating all aggregates...');
     
     // Process aggregates in parallel for better performance
     await Promise.all([
@@ -15,11 +15,11 @@ export class AggregationService {
       this.recalculateUserAggregates()
     ]);
     
-    logger.info('✅ Aggregates recalculated successfully');
+    logger.debug('✅ Aggregates recalculated successfully');
   }
 
   private async recalculateSessionAggregates(): Promise<void> {
-    logger.info('  📊 Recalculating session aggregates...');
+    logger.debug('  📊 Recalculating session aggregates...');
     
     // Get aggregated data for all sessions at once
     const sessionAggregates = await this.prisma.message.groupBy({
@@ -59,7 +59,7 @@ export class AggregationService {
   }
 
   private async recalculateProjectAggregates(): Promise<void> {
-    logger.info('  📊 Recalculating project aggregates...');
+    logger.debug('  📊 Recalculating project aggregates...');
     
     // Get session counts per project
     const sessionCounts = await this.prisma.session.groupBy({
@@ -113,7 +113,7 @@ export class AggregationService {
   }
 
   private async recalculateMachineAggregates(): Promise<void> {
-    logger.info('  📊 Recalculating machine aggregates...');
+    logger.debug('  📊 Recalculating machine aggregates...');
     
     // Get counts
     const projectCounts = await this.prisma.project.groupBy({
@@ -174,7 +174,7 @@ export class AggregationService {
   }
 
   private async recalculateUserAggregates(): Promise<void> {
-    logger.info('  📊 Recalculating user aggregates...');
+    logger.debug('  📊 Recalculating user aggregates...');
     
     // Get counts
     const projectCounts = await this.prisma.project.groupBy({
@@ -235,7 +235,7 @@ export class AggregationService {
   }
 
   async verifyAggregates(): Promise<any> {
-    logger.info('🔍 Verifying aggregates...');
+    logger.debug('🔍 Verifying aggregates...');
     
     // Query the verification view created in the migration
     const result = await this.prisma.$queryRaw`
